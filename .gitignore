@@ -1,0 +1,17 @@
+# App data
+.key
+shifts.db
+
+# virtualenv
+.venv/
+venv/
+ENV/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+Crujisim.sublime-workspace
+crujisim.code-workspace
+*.glade~
+test.py
