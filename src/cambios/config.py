@@ -4,7 +4,8 @@ import secrets
 from pathlib import Path
 
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+
+from .database import db
 
 
 def load_key() -> str:
@@ -26,5 +27,4 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///shifts.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = load_key()
-
-db = SQLAlchemy(app)
+db.init_app(app)
