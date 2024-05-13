@@ -4,8 +4,8 @@ import collections
 
 from flask import Response, redirect, render_template, request, session, url_for
 
-from config import app, db
-from models import Shift, User
+from .config import app, db
+from .models import Shift, User
 
 
 @app.route("/")
