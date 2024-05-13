@@ -3,8 +3,9 @@
 import collections
 
 from flask import Response, redirect, render_template, request, session, url_for
+from flask_admin.contrib.sqla import ModelView
 
-from .config import app, db
+from .config import admin, admin_password, app, db
 from .models import Shift, User
 
 
@@ -30,6 +31,12 @@ def login() -> str:
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
+
+        # Check for admin user. The password is stored in the admin_passwd file.
+        if username == "admin" and password == admin_password:
+            session["user_id"] = 0
+            return redirect(url_for("admin.index"))
+
         user = User.query.filter_by(username=username).first()
         if user and user.password == password:
             session["user_id"] = user.id
@@ -57,6 +64,20 @@ def register() -> Response:
         return redirect(url_for("login"))
     return render_template("register.html")
 
+
+class AdminModelView(ModelView):
+    """Custom ModelView for the admin panel."""
+
+    def is_accessible(self) -> bool:
+        """Only allow access to the admin panel if the user is an admin."""
+        return session.get("user_id") == 0
+
+    def inaccessible_callback(self, name, **kwargs) -> Response:
+        """Redirect to the login page if the user is not an admin."""
+        return redirect(url_for("login"))
+
+
+admin.add_view(AdminModelView(User, db.session))
 
 if __name__ == "__main__":
     with app.app_context():

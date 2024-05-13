@@ -1,4 +1,5 @@
 # App data
+.admin_passwd
 .key
 shifts.db
 
