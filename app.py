@@ -1,5 +1,7 @@
 """Flask App for managing shifts."""
 
+import collections
+
 from flask import Response, redirect, render_template, request, session, url_for
 
 from config import app, db
@@ -11,8 +13,14 @@ def index() -> Response:
     """Render the index page."""
     if "user_id" in session:
         user = User.query.get(session["user_id"])
-        shifts = Shift.query.all()
-        return render_template("index.html", user=user, shifts=shifts)
+        shifts = Shift.query.order_by(Shift.date).all()
+        shift_data = collections.defaultdict(
+            lambda: {"M": "Open", "T": "Open", "N": "Open"},
+        )
+        for shift in shifts:
+            date_str = shift.date.strftime("%Y-%m-%d")
+            shift_data[date_str][shift.shift_type] = shift.user.username
+        return render_template("index.html", user=user, shift_data=shift_data)
     return redirect(url_for("login"))
 
 
