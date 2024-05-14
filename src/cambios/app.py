@@ -11,7 +11,7 @@ from .config import admin, admin_password, app, db
 from .models import Shift, User
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate("path/to/your/firebase-adminsdk.json")
+cred = credentials.Certificate("cambios-76578-firebase-adminsdk-sude0-7d233cd189.json")
 firebase_admin.initialize_app(cred)
 
 
