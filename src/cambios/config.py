@@ -45,6 +45,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = load_key()
 db.init_app(app)
 
+
 admin_password = load_admin_password()
 admin = Admin(
     app,

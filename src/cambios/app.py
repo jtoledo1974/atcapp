@@ -8,11 +8,15 @@ from flask import Response, flash, redirect, render_template, request, session, 
 from flask_admin.contrib.sqla import ModelView
 
 from .config import admin, admin_password, app, db
+from .database import init_db
 from .models import Shift, User
 
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate("cambios-76578-firebase-adminsdk-sude0-7d233cd189.json")
 firebase_admin.initialize_app(cred)
+
+with app.app_context():
+    init_db()
 
 
 @app.route("/")
