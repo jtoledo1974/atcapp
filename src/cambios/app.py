@@ -2,7 +2,7 @@
 
 import collections
 
-from flask import Response, redirect, render_template, request, session, url_for
+from flask import Response, flash, redirect, render_template, request, session, url_for
 from flask_admin.contrib.sqla import ModelView
 
 from .config import admin, admin_password, app, db
@@ -32,7 +32,7 @@ def login() -> str:
         username = request.form["username"]
         password = request.form["password"]
 
-        # Check for admin user. The password is stored in the admin_passwd file.
+        # Check for admin user.
         if username == "admin" and password == admin_password:
             session["user_id"] = 0
             return redirect(url_for("admin.index"))
@@ -40,8 +40,10 @@ def login() -> str:
         user = User.query.filter_by(username=username).first()
         if user and user.password == password:
             session["user_id"] = user.id
+            flash("Login successful!", "success")
             return redirect(url_for("index"))
-        return "Login Failed"
+        flash("Login failed. Please check your username and password.", "danger")
+        return redirect(url_for("login"))
     return render_template("login.html")
 
 
