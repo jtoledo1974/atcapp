@@ -13,6 +13,7 @@ setup(
         "flask-admin",
         "sqlalchemy",
         "alembic",
+        "firebase-admin",
         # other dependencies
     ],
     # other setup options

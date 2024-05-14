@@ -2,11 +2,17 @@
 
 import collections
 
+import firebase_admin
+from firebase_admin import credentials
 from flask import Response, flash, redirect, render_template, request, session, url_for
 from flask_admin.contrib.sqla import ModelView
 
 from .config import admin, admin_password, app, db
 from .models import Shift, User
+
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate("path/to/your/firebase-adminsdk.json")
+firebase_admin.initialize_app(cred)
 
 
 @app.route("/")
