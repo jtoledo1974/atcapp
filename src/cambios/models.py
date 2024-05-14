@@ -1,6 +1,6 @@
 """Database models for the application."""
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from .database import db
@@ -11,12 +11,15 @@ class User(db.Model):
 
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
+    firebase_uid = Column(String, unique=True)
+    email = Column(String(80), unique=True)
     username = Column(String(80), unique=True, nullable=False)
     password = Column(String(80), nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     category = Column(String(50), nullable=False)
     license_number = Column(String(50), nullable=False)
+    is_admin = Column(Boolean, default=False)
 
 
 class Shift(db.Model):
