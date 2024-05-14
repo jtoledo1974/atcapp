@@ -12,9 +12,7 @@ class User(db.Model):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     firebase_uid = Column(String, unique=True)
-    email = Column(String(80), unique=True)
-    username = Column(String(80), unique=True, nullable=False)
-    password = Column(String(80), nullable=False)
+    email = Column(String(80), unique=True, nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     category = Column(String(50), nullable=False)
