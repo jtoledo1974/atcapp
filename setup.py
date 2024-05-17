@@ -11,7 +11,7 @@ setup(
     install_requires=[
         "flask",
         "flask-admin",
-        "sqlalchemy",
+        "flask-sqlalchemy",
         "alembic",
         "firebase-admin",
         # other dependencies
