@@ -1,12 +1,10 @@
-"""Configuration for the Flask app."""
+"""Configuration module."""
 
 import secrets
 from pathlib import Path
 
-from flask import Flask
-from flask_admin import Admin
-
-from .database import db
+_admin_password: str = ""
+"""The admin password."""
 
 
 def load_key() -> str:
@@ -39,16 +37,6 @@ def load_admin_password() -> str:
     return password
 
 
-app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///shifts.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SECRET_KEY"] = load_key()
-db.init_app(app)
-
-
-admin_password = load_admin_password()
-admin = Admin(
-    app,
-    name="Admin Panel",
-    template_mode="bootstrap4",
-)
+def get_admin_password() -> str:
+    """Return the admin password."""
+    return _admin_password
