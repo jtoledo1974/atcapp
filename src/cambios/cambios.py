@@ -10,15 +10,18 @@ import pdfplumber
 
 from .models import User
 
+BASIC_SHIFTS = ["M", "T", "N", "im", "it", "in"]
+
 SHIFT_TYPES = {
+    "SUP": "SUPERVISIÓN",
     "A1": "TRABAJO EN FRECUENCIA",
     "A2": "INSTRUCTOR IMPARTIENDO OJT O SIENDO EVALUADO",
-    "A3": "INSTRUCTOR EVALUADOR OJT",
-    "A4": "CONTROLADOR EN DT (FPT) EVALUANDO",
-    "A5": "CONTROLADOR SIENDO EVALUADO EN COMPETENCIA OPERACIONAL",
-    "AM": "ASAMBLEARIAS",
-    "B01": "BAJA JUSTIFICADA POR ENFERMEDAD QUE NO DA LUGAR A IT",
-    "B02": "MOTIVO MEDICO: BAJA POR PARTES IT",
+    "A2e": "INSTRUCTOR EVALUANDO OJT",
+    "A3": "CONTROLADOR EN OJT (FPT) I EVALUANDO",
+    "A4": "CONTROLADOR SIENDO EVALUADO EN COMPETENCIA OPERACIONAL",
+    "A5": "IMAGINARIAS",
+    "B00": "BAJA JUSTIFICADA POR ENFERMEDAD QUE NO DA LUGAR A IT",
+    "B01": "MOTIVO MEDICO: BAJA POR PARTES IT",
     "B03": "MOTIVO MEDICO: AVISA ENFERMO",
     "B04": "MOTIVO MEDICO: ASTE PREV NO PRESTA SERVICIO OPERATIVO",
     "B05": "SALIDA DE FRECUENCIA: EMBARAZO SEMANA 33",
@@ -74,7 +77,7 @@ SHIFT_TYPES = {
     "FORM": "FORMACIÓN NO REALIZADA",
 }
 
-ATC_ROLES = {"TS", "IS", "TI", "INS", "PTD", "CON", "SUP"}  # Add all ATC roles here
+ATC_ROLES = {"TS", "IS", "TI", "INS", "PTD", "CON", "SUP", "N/A"}
 
 
 def is_admin(email: str) -> bool:
@@ -97,9 +100,11 @@ def is_valid_shift_code(shift_code):
     """Check if the shift code is valid."""
     if not shift_code:
         return False
+    if shift_code in BASIC_SHIFTS:
+        return True
     if shift_code in SHIFT_TYPES:
         return True
-    for prefix in ["M", "T", "N"]:
+    for prefix in BASIC_SHIFTS:
         if shift_code.startswith(prefix) and shift_code[1:] in SHIFT_TYPES:
             return True
     return False
