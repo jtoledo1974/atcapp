@@ -55,14 +55,13 @@ def login() -> str:
 
         # Check for admin user.
         if is_admin(email):
-            session["user_id"] = 0
             return redirect(url_for("admin.index"))
 
         user = User.query.filter_by(email=email).first()
         if user:
             session["user_id"] = user.id
             flash("Login successful!", "success")
-            return redirect(url_for("index"))
+            return redirect(url_for("main.index"))
         flash("Login failed. Please check your username and password.", "danger")
         return redirect(url_for("main.login"))
     return render_template("login.html")
@@ -72,6 +71,9 @@ def login() -> str:
 def logout() -> Response:
     """Logout the user."""
     session.pop("user_id", None)
+    session.pop("idToken", None)
+    # Clear firebase user session
+
     return redirect(url_for("main.login"))
 
 
