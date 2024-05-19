@@ -1,6 +1,7 @@
 """Flask App for managing shifts."""
 
 import collections
+from typing import Any
 
 from flask import Response, flash, redirect, render_template, request, session, url_for
 from flask_admin.contrib.sqla import ModelView
@@ -81,7 +82,7 @@ class AdminModelView(ModelView):
         """Only allow access to the admin panel if the user is an admin."""
         return session.get("user_id") == 0
 
-    def inaccessible_callback(self, name, **kwargs) -> Response:
+    def inaccessible_callback(self, _name: str, **_kwargs: dict[str, Any]) -> Response:
         """Redirect to the login page if the user is not an admin."""
         return redirect(url_for("login"))
 
