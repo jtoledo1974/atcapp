@@ -119,36 +119,40 @@ def extract_month_year(text):
 
 
 def extract_schedule_data(page):
-    lines = page.extract_text().split("\n")
+    table = page.extract_table()
+    if table is None:
+        return []
+
     data = []
 
-    for line in lines:
-        parts = line.split()
-        if (
-            len(parts) < 3
-        ):  # Skip lines that do not have enough parts to be valid entries
-            continue
+    for row in table:
+        if row and any(row):
+            parts = [cell.strip() if cell else "" for cell in row]
+            if (
+                len(parts) < 3
+            ):  # Skip rows that do not have enough parts to be valid entries
+                continue
 
-        # Identify role by finding the first occurrence of a known role
-        role_index = next(
-            (i for i, part in enumerate(parts) if part in ATC_ROLES),
-            None,
-        )
-        if role_index is None:
-            continue  # Skip lines without a valid role
+            # Identify role by finding the first occurrence of a known role
+            role_index = next(
+                (i for i, part in enumerate(parts) if part in ATC_ROLES),
+                None,
+            )
+            if role_index is None:
+                continue  # Skip rows without a valid role
 
-        name = " ".join(parts[:role_index])
-        role = parts[role_index]
-        shifts = parts[role_index + 1 :]
+            name = " ".join(parts[:role_index])
+            role = parts[role_index]
+            shifts = parts[role_index + 1 :]
 
-        # Filter out invalid shift codes
-        shifts = [shift if is_valid_shift_code(shift) else "" for shift in shifts]
+            # Filter out invalid shift codes
+            shifts = [shift if is_valid_shift_code(shift) else "" for shift in shifts]
 
-        # Handle incomplete shift rows by padding with empty strings
-        if len(shifts) < 31:
-            shifts.extend([""] * (31 - len(shifts)))
+            # Handle incomplete shift rows by padding with empty strings
+            if len(shifts) < 31:
+                shifts.extend([""] * (31 - len(shifts)))
 
-        data.append({"name": name, "role": role, "shifts": shifts})
+            data.append({"name": name, "role": role, "shifts": shifts})
 
     return data
 
