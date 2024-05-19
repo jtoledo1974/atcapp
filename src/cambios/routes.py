@@ -16,8 +16,8 @@ from flask import (
     url_for,
 )
 
-from .config import get_admin_password
 from .database import db
+from .firebase import verify_id_token
 from .models import Shift, User
 
 if TYPE_CHECKING:
@@ -46,16 +46,19 @@ def index() -> Response:
 def login() -> str:
     """Render the login page."""
     if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
+        try:
+            email = verify_id_token(request.form["idToken"])["email"]
+        except ValueError:
+            flash("Login failed. Please try again.", "danger")
+            return redirect(url_for("main.login"))
 
-        # Check for admin user.
-        if username == "admin" and password == get_admin_password():
-            session["user_id"] = 0
-            return redirect(url_for("admin.index"))
+        # # Check for admin user.
+        # if email == "admin" and password == get_admin_password():
+        session["user_id"] = 0
+        return redirect(url_for("admin.index"))
 
-        user = User.query.filter_by(username=username).first()
-        if user and user.password == password:
+        user = User.query.filter_by(email=email).first()
+        if user:
             session["user_id"] = user.id
             flash("Login successful!", "success")
             return redirect(url_for("index"))

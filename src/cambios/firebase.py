@@ -6,7 +6,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import firebase_admin
-from firebase_admin import credentials
+from firebase_admin import auth, credentials
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -27,3 +27,16 @@ def init_firebase(logger: Logger) -> None:
         )
         sys.exit(1)
     firebase_admin.initialize_app(cred)
+
+
+def verify_id_token(id_token: str) -> dict:
+    """Verify the Firebase ID token.
+
+    Returns the decoded token if verification is successful.
+
+    """
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        return decoded_token
+    except Exception as e:
+        raise ValueError(f"Token verification failed: {e!s}")
