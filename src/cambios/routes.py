@@ -16,7 +16,7 @@ from flask import (
     url_for,
 )
 
-from .cambios import is_admin
+from .cambios import is_admin, process_file
 from .database import db
 from .firebase import verify_id_token
 from .models import Shift, User
@@ -87,6 +87,21 @@ def register() -> Response:
         db.session.commit()
         return redirect(url_for("main.login"))
     return render_template("main.register.html")
+
+
+@main.route("/upload", methods=["GET", "POST"])
+def upload() -> Response:
+    """Upload shift data to the server.
+
+    For GET requests, render the upload page.
+    For POST requests, upload the shift data to the server.
+    """
+    if request.method == "POST":
+        file = request.files["file"]
+        if file.filename:
+            process_file(file)
+            return redirect(url_for("main.index"))
+    return render_template("upload.html")
 
 
 def register_routes(app: Flask) -> Blueprint:
