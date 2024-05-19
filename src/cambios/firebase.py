@@ -13,20 +13,24 @@ if TYPE_CHECKING:
 
 CRED_FILE = "cambios-76578-firebase-adminsdk-sude0-7d233cd189.json"
 
+logger: Logger
 
-def init_firebase(logger: Logger) -> None:
+
+def init_firebase(app_logger: Logger) -> None:
     """Initialize Firebase Admin SDK."""
     try:
         cred = credentials.Certificate(CRED_FILE)
     except FileNotFoundError:
         # Report error and shutdown
-        logger.critical(
+        app_logger.critical(
             "Firebase Admin SDK credentials file not found: %s"
             "\nPlease download from Firebase Console and place in the project root.",
             CRED_FILE,
         )
         sys.exit(1)
     firebase_admin.initialize_app(cred)
+    global logger  # noqa: PLW0603
+    logger = app_logger
 
 
 def verify_id_token(id_token: str) -> dict:
@@ -37,6 +41,7 @@ def verify_id_token(id_token: str) -> dict:
     """
     try:
         decoded_token = auth.verify_id_token(id_token)
+    except Exception:
+        logger.exception("Token verification failed")
+    else:
         return decoded_token
-    except Exception as e:
-        raise ValueError(f"Token verification failed: {e!s}")
