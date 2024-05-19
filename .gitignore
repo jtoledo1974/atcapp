@@ -1,6 +1,9 @@
 # App data
+.admin_passwd
 .key
 shifts.db
+*firebase-adminsdk*.json
+
 
 # virtualenv
 .venv/

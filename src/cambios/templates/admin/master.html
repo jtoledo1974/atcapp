@@ -1,0 +1,11 @@
+{% extends 'admin/base.html' %}
+{% block access_control %}
+{# {{ super() }} #}
+<li class="nav-item">
+    <a class="nav-link" href="{{ url_for('main.logout') }}">Logout</a>
+    {# Show the user's email address #}
+    <span class="navbar-text">
+        {{ current_user.email }}
+
+</li>
+{% endblock %}

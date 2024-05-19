@@ -10,8 +10,10 @@ setup(
     include_package_data=True,
     install_requires=[
         "flask",
-        "sqlalchemy",
+        "flask-admin",
+        "flask-sqlalchemy",
         "alembic",
+        "firebase-admin",
         # other dependencies
     ],
     # other setup options

@@ -1,64 +1,62 @@
 """Flask App for managing shifts."""
 
-import collections
+from typing import Any
 
-from flask import Response, redirect, render_template, request, session, url_for
+from flask import Flask, Response, redirect, session, url_for
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
 
-from .config import app, db
-from .models import Shift, User
-
-
-@app.route("/")
-def index() -> Response:
-    """Render the index page."""
-    if "user_id" in session:
-        user = User.query.get(session["user_id"])
-        shifts = Shift.query.order_by(Shift.date).all()
-        shift_data = collections.defaultdict(
-            lambda: {"M": "Open", "T": "Open", "N": "Open"},
-        )
-        for shift in shifts:
-            date_str = shift.date.strftime("%Y-%m-%d")
-            shift_data[date_str][shift.shift_type] = shift.user.username
-        return render_template("index.html", user=user, shift_data=shift_data)
-    return redirect(url_for("login"))
+from .config import load_admin_password, load_key
+from .database import db, init_db
+from .firebase import init_firebase
+from .models import User
+from .routes import register_routes
 
 
-@app.route("/login", methods=["GET", "POST"])
-def login() -> str:
-    """Render the login page."""
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        user = User.query.filter_by(username=username).first()
-        if user and user.password == password:
-            session["user_id"] = user.id
-            return redirect(url_for("index"))
-        return "Login Failed"
-    return render_template("login.html")
+class AdminModelView(ModelView):
+    """Custom ModelView for the admin panel."""
 
+    def is_accessible(self) -> bool:
+        """Only allow access to the admin panel if the user is an admin."""
+        return session.get("user_id") == 0
 
-@app.route("/logout")
-def logout() -> Response:
-    """Logout the user."""
-    session.pop("user_id", None)
-    return redirect(url_for("login"))
-
-
-@app.route("/register", methods=["GET", "POST"])
-def register() -> Response:
-    """Render the register page."""
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        new_user = User(username=username, password=password)
-        db.session.add(new_user)
-        db.session.commit()
+    def inaccessible_callback(self, _name: str, **_kwargs: dict[str, Any]) -> Response:
+        """Redirect to the login page if the user is not an admin."""
         return redirect(url_for("login"))
-    return render_template("register.html")
+
+
+def create_app() -> Flask:
+    """Create the Flask app."""
+    app = Flask(__name__)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///shifts.db"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SECRET_KEY"] = load_key()
+    db.init_app(app)
+    with app.app_context():
+        init_db()
+
+    init_firebase(app.logger)
+    register_routes(app)
+
+    _admin_password = load_admin_password()
+    admin = Admin(
+        app,
+        name="Admin Panel",
+        template_mode="bootstrap4",
+    )
+    admin.add_view(AdminModelView(User, db.session))
+
+    # Context processor to make user info available in templates
+    @app.context_processor
+    def inject_user() -> dict[str, str]:
+        user = User.query.filter_by(id=session.get("user_id")).first()
+        return {
+            "current_user": user,
+        }
+
+    return app
 
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
+    app = create_app()
+    app.run(debug=True, port=5005)

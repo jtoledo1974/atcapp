@@ -14,3 +14,11 @@ naming_convention = {
 
 metadata = MetaData(naming_convention=naming_convention)
 db = SQLAlchemy(metadata=metadata)
+
+
+def init_db() -> None:
+    """Initialize the database.
+
+    This should make sure that tables are created in the right order.
+    """
+    db.metadata.create_all(bind=db.engine)
