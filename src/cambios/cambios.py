@@ -93,6 +93,18 @@ def is_admin(email: str) -> bool:
     return not User.query.filter_by(is_admin=True).first()
 
 
+def is_valid_shift_code(shift_code):
+    """Check if the shift code is valid."""
+    if not shift_code:
+        return False
+    if shift_code in SHIFT_TYPES:
+        return True
+    for prefix in ["M", "T", "N"]:
+        if shift_code.startswith(prefix) and shift_code[1:] in SHIFT_TYPES:
+            return True
+    return False
+
+
 def extract_month_year(text):
     month_year_pattern = re.compile(r"Mes:\s*(\w+)\s*Año:\s*(\d{4})")
     match = month_year_pattern.search(text)
@@ -104,14 +116,34 @@ def extract_month_year(text):
 def extract_schedule_data(page):
     lines = page.extract_text().split("\n")
     data = []
-    name_shift_pattern = re.compile(r"([A-Z\s]+)\s+(\w+)(?:\s+(\w+))*")
 
     for line in lines:
-        if name_shift_pattern.match(line):
-            parts = line.split()
-            name = " ".join(parts[:-31])
-            shifts = parts[-31:]
-            data.append({"name": name, "shifts": shifts})
+        parts = line.split()
+        if (
+            len(parts) < 3
+        ):  # Skip lines that do not have enough parts to be valid entries
+            continue
+
+        # Identify role by finding the first occurrence of a known role
+        role_index = next(
+            (i for i, part in enumerate(parts) if part in ATC_ROLES),
+            None,
+        )
+        if role_index is None:
+            continue  # Skip lines without a valid role
+
+        name = " ".join(parts[:role_index])
+        role = parts[role_index]
+        shifts = parts[role_index + 1 :]
+
+        # Filter out invalid shift codes
+        shifts = [shift if is_valid_shift_code(shift) else "" for shift in shifts]
+
+        # Handle incomplete shift rows by padding with empty strings
+        if len(shifts) < 31:
+            shifts.extend([""] * (31 - len(shifts)))
+
+        data.append({"name": name, "role": role, "shifts": shifts})
 
     return data
 
@@ -124,7 +156,6 @@ def parse_name(name):
 
 
 def is_valid_user_entry(entry):
-    # Check if the name is empty or the shifts array contains only day abbreviations
     days_of_week = {"S", "D", "L", "M", "X", "J", "V"}
     if not entry["name"] or all(day in days_of_week for day in entry["shifts"]):
         return False
