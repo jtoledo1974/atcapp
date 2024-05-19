@@ -71,9 +71,7 @@ def login() -> str:
 @main.route("/logout")
 def logout() -> Response:
     """Logout the user."""
-    session.pop("user_id", None)
-    session.pop("idToken", None)
-    # Clear firebase user session
+    session.clear()
 
     return redirect(url_for("main.login"))
 
