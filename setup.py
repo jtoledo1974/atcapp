@@ -14,7 +14,7 @@ setup(
         "flask-sqlalchemy",
         "alembic",
         "firebase-admin",
-        "pypdf",
+        "pdfplumber",
         # other dependencies
     ],
     # other setup options
