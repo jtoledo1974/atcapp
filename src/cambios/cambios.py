@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import locale
 import re
 from datetime import datetime
 
@@ -87,6 +88,14 @@ def process_file(file):
             print(f"Month: {month}")
             print(f"Year: {year}")
 
+        # Set the locale to Spanish
+        original_locale = locale.getlocale(locale.LC_TIME)
+        try:
+            locale.setlocale(locale.LC_TIME, "es_ES")
+        except locale.Error:
+            print("Locale 'es_ES' not available. Please ensure it's installed.")
+            return
+
         for entry in all_data:
             if not is_valid_user_entry(entry):
                 continue
@@ -96,6 +105,13 @@ def process_file(file):
             for day, shift_code in enumerate(shifts, start=1):
                 if shift_code:  # Skip empty shift codes
                     date_str = f"{day:02d} {month} {year}"
-                    shift_date = datetime.strptime(date_str, "%d %B %Y")
+                    try:
+                        shift_date = datetime.strptime(date_str, "%d %B %Y")
+                    except ValueError:
+                        print(f"Failed to parse date: {date_str}")
+                        continue
                     print(f"  Date: {shift_date}")
                     print(f"  Shift Code: {shift_code}")
+
+        # Revert to the original locale
+        locale.setlocale(locale.LC_TIME, original_locale)
