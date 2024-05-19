@@ -16,6 +16,7 @@ from flask import (
     url_for,
 )
 
+from .cambios import is_admin
 from .database import db
 from .firebase import verify_id_token
 from .models import Shift, User
@@ -52,10 +53,10 @@ def login() -> str:
             flash("Login failed. Please try again.", "danger")
             return redirect(url_for("main.login"))
 
-        # # Check for admin user.
-        # if email == "admin" and password == get_admin_password():
-        session["user_id"] = 0
-        return redirect(url_for("admin.index"))
+        # Check for admin user.
+        if is_admin(email):
+            session["user_id"] = 0
+            return redirect(url_for("admin.index"))
 
         user = User.query.filter_by(email=email).first()
         if user:
