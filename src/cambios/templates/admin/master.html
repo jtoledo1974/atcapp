@@ -5,7 +5,7 @@
     <a class="nav-link" href="{{ url_for('main.logout') }}">Logout</a>
     {# Show the user's email address #}
     <span class="navbar-text">
-        {{ user.email }}
+        {{ current_user.email }}
 
 </li>
 {% endblock %}

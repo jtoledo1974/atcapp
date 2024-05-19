@@ -46,6 +46,14 @@ def create_app() -> Flask:
     )
     admin.add_view(AdminModelView(User, db.session))
 
+    # Context processor to make user info available in templates
+    @app.context_processor
+    def inject_user() -> dict[str, str]:
+        user = User.query.filter_by(id=session.get("user_id")).first()
+        return {
+            "current_user": user,
+        }
+
     return app
 
 

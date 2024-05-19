@@ -60,6 +60,7 @@ def login() -> str:
         user = User.query.filter_by(email=email).first()
         if user:
             session["user_id"] = user.id
+
             flash("Login successful!", "success")
             return redirect(url_for("main.index"))
         flash("Login failed. Please check your username and password.", "danger")
