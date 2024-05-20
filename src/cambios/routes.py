@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from flask import (
     Blueprint,
     Response,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -91,7 +92,7 @@ def upload() -> Response:
     if request.method == "POST":
         file = request.files["file"]
         if file.filename:
-            process_file(file, db.session)
+            process_file(file, db.session, app_logger=current_app.logger)
             return redirect(url_for("main.index"))
     return render_template("upload.html")
 

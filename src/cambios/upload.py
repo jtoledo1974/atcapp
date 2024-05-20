@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import locale
+import logging
 import re
 import unicodedata
 from datetime import datetime
@@ -14,9 +15,23 @@ from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
 from .models import Shift, User
 
 if TYPE_CHECKING:
+    from logging import Logger
+
     from pdfplumber.page import Page
     from sqlalchemy.orm import Session
     from werkzeug.datastructures import FileStorage
+
+logger: Logger
+
+
+def setup_logger(app_logger: Logger | None) -> None:
+    """Set up the logger."""
+    global logger  # noqa: PLW0603
+    if app_logger:
+        logger = app_logger
+        return
+
+    logger = logging.getLogger(__name__)
 
 
 def is_valid_shift_code(shift_code: str) -> bool:
@@ -42,6 +57,11 @@ def extract_month_year(text: str) -> tuple[str, str]:
     return None, None
 
 
+MIN_SHIFT_COLUMNS = 3
+"""Minimum number of columns required for a valid shift entry."""
+MAX_DAYS_IN_MONTH = 31
+
+
 def extract_schedule_data(page: Page) -> list[dict]:
     """Extract the schedule data from the page."""
     table = page.extract_table()
@@ -54,7 +74,7 @@ def extract_schedule_data(page: Page) -> list[dict]:
         if row and any(row):
             parts = [cell.strip() if cell else "" for cell in row]
             if (
-                len(parts) < 3
+                len(parts) < MIN_SHIFT_COLUMNS
             ):  # Skip rows that do not have enough parts to be valid entries
                 continue
 
@@ -75,8 +95,8 @@ def extract_schedule_data(page: Page) -> list[dict]:
                 continue
 
             # Handle incomplete shift rows by padding with empty strings
-            if len(shifts) < 31:
-                shifts.extend([""] * (31 - len(shifts)))
+            if len(shifts) < MAX_DAYS_IN_MONTH:
+                shifts.extend([""] * (MAX_DAYS_IN_MONTH - len(shifts)))
 
             data.append({"name": name, "role": role, "shifts": shifts})
 
@@ -111,7 +131,7 @@ def parse_name(name: str) -> tuple[str, str]:
     i = 0
 
     # Identify the last names
-    while i < len(parts) and len(last_name_parts) < 2:
+    while i < len(parts) and len(last_name_parts) < 2:  # noqa: PLR2004 Dos apellidos
         if parts[i].upper() in prepositions:
             # Handle multi-word prepositions (e.g., "DE LA", "DE LOS")
             if i + 1 < len(parts):
@@ -144,7 +164,7 @@ def parse_name(name: str) -> tuple[str, str]:
     return first_name, last_name
 
 
-def is_valid_user_entry(entry) -> bool:
+def is_valid_user_entry(entry: dict) -> bool:
     """Check if the user entry is valid."""
     days_of_week = {"S", "D", "L", "M", "X", "J", "V"}
     if not entry["name"] or all(day in days_of_week for day in entry["shifts"]):
@@ -168,7 +188,10 @@ def set_locale(locale_name: str) -> None:
     try:
         locale.setlocale(locale.LC_TIME, locale_name)
     except locale.Error:
-        print(f"Locale '{locale_name}' not available. Please ensure it's installed.")
+        logger.exception(
+            "Locale %s not available. Please ensure it's installed.",
+            locale_name,
+        )
         raise
 
 
@@ -186,6 +209,7 @@ def insert_shift_data(
     db_session: Session,
 ) -> None:
     """Insert shift data into the database."""
+    logger.info("Inserting shifts for %s %s", user.first_name, user.last_name)
     for day, shift_code in enumerate(shifts, start=1):
         if shift_code:  # Skip empty shift codes
             date_str = f"{day:02d} {month} {year}"
@@ -262,14 +286,20 @@ def parse_and_insert_data(
         user = find_user(entry["name"], db_session)
 
         if not user:
-            print(f"User not found for entry: {entry['name']}")
+            logger.warning("User not found for entry: %s", entry["name"])
             continue
 
         insert_shift_data(entry["shifts"], month, year, user, db_session)
 
 
-def process_file(file: FileStorage, db_session: Session) -> None:
+def process_file(
+    file: FileStorage,
+    db_session: Session,
+    /,
+    app_logger: Logger | None = None,
+) -> None:
     """Process the uploaded file and insert data into the database."""
+    setup_logger(app_logger)
     with pdfplumber.open(file) as pdf:
         all_data = []
         month, year = extract_month_year_from_first_page(pdf.pages[0])
@@ -283,16 +313,3 @@ def process_file(file: FileStorage, db_session: Session) -> None:
             parse_and_insert_data(all_data, month, year, db_session)
         finally:
             reset_locale()
-
-
-# Example usage:
-# from sqlalchemy import create_engine
-# from sqlalchemy.orm import sessionmaker
-# from .database import Base
-
-# engine = create_engine('sqlite:///yourdatabase.db')
-# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# db_session = SessionLocal()
-# with open("schedule.pdf", "rb") as f:
-#     process_file(f, db_session)
