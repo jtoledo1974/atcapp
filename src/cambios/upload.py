@@ -15,6 +15,7 @@ import logging
 import re
 import unicodedata
 from datetime import datetime
+from io import BytesIO
 from typing import TYPE_CHECKING
 
 import pdfplumber
@@ -138,7 +139,7 @@ def parse_name(name: str) -> tuple[str, str]:
     """
     parts = name.split()
     prepositions = {"DE", "DEL", "DE LA", "DE LOS", "DE LAS"}
-    last_name_parts = []
+    last_name_parts: list[str] = []
     i = 0
 
     # Identify the last names
@@ -362,7 +363,7 @@ def process_file(
 ) -> None:
     """Process the uploaded file and insert data into the database."""
     setup_logger(app_logger)
-    with pdfplumber.open(file) as pdf:
+    with pdfplumber.open(BytesIO(file.read())) as pdf:
         all_data = []
         month, year = extract_month_year_from_first_page(pdf.pages[0])
 
