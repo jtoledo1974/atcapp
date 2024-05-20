@@ -78,19 +78,6 @@ def logout() -> Response:
     return redirect(url_for("main.login"))
 
 
-@main.route("/register", methods=["GET", "POST"])
-def register() -> Response:
-    """Render the register page."""
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        new_user = User(username=username, password=password)
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for("main.login"))
-    return render_template("main.register.html")
-
-
 @main.route("/upload", methods=["GET", "POST"])
 def upload() -> Response:
     """Upload shift data to the server.
