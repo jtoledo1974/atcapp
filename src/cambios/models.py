@@ -28,15 +28,10 @@ class Shift(db.Model):
     date = Column(DateTime, nullable=False)
     shift_type = Column(
         String(10),
-        ForeignKey("shift_types.code"),
         nullable=False,
     )  # This now references the primary key of ShiftTypes
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", backref="shifts")
-    shift_type_details = relationship(
-        "ShiftTypes",
-        back_populates="shifts",
-    )  # Optionally, to access ShiftTypes from Shift
 
 
 class ShiftTypes(db.Model):
@@ -45,7 +40,3 @@ class ShiftTypes(db.Model):
     __tablename__ = "shift_types"
     code = Column(String(10), primary_key=True, nullable=False)
     description = Column(String(50), nullable=False)
-    shifts = relationship(
-        "Shift",
-        back_populates="shift_type_details",
-    )  # This tells SQLAlchemy how to navigate back from ShiftTypes to Shift

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import pdfplumber
 
 from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
-from .models import Shift, ShiftTypes, User
+from .models import Shift, User
 
 if TYPE_CHECKING:
     from pdfplumber.page import Page
@@ -190,7 +190,7 @@ def insert_shift_data(
         if shift_code:  # Skip empty shift codes
             date_str = f"{day:02d} {month} {year}"
             try:
-                shift_date = datetime.strptime(date_str, "%d %B %Y")
+                shift_date = datetime.strptime(date_str, "%d %B %Y")  # noqa: DTZ007
             except ValueError:
                 continue
 
@@ -200,18 +200,16 @@ def insert_shift_data(
                 .filter_by(user_id=user.id, date=shift_date)
                 .first()
             )
-            if not existing_shift:
-                shift_type = (
-                    db_session.query(ShiftTypes).filter_by(code=shift_code).first()
-                )
-                if shift_type:
-                    new_shift = Shift(
-                        date=shift_date,
-                        shift_type=shift_code,
-                        user_id=user.id,
-                    )
-                    db_session.add(new_shift)
-                    db_session.commit()
+            if existing_shift:
+                continue
+
+            new_shift = Shift(
+                date=shift_date,
+                shift_type=shift_code,
+                user_id=user.id,
+            )
+            db_session.add(new_shift)
+            db_session.commit()
 
 
 def normalize_string(s: str) -> str:
