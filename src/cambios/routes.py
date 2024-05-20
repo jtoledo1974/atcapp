@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import collections
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from flask import (
@@ -31,43 +31,45 @@ main = Blueprint("main", __name__)
 @main.route("/")
 def index() -> Response:
     """Render the index page."""
-    if "user_id" in session:
-        user = User.query.get(session["user_id"])
-        shifts = Shift.query.order_by(Shift.date).all()
-        shift_data = collections.defaultdict(
-            lambda: {"M": "Open", "T": "Open", "N": "Open"},
+    if "user_id" not in session:
+        return redirect(url_for("main.login"))
+
+    user = User.query.get(session["user_id"])
+    shifts = Shift.query.order_by(Shift.date).all()
+    shift_data = defaultdict(lambda: {"M": "Open", "T": "Open", "N": "Open"})
+    for shift in shifts:
+        date_str = shift.date.strftime("%Y-%m-%d")
+        shift_data[date_str][shift.shift_type] = (
+            f"{shift.user.first_name} {shift.user.last_name}"
         )
-        for shift in shifts:
-            date_str = shift.date.strftime("%Y-%m-%d")
-            shift_data[date_str][shift.shift_type] = shift.user.username
-        return render_template("index.html", user=user, shift_data=shift_data)
-    return redirect(url_for("main.login"))
+    return render_template("index.html", user=user, shift_data=shift_data)
 
 
 @main.route("/login", methods=["GET", "POST"])
 def login() -> str:
     """Render the login page."""
-    if request.method == "POST":
-        try:
-            email = verify_id_token(request.form["idToken"])["email"]
-        except ValueError:
-            flash("Login failed. Please try again.", "danger")
-            return redirect(url_for("main.login"))
+    if request.method != "POST":
+        return render_template("login.html")
 
-        # Check for admin user.
-        if is_admin(email):
-            session["is_admin"] = True
-            return redirect(url_for("admin.index"))
-
-        user = User.query.filter_by(email=email).first()
-        if user:
-            session["user_id"] = user.id
-
-            flash("Login successful!", "success")
-            return redirect(url_for("main.index"))
-        flash("Login failed. Please check your username and password.", "danger")
+    try:
+        email = verify_id_token(request.form["idToken"])["email"]
+    except ValueError:
+        flash("Login failed. Please try again.", "danger")
         return redirect(url_for("main.login"))
-    return render_template("login.html")
+
+    # Check for admin user.
+    if is_admin(email):
+        session["is_admin"] = True
+        return redirect(url_for("admin.index"))
+
+    user = User.query.filter_by(email=email).first()
+    if user:
+        session["user_id"] = user.id
+
+        flash("Login successful!", "success")
+        return redirect(url_for("main.index"))
+    flash("Login failed. Please check your username and password.", "danger")
+    return redirect(url_for("main.login"))
 
 
 @main.route("/logout")
