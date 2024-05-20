@@ -18,7 +18,7 @@ class AdminModelView(ModelView):
 
     def is_accessible(self) -> bool:
         """Only allow access to the admin panel if the user is an admin."""
-        return session.get("user_id") == 0
+        return session.get("is_admin")
 
     def inaccessible_callback(self, _name: str, **_kwargs: dict[str, Any]) -> Response:
         """Redirect to the login page if the user is not an admin."""
