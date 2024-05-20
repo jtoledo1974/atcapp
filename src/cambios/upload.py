@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import locale
 import re
+import unicodedata
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -213,6 +214,13 @@ def insert_shift_data(
                     db_session.commit()
 
 
+def normalize_string(s: str) -> str:
+    """Normalize string by removing accents and converting to lowercase."""
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+    ).lower()
+
+
 def find_user(name: str, db_session: Session) -> User | None:
     """Find a user in the database by name.
 
@@ -221,16 +229,22 @@ def find_user(name: str, db_session: Session) -> User | None:
     'LAST_NAME FIRST_NAME' and try to match the name that way.
     """
     first_name, last_name = parse_name(name)
-    user = (
-        db_session.query(User)
-        .filter_by(first_name=first_name, last_name=last_name)
-        .first()
-    )
-    if user:
-        return user
+    normalized_first_name = normalize_string(first_name)
+    normalized_last_name = normalize_string(last_name)
 
-    for user in db_session.query(User).all():
-        if f"{user.last_name} {user.first_name}" == name:
+    # Fetch all users and normalize names for comparison
+    users = db_session.query(User).all()
+    for user in users:
+        if (
+            normalize_string(user.first_name) == normalized_first_name
+            and normalize_string(user.last_name) == normalized_last_name
+        ):
+            return user
+
+    # Attempt to match the full name
+    normalized_name = normalize_string(name)
+    for user in users:
+        if normalize_string(f"{user.last_name} {user.first_name}") == normalized_name:
             return user
 
     return None
