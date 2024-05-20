@@ -15,19 +15,5 @@
                 "panel": "dedicated"
             }
         },
-        {
-            "label": "Open File List",
-            "type": "shell",
-            "command": "${command:workbench.action.files.openFile}",
-            "args": [
-                "${workspaceFolder}/file_list.txt"
-            ],
-            "problemMatcher": [],
-            "dependsOn": "List Project Files",
-            "presentation": {
-                "reveal": "silent",
-                "panel": "dedicated"
-            }
-        }
     ]
 }
