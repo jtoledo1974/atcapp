@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "List Project Files",
+            "type": "shell",
+            "command": "python utils/list_files.py",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "Open File List",
+            "type": "shell",
+            "command": "${command:workbench.action.files.openFile}",
+            "args": [
+                "${workspaceFolder}/file_list.txt"
+            ],
+            "problemMatcher": [],
+            "dependsOn": "List Project Files",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "dedicated"
+            }
+        }
+    ]
+}
