@@ -13,13 +13,17 @@
 
 <body>
     <div class="container mt-5">
-        <h2>Shift Schedule</h2>
+        <h2>Carga de Turnero</h2>
         <form method="post" enctype="multipart/form-data">
             <div class="mb-3">
-                <label for="file" class="form-label">Select a PDF file</label>
+                <label for="file" class="form-label">Escoja un archivo PDF</label>
                 <input type="file" class="form-control" id="file" name="file">
             </div>
-            <button type="submit" class="btn btn-primary">Upload</button>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="add_new" name="add_new">
+                <label class="form-check-label" for="add_new">Añadir controladores nuevos a la base de datos</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Subir</button>
         </form>
         <a id="logoutLink" href="{{ url_for('main.logout') }}" class="btn btn-primary">Logout</a>
 </body>

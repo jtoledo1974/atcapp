@@ -243,7 +243,13 @@ def normalize_string(s: str) -> str:
     ).lower()
 
 
-def find_user(name: str, db_session: Session) -> User | None:
+def find_user(
+    name: str,
+    db_session: Session,
+    role: str,
+    *,
+    add_new: bool = False,
+) -> User | None:
     """Find a user in the database by name.
 
     First attempt is to find the user by first and last name.
@@ -269,7 +275,20 @@ def find_user(name: str, db_session: Session) -> User | None:
         if normalize_string(f"{user.last_name} {user.first_name}") == normalized_name:
             return user
 
-    return None
+    if not add_new:
+        return None
+
+    # Create a new user
+    new_user = User(
+        first_name=first_name,
+        last_name=last_name,
+        email=f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com",
+        category=role,
+        license_number="",
+    )
+    db_session.add(new_user)
+    db_session.commit()
+    return new_user
 
 
 def parse_and_insert_data(
@@ -277,13 +296,15 @@ def parse_and_insert_data(
     month: str,
     year: str,
     db_session: Session,
+    *,
+    add_new: bool = False,
 ) -> None:
     """Parse extracted data and insert it into the database."""
     for entry in all_data:
         if not is_valid_user_entry(entry):
             continue
 
-        user = find_user(entry["name"], db_session)
+        user = find_user(entry["name"], db_session, entry["role"], add_new=add_new)
 
         if not user:
             logger.warning("User not found for entry: %s", entry["name"])
@@ -295,7 +316,8 @@ def parse_and_insert_data(
 def process_file(
     file: FileStorage,
     db_session: Session,
-    /,
+    *,
+    add_new: bool = False,
     app_logger: Logger | None = None,
 ) -> None:
     """Process the uploaded file and insert data into the database."""
@@ -310,6 +332,6 @@ def process_file(
 
         set_locale("es_ES")
         try:
-            parse_and_insert_data(all_data, month, year, db_session)
+            parse_and_insert_data(all_data, month, year, db_session, add_new=add_new)
         finally:
             reset_locale()

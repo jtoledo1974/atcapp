@@ -89,12 +89,22 @@ def upload() -> Response:
     For GET requests, render the upload page.
     For POST requests, upload the shift data to the server.
     """
-    if request.method == "POST":
-        file = request.files["file"]
-        if file.filename:
-            process_file(file, db.session, app_logger=current_app.logger)
-            return redirect(url_for("main.index"))
-    return render_template("upload.html")
+    if request.method != "POST":
+        return render_template("upload.html")
+
+    file = request.files["file"]
+    add_new = bool(request.form.get("add_new"))
+    if not file.filename:
+        flash("No file selected", "danger")
+        return redirect(url_for("main.upload"))
+
+    process_file(
+        file,
+        db.session,
+        add_new=add_new,
+        app_logger=current_app.logger,
+    )
+    return redirect(url_for("main.index"))
 
 
 def register_routes(app: Flask) -> Blueprint:
