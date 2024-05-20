@@ -56,6 +56,7 @@ def login() -> str:
 
         # Check for admin user.
         if is_admin(email):
+            session["is_admin"] = True
             return redirect(url_for("admin.index"))
 
         user = User.query.filter_by(email=email).first()
