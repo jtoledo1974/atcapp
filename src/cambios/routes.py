@@ -57,19 +57,20 @@ def login() -> str:
         flash("Login failed. Please try again.", "danger")
         return redirect(url_for("main.login"))
 
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash("Usuario no reconocido. Hable con el administrador.", "danger")
+        return redirect(url_for("main.logout"))
+
+    session["user_id"] = user.id
+    flash("Login successful!", "success")
+
     # Check for admin user.
     if is_admin(email):
         session["is_admin"] = True
         return redirect(url_for("admin.index"))
 
-    user = User.query.filter_by(email=email).first()
-    if user:
-        session["user_id"] = user.id
-
-        flash("Login successful!", "success")
-        return redirect(url_for("main.index"))
-    flash("Login failed. Please check your username and password.", "danger")
-    return redirect(url_for("main.login"))
+    return redirect(url_for("main.index"))
 
 
 @main.route("/logout")
