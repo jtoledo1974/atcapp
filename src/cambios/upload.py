@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING
 import pdfplumber
 
 from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
+from .models import Shift, ShiftTypes, User
 
 if TYPE_CHECKING:
     from pdfplumber.page import Page
+    from sqlalchemy.orm import Session
     from werkzeug.datastructures import FileStorage
 
 
@@ -96,8 +98,8 @@ def is_valid_user_entry(entry) -> bool:
     return True
 
 
-def process_file(file: FileStorage) -> None:
-    """Process the uploaded file."""
+def process_file(file: FileStorage, db_session: Session) -> None:
+    """Process the uploaded file and insert data into the database."""
     with pdfplumber.open(file) as pdf:
         all_data = []
         month = None
@@ -114,11 +116,6 @@ def process_file(file: FileStorage) -> None:
             page_data = extract_schedule_data(page)
             all_data.extend(page_data)
 
-        # Print the extracted data in a structured format
-        if month and year:
-            print(f"Month: {month}")
-            print(f"Year: {year}")
-
         # Set the locale to Spanish
         original_locale = locale.getlocale(locale.LC_TIME)
         try:
@@ -130,9 +127,19 @@ def process_file(file: FileStorage) -> None:
         for entry in all_data:
             if not is_valid_user_entry(entry):
                 continue
+
             first_name, last_name = parse_name(entry["name"])
+            user = (
+                db_session.query(User)
+                .filter_by(first_name=first_name, last_name=last_name)
+                .first()
+            )
+
+            if not user:
+                print(f"User {first_name} {last_name} not found in the database.")
+                continue
+
             shifts = entry["shifts"]
-            print(f"User: {first_name} {last_name}")
             for day, shift_code in enumerate(shifts, start=1):
                 if shift_code:  # Skip empty shift codes
                     date_str = f"{day:02d} {month} {year}"
@@ -140,8 +147,40 @@ def process_file(file: FileStorage) -> None:
                         shift_date = datetime.strptime(date_str, "%d %B %Y")
                     except ValueError:
                         continue
-                    print(f"  Date: {shift_date}")
-                    print(f"  Shift Code: {shift_code}")
+
+                    # Check if shift already exists for the user on this date
+                    existing_shift = (
+                        db_session.query(Shift)
+                        .filter_by(user_id=user.id, date=shift_date)
+                        .first()
+                    )
+                    if not existing_shift:
+                        shift_type = (
+                            db_session.query(ShiftTypes)
+                            .filter_by(code=shift_code)
+                            .first()
+                        )
+                        if shift_type:
+                            new_shift = Shift(
+                                date=shift_date,
+                                shift_type=shift_code,
+                                user_id=user.id,
+                            )
+                            db_session.add(new_shift)
+                            db_session.commit()
 
         # Revert to the original locale
         locale.setlocale(locale.LC_TIME, original_locale)
+
+
+# Example usage:
+# from sqlalchemy import create_engine
+# from sqlalchemy.orm import sessionmaker
+# from .database import Base
+
+# engine = create_engine('sqlite:///yourdatabase.db')
+# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# db_session = SessionLocal()
+# with open("schedule.pdf", "rb") as f:
+#     process_file(f, db_session)

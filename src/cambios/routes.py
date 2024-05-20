@@ -100,7 +100,7 @@ def upload() -> Response:
     if request.method == "POST":
         file = request.files["file"]
         if file.filename:
-            process_file(file)
+            process_file(file, db.session)
             return redirect(url_for("main.index"))
     return render_template("upload.html")
 
