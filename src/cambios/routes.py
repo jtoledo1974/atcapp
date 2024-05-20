@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 from flask import (
     Blueprint,
-    Response,
     current_app,
     flash,
     redirect,
@@ -25,19 +24,20 @@ from .upload import process_file
 
 if TYPE_CHECKING:
     from flask import Flask
+    from werkzeug import Response
 
 main = Blueprint("main", __name__)
 
 
 @main.route("/")
-def index() -> Response:
+def index() -> Response | str:
     """Render the index page."""
     if "user_id" not in session:
         return redirect(url_for("main.login"))
 
     user = User.query.get(session["user_id"])
     shifts = Shift.query.order_by(Shift.date).all()
-    shift_data = defaultdict(lambda: {"M": "Open", "T": "Open", "N": "Open"})
+    shift_data: dict = defaultdict(lambda: {"M": "Open", "T": "Open", "N": "Open"})
     for shift in shifts:
         date_str = shift.date.strftime("%Y-%m-%d")
         shift_data[date_str][shift.shift_type] = (
@@ -47,7 +47,7 @@ def index() -> Response:
 
 
 @main.route("/login", methods=["GET", "POST"])
-def login() -> str:
+def login() -> Response | str:
     """Render the login page."""
     if request.method != "POST":
         return render_template("login.html")
@@ -83,7 +83,7 @@ def logout() -> Response:
 
 
 @main.route("/upload", methods=["GET", "POST"])
-def upload() -> Response:
+def upload() -> Response | str:
     """Upload shift data to the server.
 
     For GET requests, render the upload page.

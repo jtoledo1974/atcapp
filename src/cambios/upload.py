@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from logging import Logger
 
     from pdfplumber.page import Page
-    from sqlalchemy.orm import Session
+    from sqlalchemy.orm.scoping import scoped_session
     from werkzeug.datastructures import FileStorage
 
 logger: Logger
@@ -354,7 +354,7 @@ def parse_and_insert_data(
 
 def process_file(
     file: FileStorage,
-    db_session: Session,
+    db_session: scoped_session,
     *,
     add_new: bool = False,
     app_logger: Logger | None = None,
