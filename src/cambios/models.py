@@ -16,6 +16,7 @@ class User(db.Model):
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     category = Column(String(50), nullable=False)
+    team = Column(String(1))
     license_number = Column(String(50), nullable=False)
     is_admin = Column(Boolean, default=False)
 

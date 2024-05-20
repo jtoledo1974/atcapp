@@ -57,8 +57,6 @@ def extract_month_year(text: str) -> tuple[str, str]:
     return None, None
 
 
-MIN_SHIFT_COLUMNS = 3
-"""Minimum number of columns required for a valid shift entry."""
 MAX_DAYS_IN_MONTH = 31
 
 
@@ -69,14 +67,18 @@ def extract_schedule_data(page: Page) -> list[dict]:
         return []
 
     data = []
+    team: str | None = None
+
+    # Regular expression to find the team
+    team_pattern = re.compile(r"EQUIPO: (\w+)")
 
     for row in table:
         if row and any(row):
             parts = [cell.strip() if cell else "" for cell in row]
-            if (
-                len(parts) < MIN_SHIFT_COLUMNS
-            ):  # Skip rows that do not have enough parts to be valid entries
-                continue
+
+            if not team:
+                team_match = team_pattern.search(parts[0])
+                team = team_match.group(1) if team_match else None
 
             # Identify role by finding the first occurrence of a known role
             role_index = next(
@@ -98,7 +100,7 @@ def extract_schedule_data(page: Page) -> list[dict]:
             if len(shifts) < MAX_DAYS_IN_MONTH:
                 shifts.extend([""] * (MAX_DAYS_IN_MONTH - len(shifts)))
 
-            data.append({"name": name, "role": role, "shifts": shifts})
+            data.append({"name": name, "role": role, "team": team, "shifts": shifts})
 
     return data
 
@@ -247,6 +249,7 @@ def find_user(
     name: str,
     db_session: Session,
     role: str,
+    team: str | None,
     *,
     add_new: bool = False,
 ) -> User | None:
@@ -284,6 +287,7 @@ def find_user(
         last_name=last_name,
         email=f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com",
         category=role,
+        team=team.upper() if team else None,
         license_number="",
     )
     db_session.add(new_user)
@@ -304,7 +308,13 @@ def parse_and_insert_data(
         if not is_valid_user_entry(entry):
             continue
 
-        user = find_user(entry["name"], db_session, entry["role"], add_new=add_new)
+        user = find_user(
+            entry["name"],
+            db_session,
+            entry["role"],
+            team=entry["team"],
+            add_new=add_new,
+        )
 
         if not user:
             logger.warning("User not found for entry: %s", entry["name"])
