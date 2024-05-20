@@ -1,4 +1,12 @@
-"""Processes the uploaded schedule file."""
+"""Processes the uploaded schedule file.
+
+process_file is the main function that processes the uploaded schedule file.
+It extracts the schedule data from the file, parses the data, and inserts it
+into the database. The function uses the extract_schedule_data function to
+extract the schedule data from each page of the uploaded file. The extracted
+data is then parsed using the parse_and_insert_data function, which inserts
+the data into the database.
+"""
 
 from __future__ import annotations
 
@@ -305,7 +313,7 @@ def find_user(  # noqa: PLR0913
             == normalized_full_name
         ):
             if edit_existing:
-                return update_user(user, role, team, db_session)
+                return update_user(user, role, team)
             return user
 
     if add_new:
