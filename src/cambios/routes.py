@@ -16,10 +16,11 @@ from flask import (
     url_for,
 )
 
-from .cambios import is_admin, process_file
+from .cambios import is_admin
 from .database import db
 from .firebase import verify_id_token
 from .models import Shift, User
+from .upload import process_file
 
 if TYPE_CHECKING:
     from flask import Flask
