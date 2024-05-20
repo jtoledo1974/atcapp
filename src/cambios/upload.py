@@ -235,7 +235,6 @@ def insert_shift_data(
                 user_id=user.id,
             )
             db_session.add(new_shift)
-            db_session.commit()
 
 
 def normalize_string(s: str) -> str:
@@ -245,6 +244,36 @@ def normalize_string(s: str) -> str:
     ).lower()
 
 
+def create_user(
+    first_name: str,
+    last_name: str,
+    email: str,
+    role: str,
+    team: str | None,
+    db_session: Session,
+) -> User:
+    """Create a new user in the database."""
+    new_user = User(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        category=role,
+        team=team.upper() if team else None,
+        license_number="",
+    )
+    db_session.add(new_user)
+    return new_user
+
+
+def update_user(user: User, role: str, team: str | None, db_session: Session) -> User:
+    """Update the user's team and role if they differ from the provided values."""
+    if user.category != role:
+        user.category = role
+    if team and user.team != team.upper():
+        user.team = team.upper()
+    return user
+
+
 def find_user(
     name: str,
     db_session: Session,
@@ -252,47 +281,38 @@ def find_user(
     team: str | None,
     *,
     add_new: bool = False,
+    edit_existing: bool = True,
 ) -> User | None:
     """Find a user in the database by name.
 
-    First attempt is to find the user by first and last name.
-    If we fail, we take a look at all users in the database in the form
-    'LAST_NAME FIRST_NAME' and try to match the name that way.
+    If the user is not found, create a new user if add_new is True.
+    If the user is found, update the user's role and team if edit_existing is True.
     """
     first_name, last_name = parse_name(name)
     normalized_first_name = normalize_string(first_name)
     normalized_last_name = normalize_string(last_name)
+    normalized_full_name = normalize_string(f"{last_name} {first_name}")
 
     # Fetch all users and normalize names for comparison
     users = db_session.query(User).all()
+
     for user in users:
         if (
             normalize_string(user.first_name) == normalized_first_name
             and normalize_string(user.last_name) == normalized_last_name
+        ) or (
+            normalize_string(f"{user.last_name} {user.first_name}")
+            == normalized_full_name
         ):
+            if edit_existing:
+                return update_user(user, role, team, db_session)
             return user
 
-    # Attempt to match the full name
-    normalized_name = normalize_string(name)
-    for user in users:
-        if normalize_string(f"{user.last_name} {user.first_name}") == normalized_name:
-            return user
+    if add_new:
+        email = f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com"
+        return create_user(first_name, last_name, email, role, team, db_session)
 
-    if not add_new:
-        return None
-
-    # Create a new user
-    new_user = User(
-        first_name=first_name,
-        last_name=last_name,
-        email=f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com",
-        category=role,
-        team=team.upper() if team else None,
-        license_number="",
-    )
-    db_session.add(new_user)
-    db_session.commit()
-    return new_user
+    return None
 
 
 def parse_and_insert_data(
@@ -321,6 +341,7 @@ def parse_and_insert_data(
             continue
 
         insert_shift_data(entry["shifts"], month, year, user, db_session)
+        db_session.commit()
 
 
 def process_file(
