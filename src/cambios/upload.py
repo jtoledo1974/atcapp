@@ -62,7 +62,8 @@ def extract_month_year(text: str) -> tuple[str, str]:
     match = month_year_pattern.search(text)
     if match:
         return match.group(1), match.group(2)
-    return None, None
+    _msg = "Couldn't extract month and year from the text"
+    raise ValueError(_msg)
 
 
 MAX_DAYS_IN_MONTH = 31
@@ -216,7 +217,7 @@ def insert_shift_data(
     month: str,
     year: str,
     user: User,
-    db_session: Session,
+    db_session: scoped_session,
 ) -> None:
     """Insert shift data into the database."""
     logger.info("Inserting shifts for %s %s", user.first_name, user.last_name)
@@ -258,7 +259,7 @@ def create_user(  # noqa: PLR0913
     email: str,
     role: str,
     team: str | None,
-    db_session: Session,
+    db_session: scoped_session,
 ) -> User:
     """Create a new user in the database."""
     new_user = User(
@@ -284,7 +285,7 @@ def update_user(user: User, role: str, team: str | None) -> User:
 
 def find_user(  # noqa: PLR0913
     name: str,
-    db_session: Session,
+    db_session: scoped_session,
     role: str,
     team: str | None,
     *,
@@ -327,7 +328,7 @@ def parse_and_insert_data(
     all_data: list[dict],
     month: str,
     year: str,
-    db_session: Session,
+    db_session: scoped_session,
     *,
     add_new: bool = False,
 ) -> None:

@@ -1,18 +1,23 @@
 """Flask App for managing shifts."""
 
+from __future__ import annotations
+
 import os
 import secrets
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from flask import Flask, Response, redirect, session, url_for
-from flask_admin import Admin
-from flask_admin.contrib.sqla import ModelView
+from flask import Flask, redirect, session, url_for
+from flask_admin import Admin  # type: ignore[import-untyped]
+from flask_admin.contrib.sqla import ModelView  # type: ignore[import-untyped]
 
 from .database import db, init_db
 from .firebase import init_firebase
 from .models import User
 from .routes import register_routes
+
+if TYPE_CHECKING:
+    from werkzeug import Response
 
 
 class Config:
@@ -47,14 +52,14 @@ class AdminModelView(ModelView):
 
     def is_accessible(self) -> bool:
         """Only allow access to the admin panel if the user is an admin."""
-        return session.get("is_admin")
+        return bool(session.get("is_admin"))
 
     def inaccessible_callback(self, _name: str, **_kwargs: dict[str, Any]) -> Response:
         """Redirect to the login page if the user is not an admin."""
         return redirect(url_for("login"))
 
 
-def create_app(config_class: Config = Config) -> Flask:
+def create_app(config_class: type[Config] = Config) -> Flask:
     """Create the Flask app."""
     app = Flask(__name__)
     app.config.from_object(config_class)

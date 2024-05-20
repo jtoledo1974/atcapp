@@ -1,11 +1,12 @@
 {
   "[python]": {
-      "editor.formatOnSave": true,
-      "editor.defaultFormatter": "charliermarsh.ruff",
-      "editor.codeActionsOnSave": {
-          "source.fixAll": "explicit",
-          "source.fixAll.ruff": "explicit"
-      },
-      "python.sortImports.enabled": false
-  }
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.fixAll.ruff": "explicit"
+    },
+    "python.sortImports.enabled": false
+  },
+  "mypy-type-checker.importStrategy": "fromEnvironment"
 }
