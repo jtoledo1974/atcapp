@@ -98,12 +98,17 @@ def upload() -> Response | str:
         flash("No file selected", "danger")
         return redirect(url_for("main.upload"))
 
-    process_file(
-        file,
-        db.session,
-        add_new=add_new,
-        app_logger=current_app.logger,
-    )
+    try:
+        process_file(
+            file,
+            db.session,
+            add_new=add_new,
+            app_logger=current_app.logger,
+        )
+    except ValueError as e:
+        flash(str(e), "danger")
+        return redirect(url_for("main.upload"))
+
     return redirect(url_for("main.index"))
 
 
