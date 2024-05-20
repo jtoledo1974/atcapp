@@ -244,7 +244,7 @@ def normalize_string(s: str) -> str:
     ).lower()
 
 
-def create_user(
+def create_user(  # noqa: PLR0913
     first_name: str,
     last_name: str,
     email: str,
@@ -265,7 +265,7 @@ def create_user(
     return new_user
 
 
-def update_user(user: User, role: str, team: str | None, db_session: Session) -> User:
+def update_user(user: User, role: str, team: str | None) -> User:
     """Update the user's team and role if they differ from the provided values."""
     if user.category != role:
         user.category = role
@@ -274,7 +274,7 @@ def update_user(user: User, role: str, team: str | None, db_session: Session) ->
     return user
 
 
-def find_user(
+def find_user(  # noqa: PLR0913
     name: str,
     db_session: Session,
     role: str,
