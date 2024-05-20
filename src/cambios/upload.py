@@ -214,13 +214,26 @@ def insert_shift_data(
 
 
 def find_user(name: str, db_session: Session) -> User | None:
-    """Find a user in the database by name."""
+    """Find a user in the database by name.
+
+    First attempt is to find the user by first and last name.
+    If we fail, we take a look at all users in the database in the form
+    'LAST_NAME FIRST_NAME' and try to match the name that way.
+    """
     first_name, last_name = parse_name(name)
-    return (
+    user = (
         db_session.query(User)
         .filter_by(first_name=first_name, last_name=last_name)
         .first()
     )
+    if user:
+        return user
+
+    for user in db_session.query(User).all():
+        if f"{user.last_name} {user.first_name}" == name:
+            return user
+
+    return None
 
 
 def parse_and_insert_data(
