@@ -151,79 +151,113 @@ def is_valid_user_entry(entry) -> bool:
     return True
 
 
+def extract_month_year_from_first_page(page: Page) -> tuple[str, str]:
+    """Extract month and year from the first page."""
+    text = page.extract_text()
+    return extract_month_year(text)
+
+
+_original_locale = None
+
+
+def set_locale(locale_name: str) -> None:
+    """Set the locale to the specified locale name."""
+    global _original_locale  # noqa: PLW0603
+    _original_locale = locale.getlocale(locale.LC_TIME)
+    try:
+        locale.setlocale(locale.LC_TIME, locale_name)
+    except locale.Error:
+        print(f"Locale '{locale_name}' not available. Please ensure it's installed.")
+        raise
+
+
+def reset_locale() -> None:
+    """Reset the locale to the original locale."""
+    if _original_locale:
+        locale.setlocale(locale.LC_TIME, _original_locale)
+
+
+def insert_shift_data(
+    shifts: list[str],
+    month: str,
+    year: str,
+    user: User,
+    db_session: Session,
+) -> None:
+    """Insert shift data into the database."""
+    for day, shift_code in enumerate(shifts, start=1):
+        if shift_code:  # Skip empty shift codes
+            date_str = f"{day:02d} {month} {year}"
+            try:
+                shift_date = datetime.strptime(date_str, "%d %B %Y")
+            except ValueError:
+                continue
+
+            # Check if shift already exists for the user on this date
+            existing_shift = (
+                db_session.query(Shift)
+                .filter_by(user_id=user.id, date=shift_date)
+                .first()
+            )
+            if not existing_shift:
+                shift_type = (
+                    db_session.query(ShiftTypes).filter_by(code=shift_code).first()
+                )
+                if shift_type:
+                    new_shift = Shift(
+                        date=shift_date,
+                        shift_type=shift_code,
+                        user_id=user.id,
+                    )
+                    db_session.add(new_shift)
+                    db_session.commit()
+
+
+def find_user(name: str, db_session: Session) -> User | None:
+    """Find a user in the database by name."""
+    first_name, last_name = parse_name(name)
+    return (
+        db_session.query(User)
+        .filter_by(first_name=first_name, last_name=last_name)
+        .first()
+    )
+
+
+def parse_and_insert_data(
+    all_data: list[dict],
+    month: str,
+    year: str,
+    db_session: Session,
+) -> None:
+    """Parse extracted data and insert it into the database."""
+    for entry in all_data:
+        if not is_valid_user_entry(entry):
+            continue
+
+        user = find_user(entry["name"], db_session)
+
+        if not user:
+            print(f"User not found for entry: {entry['name']}")
+            continue
+
+        insert_shift_data(entry["shifts"], month, year, user, db_session)
+
+
 def process_file(file: FileStorage, db_session: Session) -> None:
     """Process the uploaded file and insert data into the database."""
     with pdfplumber.open(file) as pdf:
         all_data = []
-        month = None
-        year = None
+        month, year = extract_month_year_from_first_page(pdf.pages[0])
 
-        for page_num in range(len(pdf.pages)):
-            page = pdf.pages[page_num]
-            if page_num == 0:
-                # Extract month and year from the first page
-                text = page.extract_text()
-                month, year = extract_month_year(text)
-
-            # Extract schedule data from each page
+        for page in pdf.pages:
             page_data = extract_schedule_data(page)
             all_data.extend(page_data)
 
-        # Set the locale to Spanish
-        original_locale = locale.getlocale(locale.LC_TIME)
+        set_locale("es_ES")
         try:
-            locale.setlocale(locale.LC_TIME, "es_ES")
-        except locale.Error:
-            print("Locale 'es_ES' not available. Please ensure it's installed.")
-            return
-
-        for entry in all_data:
-            if not is_valid_user_entry(entry):
-                continue
-
-            first_name, last_name = parse_name(entry["name"])
-            user = (
-                db_session.query(User)
-                .filter_by(first_name=first_name, last_name=last_name)
-                .first()
-            )
-
-            if not user:
-                print(f"User {last_name}, {first_name}  not found in the database.")
-                continue
-
-            shifts = entry["shifts"]
-            for day, shift_code in enumerate(shifts, start=1):
-                if shift_code:  # Skip empty shift codes
-                    date_str = f"{day:02d} {month} {year}"
-                    try:
-                        shift_date = datetime.strptime(date_str, "%d %B %Y")
-                    except ValueError:
-                        continue
-
-                    # Check if shift already exists for the user on this date
-                    existing_shift = (
-                        db_session.query(Shift)
-                        .filter_by(user_id=user.id, date=shift_date)
-                        .first()
-                    )
-                    if not existing_shift:
-                        shift_type = (
-                            db_session.query(ShiftTypes)
-                            .filter_by(code=shift_code)
-                            .first()
-                        )
-                        if shift_type:
-                            new_shift = Shift(
-                                date=shift_date,
-                                shift_type=shift_code,
-                                user_id=user.id,
-                            )
-                            db_session.add(new_shift)
-                            db_session.commit()
-
-        # Revert to the original locale
-        locale.setlocale(locale.LC_TIME, original_locale)
+            parse_and_insert_data(all_data, month, year, db_session)
+        finally:
+            reset_locale()
 
 
 # Example usage:
