@@ -60,6 +60,21 @@ def login() -> Response | str:
 
     user = User.query.filter_by(email=email).first()
     if not user:
+        # If the user database is empty we assume the first user is an admin.
+        if not User.query.all():
+            user = User(
+                email=email,
+                first_name="Admin",
+                last_name="User",
+                category="Admin",
+                license_number=0,
+                is_admin=True,
+            )
+            db.session.add(user)
+            db.session.commit()
+            session["is_admin"] = True
+            return redirect(url_for("admin.index"))
+
         flash("Usuario no reconocido. Hable con el administrador.", "danger")
         return redirect(url_for("main.logout"))
 
