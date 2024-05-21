@@ -13,6 +13,12 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _set_env() -> None:
+    """Set up logging using the environment variable."""
+    os.environ["ENABLE_LOGGING"] = "true"
+
+
 @pytest.fixture()
 def app() -> Flask:
     """Create and configure a new app instance for each test."""

@@ -39,6 +39,7 @@ Estas variables de entorno se utilizan para configurar la aplicación.
 - `DEBUG`: Indica si el modo de depuración está habilitado. Se interpreta como verdadero si el valor es "true", "1" o "t" (ignorando mayúsculas y minúsculas).
 - `HOST`: Dirección IP en la que se ejecutará la aplicación. Si no se proporciona, se utilizará localhost y no servirá clientes externos.
 - `PORT`: Puerto en el que se ejecutará la aplicación. Si no se proporciona, se utilizará el puerto 80.
+- `ENABLE_LOGGING`: Indica si se deben habilitar los registros de la aplicación en logs/
 
 ### Instalar imágenes precompiladas
 ```sh

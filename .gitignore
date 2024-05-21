@@ -4,7 +4,7 @@
 shifts.db
 *firebase*.json
 file_listings.md
-
+logs/
 
 # virtualenv
 .venv/
