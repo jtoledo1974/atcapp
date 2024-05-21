@@ -1,72 +1,69 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Login</title>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
-  <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
-  <script>
-    // Your web app's Firebase configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyBGFN_jzYYOYfbQkTxQfjrb_x2_zTBy-Ug",
-        authDomain: "cambios-76578.firebaseapp.com",
-        projectId: "cambios-76578",
-        storageBucket: "cambios-76578.appspot.com",
-        messagingSenderId: "860275865505",
-        appId: "1:860275865505:web:eff419cfc1cfb474d87de0"
-    };  
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
+{% extends "base.html" %}
 
-    // FirebaseUI config
-    const uiConfig = {
-      callbacks: {
-        signInSuccessWithAuthResult: function(authResult, redirectUrl) {
-          // User successfully signed in
-          // Return type determines whether we continue the redirect automatically
-          // or whether we leave that to developer to handle.
-          return true;
-        },
-        uiShown: function() {
-          // The widget is rendered
-          // Hide the loader
-          document.getElementById('loader').style.display = 'none';
-        }
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<h1>Login</h1>
+<div id="firebaseui-auth-container"></div>
+<div id="loader">Loading...</div>
+<form id="loginForm" method="POST" action="{{ url_for('main.login') }}">
+  <input type="hidden" id="idToken" name="idToken">
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBGFN_jzYYOYfbQkTxQfjrb_x2_zTBy-Ug",
+    authDomain: "cambios-76578.firebaseapp.com",
+    projectId: "cambios-76578",
+    storageBucket: "cambios-76578.appspot.com",
+    messagingSenderId: "860275865505",
+    appId: "1:860275865505:web:eff419cfc1cfb474d87de0"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+
+  // FirebaseUI config
+  const uiConfig = {
+    callbacks: {
+      signInSuccessWithAuthResult: function (authResult, redirectUrl) {
+        // User successfully signed in
+        // Return type determines whether we continue the redirect automatically
+        // or whether we leave that to developer to handle.
+        return true;
       },
-      signInFlow: 'popup',
-      signInSuccessUrl: '/',
-      signInOptions: [
-        firebase.auth.EmailAuthProvider.PROVIDER_ID,
-        firebase.auth.GoogleAuthProvider.PROVIDER_ID,
-        firebase.auth.FacebookAuthProvider.PROVIDER_ID,
-      ],
-      tosUrl: '<your-tos-url>',
-      privacyPolicyUrl: '<your-privacy-policy-url>'
-    };
-
-    // Initialize the FirebaseUI Widget using Firebase
-    const ui = new firebaseui.auth.AuthUI(firebase.auth());
-    // The start method will wait until the DOM is loaded
-    ui.start('#firebaseui-auth-container', uiConfig);
-
-    // Handle sign-in success
-    firebase.auth().onAuthStateChanged((user) => {
-      if (user) {
-        user.getIdToken().then((idToken) => {
-          document.getElementById("idToken").value = idToken;
-          document.getElementById("loginForm").submit();
-        });
+      uiShown: function () {
+        // The widget is rendered
+        // Hide the loader
+        document.getElementById('loader').style.display = 'none';
       }
-    });
-  </script>
-</head>
-<body>
-  <h1>Login</h1>
-  <div id="firebaseui-auth-container"></div>
-  <div id="loader">Loading...</div>
-  <form id="loginForm" method="POST" action="/login">
-    <input type="hidden" id="idToken" name="idToken">
-  </form>
-</body>
-</html>
+    },
+    signInFlow: 'popup',
+    signInSuccessUrl: '/',
+    signInOptions: [
+      firebase.auth.EmailAuthProvider.PROVIDER_ID,
+      firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+      firebase.auth.FacebookAuthProvider.PROVIDER_ID,
+    ],
+    tosUrl: '<your-tos-url>',
+    privacyPolicyUrl: '<your-privacy-policy-url>'
+  };
+
+  // Initialize the FirebaseUI Widget using Firebase
+  const ui = new firebaseui.auth.AuthUI(firebase.auth());
+  // The start method will wait until the DOM is loaded
+  ui.start('#firebaseui-auth-container', uiConfig);
+
+  // Handle sign-in success
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+      user.getIdToken().then((idToken) => {
+        document.getElementById("idToken").value = idToken;
+        document.getElementById("loginForm").submit();
+      });
+    }
+  });
+</script>
+{% endblock %}

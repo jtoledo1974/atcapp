@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from flask import session
 
 if TYPE_CHECKING:
     from cambios.models import User
@@ -43,7 +42,7 @@ def test_login_failure(client: FlaskClient, mocker: MockerFixture) -> None:
         follow_redirects=True,
     )
     assert response.status_code == 200
-    assert b"Login failed. Please try again." in response.data
+    assert "Autenticación fallida.".encode() in response.data
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
@@ -53,7 +52,8 @@ def test_logout(client: FlaskClient, regular_user: User) -> None:
     response = client.get("/logout", follow_redirects=True)
     assert response.status_code == 200
     assert b"Login" in response.data
-    assert "user_id" not in session
+    with client.session_transaction() as sess:
+        assert "user_id" not in sess
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
@@ -69,6 +69,7 @@ def test_upload_get(client: FlaskClient, regular_user: User) -> None:
 def test_upload_post_no_file(client: FlaskClient, regular_user: User) -> None:
     """Test that the upload route fails if no file is selected."""
     client.post("/login", data={"idToken": "test_token"})
-    response = client.post("/upload", data={}, follow_redirects=True)
+    # Submit the upload form with an empty file field
+    response = client.post("/upload", data={"file": (None, "")}, follow_redirects=True)
     assert response.status_code == 200
-    assert b"No file selected" in response.data
+    assert b"No se ha seleccionado un archivo" in response.data

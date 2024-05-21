@@ -55,7 +55,7 @@ def login() -> Response | str:
     try:
         email = verify_id_token(request.form["idToken"])["email"]
     except ValueError:
-        flash("Login failed. Please try again.", "danger")
+        flash("Autenticación fallida.", "danger")
         return redirect(url_for("main.login"))
 
     user = User.query.filter_by(email=email).first()
@@ -106,11 +106,10 @@ def upload() -> Response | str:
     """
     if request.method != "POST":
         return render_template("upload.html")
-
     file = request.files["file"]
     add_new = bool(request.form.get("add_new"))
     if not file.filename:
-        flash("No file selected", "danger")
+        flash("No se ha seleccionado un archivo", "danger")
         return redirect(url_for("main.upload"))
 
     try:
