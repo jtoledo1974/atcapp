@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import sys
 from typing import TYPE_CHECKING
 
@@ -11,7 +13,11 @@ from firebase_admin import auth, credentials
 if TYPE_CHECKING:
     from logging import Logger
 
-CRED_FILE = "cambios-76578-firebase-adminsdk-sude0-7d233cd189.json"
+CRED_FILE = os.getenv(
+    "FIREBASE_CRED_FILE",
+    "cambios-firebase.json",
+)
+CRED_JSON = os.getenv("FIREBASE_CRED_JSON")
 
 logger: Logger
 
@@ -19,13 +25,20 @@ logger: Logger
 def init_firebase(app_logger: Logger) -> None:
     """Initialize Firebase Admin SDK."""
     try:
-        cred = credentials.Certificate(CRED_FILE)
-    except FileNotFoundError:
+        if CRED_JSON:
+            cred_dict = json.loads(CRED_JSON)
+            cred = credentials.Certificate(cred_dict)
+        else:
+            cred = credentials.Certificate(CRED_FILE)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
         # Report error and shutdown
         app_logger.critical(
-            "Firebase Admin SDK credentials file not found: %s"
-            "\nPlease download from Firebase Console and place in the project root.",
+            "Firebase Admin SDK credentials not found or invalid: %s\n"
+            "Please set FIREBASE_CRED_FILE or FIREBASE_CRED_JSON environment variables.\n"
+            "Firebase credentials can be downloaded from Firebase Console.\n\n"
+            "%s",
             CRED_FILE,
+            str(e),
         )
         sys.exit(1)
     firebase_admin.initialize_app(cred)

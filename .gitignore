@@ -2,7 +2,7 @@
 .admin_passwd
 .key
 shifts.db
-*firebase-adminsdk*.json
+*firebase*.json
 file_listings.md
 
 
