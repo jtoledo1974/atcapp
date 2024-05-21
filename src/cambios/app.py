@@ -30,6 +30,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
     DEBUG = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1", "t"]
+    HOST = os.getenv("HOST", "localhost")
     PORT = int(os.getenv("PORT", "80"))
 
     @staticmethod
@@ -56,7 +57,7 @@ class AdminModelView(ModelView):
 
     def inaccessible_callback(self, _name: str, **_kwargs: dict[str, Any]) -> Response:
         """Redirect to the login page if the user is not an admin."""
-        return redirect(url_for("login"))
+        return redirect(url_for("main.login"))
 
 
 def create_app(config_class: type[Config] = Config) -> Flask:
@@ -92,4 +93,4 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True, port=app.config["PORT"])
+    app.run(debug=True, port=app.config["PORT"], host=app.config["HOST"])
