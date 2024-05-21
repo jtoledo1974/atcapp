@@ -20,10 +20,15 @@ CRED_FILE = os.getenv(
 CRED_JSON = os.getenv("FIREBASE_CRED_JSON")
 
 logger: Logger
+firebase_initialized = False
 
 
 def init_firebase(app_logger: Logger) -> None:
     """Initialize Firebase Admin SDK."""
+    global firebase_initialized  # noqa: PLW0603
+    if firebase_initialized:
+        return
+
     try:
         if CRED_JSON:
             cred_dict = json.loads(CRED_JSON)
@@ -44,6 +49,7 @@ def init_firebase(app_logger: Logger) -> None:
     firebase_admin.initialize_app(cred)
     global logger  # noqa: PLW0603
     logger = app_logger
+    firebase_initialized = True
 
 
 def verify_id_token(id_token: str) -> dict[str, str]:
