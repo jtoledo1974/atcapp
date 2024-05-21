@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-import firebase_admin
+import firebase_admin  # type: ignore[import-untyped]
 from firebase_admin import auth, credentials
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ def init_firebase(app_logger: Logger) -> None:
     logger = app_logger
 
 
-def verify_id_token(id_token: str) -> dict:
+def verify_id_token(id_token: str) -> dict[str, str]:
     """Verify the Firebase ID token.
 
     Returns the decoded token if verification is successful.
@@ -42,6 +42,8 @@ def verify_id_token(id_token: str) -> dict:
     try:
         decoded_token = auth.verify_id_token(id_token)
     except Exception:
-        logger.exception("Token verification failed")
+        _msg = "Token verification failed"
+        logger.exception(_msg)
+        raise ValueError(_msg) from None
     else:
         return decoded_token

@@ -3,6 +3,7 @@
 .key
 shifts.db
 *firebase-adminsdk*.json
+file_listings.md
 
 
 # virtualenv
