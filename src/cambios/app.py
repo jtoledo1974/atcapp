@@ -30,7 +30,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
     DEBUG = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1", "t"]
-    PORT = int(os.getenv("PORT", "5005"))
+    PORT = int(os.getenv("PORT", "80"))
 
     @staticmethod
     def load_key() -> str:
@@ -92,4 +92,4 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True, port=5005)
+    app.run(debug=True, port=app.config["PORT"])
