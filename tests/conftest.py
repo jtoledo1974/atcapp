@@ -1,16 +1,21 @@
 """Configuration for pytest."""
 
+from __future__ import annotations
+
 import os
 import secrets
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Generator
 
 import pytest
 from cambios.app import Config, create_app
 from cambios.models import User
-from flask import Flask
-from flask.testing import FlaskClient
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import scoped_session, sessionmaker
+
+if TYPE_CHECKING:
+    from flask import Flask
+    from flask.testing import FlaskClient
+    from flask_sqlalchemy import SQLAlchemy
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -25,6 +30,7 @@ def app() -> Flask:
     config = Config()
     config.SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
     app = create_app(config_class=Config)
+    app.config.update({"TESTING": True})
     return app
 
 
@@ -47,40 +53,34 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
     transaction = connection.begin()
 
     session_factory = sessionmaker(bind=connection)
-    Session = scoped_session(session_factory)
-    db.session = Session
+    session = scoped_session(session_factory)
+    db.session = session
 
-    yield Session
+    yield session
 
-    Session.remove()
+    session.remove()
     transaction.rollback()
     connection.close()
 
 
 @pytest.fixture()
 def client(app: Flask) -> FlaskClient:
-    """A test client for the app."""
+    """Create a test client for the app."""
     return app.test_client()
 
 
 @pytest.fixture()
-def runner(app: Flask) -> Any:
-    """A test runner for the app's Click commands."""
-    return app.test_cli_runner()
-
-
-@pytest.fixture()
-def init_firebase_mock(mocker: Any) -> None:
+def _init_firebase_mock(mocker: MockerFixture) -> None:
     """Mock the init_firebase function."""
     mocker.patch("src.cambios.firebase.init_firebase", return_value=None)
 
 
 @pytest.fixture()
-def verify_id_token_mock(mocker: Any) -> None:
-    """Mock the verify_id_token function."""
+def _verify_id_token_mock(mocker: MockerFixture) -> None:
+    """Mock the verify_id_token function from firebase."""
     mocker.patch(
         "src.cambios.firebase.auth.verify_id_token",
-        return_value={"uid": "test_uid"},
+        return_value={"uid": "test_uid", "email": "user@example.com"},
     )
 
 
