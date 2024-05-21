@@ -20,3 +20,6 @@ Crujisim.sublime-workspace
 crujisim.code-workspace
 *.glade~
 test.py
+
+# Extra files 
+*.pdf
