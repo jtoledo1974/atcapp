@@ -2,7 +2,7 @@
 .admin_passwd
 .key
 shifts.db
-*firebase-adminsdk*.json
+*firebase*.json
 file_listings.md
 
 
@@ -20,3 +20,6 @@ Crujisim.sublime-workspace
 crujisim.code-workspace
 *.glade~
 test.py
+
+# Extra files 
+*.pdf

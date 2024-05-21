@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    image: toledo74/cambios
+    container_name: cambios
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-80}:${PORT:-80}"
+    volumes:
+      - ./cambios-firebase.json:/app/cambios-firebase.json:ro
+    restart: unless-stopped
