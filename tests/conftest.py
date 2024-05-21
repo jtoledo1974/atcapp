@@ -10,7 +10,7 @@ from cambios.models import User
 from flask import Flask
 from flask.testing import FlaskClient
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 
 @pytest.fixture()
@@ -40,14 +40,13 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
     connection = db.engine.connect()
     transaction = connection.begin()
 
-    options = dict(bind=connection, binds={})
-    session = db.create_scoped_session(options=options)
+    session_factory = sessionmaker(bind=connection)
+    Session = scoped_session(session_factory)
+    db.session = Session
 
-    db.session = session
+    yield Session
 
-    yield session
-
-    session.remove()
+    Session.remove()
     transaction.rollback()
     connection.close()
 

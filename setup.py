@@ -17,5 +17,13 @@ setup(
         "pdfplumber",
         # other dependencies
     ],
-    # other setup options
+    extras_require={
+        "dev": [
+            "pytest",
+            "pytest-mock",
+            "pytest-cov",
+            "mypy",
+            "ruff",
+        ],
+    },  # other setup options
 )
