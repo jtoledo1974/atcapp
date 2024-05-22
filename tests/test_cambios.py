@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from cambios.cambios import Day, MonthCalendar, Shift, ShiftType
+from cambios.cambios import Day, MonthCalendar, MonthCalGen, Shift, ShiftType
 
 
 def test_shift() -> None:
@@ -25,30 +25,31 @@ def test_day() -> None:
 
 def test_month_calendar_days() -> None:
     """Test the generation of days in MonthCalendar."""
-    calendar = MonthCalendar(2024, 5)
+    calendar = MonthCalGen.generate(2024, 5)
     days = calendar.days
 
     # Check the number of days including the days
     # from previous and next months to fill weeks
-    assert len(days) == 35
+    weeks = calendar.weeks
+    assert len(weeks) == 5
 
     # Check first and last days of the calendar view
-    assert days[0].date == date(2024, 4, 29)
-    assert days[-1].date == date(2024, 6, 2)
+    assert weeks[0][0].date == date(2024, 4, 29)
+    assert weeks[-1][-1].date == date(2024, 6, 2)
 
     # Check specific day details
-    assert days[2].date == date(2024, 5, 1)
-    assert days[2].day_of_week == "Wednesday"
-    assert days[2].is_national_holiday
+    assert days[0].date == date(2024, 5, 1)
+    assert days[0].day_of_week == "Wednesday"
+    assert days[0].is_national_holiday
 
-    assert days[32].date == date(2024, 5, 31)
-    assert days[32].day_of_week == "Friday"
-    assert not days[32].is_national_holiday
+    assert days[30].date == date(2024, 5, 31)
+    assert days[30].day_of_week == "Friday"
+    assert not days[30].is_national_holiday
 
 
 def test_month_calendar_holidays() -> None:
     """Test the identification of national holidays in MonthCalendar."""
-    calendar = MonthCalendar(2024, 1)
+    calendar = MonthCalGen.generate(2024, 1)
     holidays = [day for day in calendar.days if day.is_national_holiday]
 
     # Check if the holidays are correctly identified
@@ -58,8 +59,8 @@ def test_month_calendar_holidays() -> None:
 
 def test_month_calendar_weeks() -> None:
     """Test the week-wise iteration in MonthCalendar."""
-    calendar = MonthCalendar(2024, 5)
-    weeks = calendar.get_weeks()
+    calendar = MonthCalGen.generate(2024, 5)
+    weeks = calendar.weeks
 
     # Check the number of weeks
     assert len(weeks) == 5

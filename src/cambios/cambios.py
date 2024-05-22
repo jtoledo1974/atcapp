@@ -129,16 +129,40 @@ class Day:
 class MonthCalendar:
     year: int
     month: int
-    days: list[Day] = field(init=False)
+    _days: list[Day] = field(default_factory=list)
 
-    def __post_init__(self) -> None:
-        """Generate the days for the month."""
-        self.days = self._generate_days(self.year, self.month)
+    @property
+    def days(self) -> list[Day]:
+        """Return the days in the month.
 
-    def _generate_days(self, year: int, month: int) -> list[Day]:
+        But only those in the actual month.
+        """
+        return [day for day in self._days if day.date.month == self.month]
+
+    @property
+    def weeks(self) -> list[list[Day]]:
+        """Return the days in the month grouped by weeks."""
+        weeks = []
+        week = []
+        for day in self._days:
+            week.append(day)
+            if day.date.weekday() == SUNDAY_DAY_NUMBER:  # Sunday is the end of the week
+                weeks.append(week)
+                week = []
+        if week:
+            weeks.append(week)  # Add the last week if it wasn't added
+        return weeks
+
+
+class MonthCalGen:
+    """Generate a calendar for a month and year and user."""
+
+    @staticmethod
+    def generate(year: int, month: int) -> MonthCalendar:
+        """Generate a calendar for a month and year."""
         days = []
         first_day = date(year, month, 1)
-        last_day = self._last_day_of_month(year, month)
+        last_day = MonthCalGen._last_day_of_month(year, month)
 
         # Determine the start of the calendar (possibly including days from the previous month)
         start_date = first_day - timedelta(days=first_day.weekday())
@@ -149,7 +173,7 @@ class MonthCalendar:
         current_date = start_date
         while current_date <= end_date:
             day_of_week = current_date.strftime("%A")
-            is_national_holiday = self._check_national_holiday(current_date)
+            is_national_holiday = MonthCalGen._check_national_holiday(current_date)
             days.append(
                 Day(
                     date=current_date,
@@ -159,14 +183,16 @@ class MonthCalendar:
             )
             current_date += timedelta(days=1)
 
-        return days
+        return MonthCalendar(year=year, month=month, _days=days)
 
-    def _last_day_of_month(self, year: int, month: int) -> date:
+    @staticmethod
+    def _last_day_of_month(year: int, month: int) -> date:
         if month == MONTHS_IN_A_YEAR:
             return date(year, 12, 31)
         return date(year, month + 1, 1) - timedelta(days=1)
 
-    def _check_national_holiday(self, date_to_check: date) -> bool:
+    @staticmethod
+    def _check_national_holiday(date_to_check: date) -> bool:
         # Placeholder for actual holiday checking logic
         # TODO #2 Implement a real holiday checking mechanism
         national_holidays = [
@@ -180,15 +206,3 @@ class MonthCalendar:
             date(date_to_check.year, 12, 8),  # Immaculate Conception
         ]
         return date_to_check in national_holidays
-
-    def get_weeks(self) -> list[list[Day]]:
-        weeks = []
-        week = []
-        for day in self.days:
-            week.append(day)
-            if day.date.weekday() == SUNDAY_DAY_NUMBER:  # Sunday is the end of the week
-                weeks.append(week)
-                week = []
-        if week:
-            weeks.append(week)  # Add the last week if it wasn't added
-        return weeks
