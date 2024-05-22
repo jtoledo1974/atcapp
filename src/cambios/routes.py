@@ -115,16 +115,21 @@ def upload() -> Response | str:
         return redirect(url_for("main.upload"))
 
     try:
-        process_file(
+        n_users, n_shifts = process_file(
             file,
             db.session,
             add_new=add_new,
             app_logger=current_app.logger,
         )
-    except ValueError as e:
-        flash(str(e), "danger")
+    except ValueError:
+        flash("Formato de archivo no válido", "danger")
         return redirect(url_for("main.upload"))
 
+    flash(
+        "Archivo cargado con éxito. "
+        f"Usuarios reconocidos: {n_users}, turnos agregados: {n_shifts}",
+        "success",
+    )
     return redirect(url_for("main.index"))
 
 

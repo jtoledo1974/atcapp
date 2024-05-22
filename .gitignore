@@ -22,4 +22,4 @@ crujisim.code-workspace
 test.py
 
 # Extra files 
-*.pdf
+/*.pdf
