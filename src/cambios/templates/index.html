@@ -1,28 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Shift Schedule{% endblock %}
+{% block title %}Turnero{% endblock %}
 
 {% block content %}
-<h2>Welcome, {{ user.email }} - Shift Schedule</h2>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Morning (M)</th>
-            <th>Evening (T)</th>
-            <th>Night (N)</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for date, shifts in shift_data.items() %}
-        <tr>
-            <td>{{ date }}</td>
-            <td>{{ shifts['M'] }}</td>
-            <td>{{ shifts['T'] }}</td>
-            <td>{{ shifts['N'] }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<h3>{{ user.first_name }} {{user.last_name }}</h3>
+{% include "calendarmonth.html" %}
 <a id="logoutLink" href="{{ url_for('main.logout') }}" class="btn btn-primary">Logout</a>
 {% endblock %}

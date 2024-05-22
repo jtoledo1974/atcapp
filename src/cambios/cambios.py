@@ -185,6 +185,11 @@ class MonthCalendar:
             weeks.append(week)  # Add the last week if it wasn't added
         return weeks
 
+    @property
+    def month_name(self) -> str:
+        """Return the name of the month."""
+        return self.days[0].date.strftime("%B").capitalize()
+
 
 class MonthCalGen:
     """Generate a calendar for a month and year and user."""

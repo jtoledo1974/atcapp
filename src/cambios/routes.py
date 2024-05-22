@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from flask import (
@@ -15,11 +15,12 @@ from flask import (
     session,
     url_for,
 )
+from pytz import timezone as tzinfo
 
-from .cambios import is_admin
+from .cambios import MonthCalGen, is_admin
 from .database import db
 from .firebase import verify_id_token
-from .models import Shift, User
+from .models import User
 from .upload import process_file
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -36,14 +37,24 @@ def index() -> Response | str:
         return redirect(url_for("main.login"))
 
     user = db.session.get(User, session["user_id"])
-    shifts = Shift.query.order_by(Shift.date).all()
-    shift_data: dict = defaultdict(lambda: {"M": "Open", "T": "Open", "N": "Open"})
-    for shift in shifts:
-        date_str = shift.date.strftime("%Y-%m-%d")
-        shift_data[date_str][shift.shift_type] = (
-            f"{shift.user.first_name} {shift.user.last_name}"
-        )
-    return render_template("index.html", user=user, shift_data=shift_data)
+    if not user:
+        return redirect(url_for("main.logout"))
+
+    # TODO #3 It would be better to use the user's timezone here
+    # Currently forcing continental Spain using pytz
+    today = datetime.now(tz=tzinfo("Europe/Madrid"))
+
+    # Get month and year from query parameters or use current month and year
+    month = request.args.get("month", type=int, default=today.month)
+    year = request.args.get("year", type=int, default=today.year)
+
+    calendar = MonthCalGen.generate(year, month, user, db.session)  # type: ignore[arg-type]
+
+    return render_template(
+        "index.html",
+        user=user,
+        calendar=calendar,
+    )
 
 
 @main.route("/login", methods=["GET", "POST"])

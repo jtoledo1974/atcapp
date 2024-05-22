@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import locale
 import logging
 import os
 import secrets
@@ -51,6 +52,8 @@ class AdminModelView(ModelView):
 
 def create_app(config_class: type[Config] = Config) -> Flask:
     """Create the Flask app."""
+    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
+
     app = Flask(__name__)
     app.config.from_object(config_class)
     app.config.from_envvar("APP_SETTINGS", silent=True)

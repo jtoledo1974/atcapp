@@ -1,0 +1,43 @@
+<!-- src/cambios/templates/calendarmonth.html -->
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{ url_for('main.index', year=(calendar.year - 1) if calendar.month == 1 else calendar.year, month=12 if calendar.month == 1 else calendar.month - 1) }}"
+        class="btn btn-primary">&laquo; Previo</a>
+    <h2>{{ calendar.month_name }} {{ calendar.year }}</h2>
+    <a href="{{ url_for('main.index', year=(calendar.year + 1) if calendar.month == 12 else calendar.year, month=1 if calendar.month == 12 else calendar.month + 1) }}"
+        class="btn btn-primary">Siguiente &raquo;</a>
+</div>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Lunes</th>
+            <th>Martes</th>
+            <th>Miércoles</th>
+            <th>Jueves</th>
+            <th>Viernes</th>
+            <th>Sábado</th>
+            <th>Domingo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for week in calendar.weeks %}
+        <tr>
+            {% for day in week %}
+            <td>
+                <!-- Day number -->
+                <div class="calendar-day">{{ day.date.day }}</div>
+
+                {% if day.shift %}
+                <!-- Shift code -->
+                <div class="shift-code">{{ day.shift.code }}</div>
+
+                <!-- Shift description -->
+                <div class="shift-description">{{ day.shift.description }}</div>
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
