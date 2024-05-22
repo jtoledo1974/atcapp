@@ -22,7 +22,7 @@ from .firebase import verify_id_token
 from .models import Shift, User
 from .upload import process_file
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from flask import Flask
     from werkzeug import Response
 

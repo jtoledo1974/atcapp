@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import firebase_admin  # type: ignore[import-untyped]
 from firebase_admin import auth, credentials
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from logging import Logger
 
 CRED_FILE = os.getenv(

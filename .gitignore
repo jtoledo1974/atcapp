@@ -23,3 +23,8 @@ test.py
 
 # Extra files 
 /*.pdf
+
+# Coverage
+.coverage
+htmlcov/
+cov.xml

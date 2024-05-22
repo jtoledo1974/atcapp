@@ -24,7 +24,7 @@ from pdfminer.pdfparser import PDFSyntaxError
 from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
 from .models import Shift, User
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from logging import Logger
 
     from pdfplumber.page import Page

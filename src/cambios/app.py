@@ -17,7 +17,7 @@ from .firebase import init_firebase
 from .models import User
 from .routes import register_routes
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from werkzeug import Response
 
 
