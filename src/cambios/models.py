@@ -34,10 +34,10 @@ class Shift(db.Model):  # type: ignore[name-defined]
     __tablename__ = "shifts"
     id = Column(Integer, primary_key=True)
     date = Column(DateTime, nullable=False)
-    shift_type = Column(
+    shift_type: str = Column(
         String(10),
         nullable=False,
-    )  # This now references the primary key of ShiftTypes
+    )  # type: ignore[assignment]
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", backref="shifts")
 
@@ -46,5 +46,5 @@ class ShiftTypes(db.Model):  # type: ignore[name-defined]
     """Shift types model."""
 
     __tablename__ = "shift_types"
-    code = Column(String(10), primary_key=True, nullable=False)
-    description = Column(String(50), nullable=False)
+    code: str = Column(String(10), primary_key=True, nullable=False)  # type: ignore[assignment]
+    description: str = Column(String(50), nullable=False)  # type: ignore[assignment]

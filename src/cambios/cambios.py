@@ -2,7 +2,25 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta
+from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
+from .models import Shift as DBShift
 from .models import User
+
+
+class ShiftPeriod(Enum):
+    """Shift types."""
+
+    M = "Mañana"
+    T = "Tarde"
+    N = "Noche"
+
 
 BASIC_SHIFTS = ["M", "T", "N", "im", "it", "in"]
 
@@ -76,6 +94,29 @@ SHIFT_TYPES = {
 
 ATC_ROLES = {"TS", "IS", "TI", "INS", "PTD", "CON", "SUP", "N/A"}
 
+MONTHS_IN_A_YEAR = 12
+SUNDAY_DAY_NUMBER = 6
+
+
+def period_from_code(code: str) -> ShiftPeriod:
+    """Get the period from a shift code."""
+    if code in BASIC_SHIFTS and code[1].upper() in BASIC_SHIFTS:
+        return ShiftPeriod[code[1].upper()]
+
+    if code[0] in BASIC_SHIFTS:
+        return ShiftPeriod[code[0].upper()]
+
+    return ShiftPeriod["M"]
+
+
+def description_from_code(code: str) -> str:
+    """Get the description from a shift code."""
+    if code in SHIFT_TYPES:
+        return SHIFT_TYPES[code]
+    if code[1:] in SHIFT_TYPES:
+        return SHIFT_TYPES[code[1:]]
+    return code
+
 
 def is_admin(email: str) -> bool:
     """Check if the user is an admin.
@@ -91,3 +132,142 @@ def is_admin(email: str) -> bool:
 
     # User is not an admin. Check whether anyone is an admin.
     return not User.query.filter_by(is_admin=True).first()
+
+
+@dataclass
+class Shift:
+    """Shift information."""
+
+    period: ShiftPeriod
+    code: str
+    description: str | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+
+
+@dataclass
+class Day:
+    """Day information."""
+
+    date: date
+    day_of_week: str
+    is_national_holiday: bool
+    shift: Shift | None = None
+
+
+@dataclass
+class MonthCalendar:
+    """Calendar for a month."""
+
+    year: int
+    month: int
+    _days: list[Day] = field(default_factory=list)
+
+    @property
+    def days(self) -> list[Day]:
+        """Return the days in the month.
+
+        But only those in the actual month.
+        """
+        return [day for day in self._days if day.date.month == self.month]
+
+    @property
+    def weeks(self) -> list[list[Day]]:
+        """Return the days in the month grouped by weeks."""
+        weeks = []
+        week = []
+        for day in self._days:
+            week.append(day)
+            if day.date.weekday() == SUNDAY_DAY_NUMBER:  # Sunday is the end of the week
+                weeks.append(week)
+                week = []
+        if week:
+            weeks.append(week)  # Add the last week if it wasn't added
+        return weeks
+
+
+class MonthCalGen:
+    """Generate a calendar for a month and year and user."""
+
+    @staticmethod
+    def generate(
+        year: int,
+        month: int,
+        user: User | None = None,
+        session: Session | None = None,
+    ) -> MonthCalendar:
+        """Generate a calendar for a month and year."""
+        days = []
+        first_day = date(year, month, 1)
+        last_day = MonthCalGen._last_day_of_month(year, month)
+
+        # Determine the start of the calendar
+        # (possibly including days from the previous month)
+        start_date = first_day - timedelta(days=first_day.weekday())
+
+        # Determine the end of the calendar
+        # (possibly including days from the next month)
+        end_date = last_day + timedelta(days=(6 - last_day.weekday()))
+
+        current_date = start_date
+        while current_date <= end_date:
+            day_of_week = current_date.strftime("%A")
+            is_national_holiday = MonthCalGen._check_national_holiday(current_date)
+            days.append(
+                Day(
+                    date=current_date,
+                    day_of_week=day_of_week,
+                    is_national_holiday=is_national_holiday,
+                ),
+            )
+            current_date += timedelta(days=1)
+
+        if not user or not session:
+            return MonthCalendar(year=year, month=month, _days=days)
+
+        # Go through every shift in the database matching the user id
+        # and the date within the dates of the calendar
+        min_date, max_date = days[0].date, days[-1].date
+        user_shifts = (
+            session.query(DBShift)
+            .filter(
+                DBShift.user_id == user.id,
+                DBShift.date.between(min_date, max_date),
+            )
+            .all()
+        )
+
+        # Add a Shift dataclass for each day that has a shift
+        shifts_by_date = {dbshift.date.date(): dbshift for dbshift in user_shifts}
+
+        for day in (day for day in days if day.date in shifts_by_date):
+            dbshift = shifts_by_date[day.date]
+            day.shift = Shift(
+                period=period_from_code(dbshift.shift_type),
+                code=dbshift.shift_type,
+                description=description_from_code(dbshift.shift_type),
+            )
+
+        return MonthCalendar(year=year, month=month, _days=days)
+
+    @staticmethod
+    def _last_day_of_month(year: int, month: int) -> date:
+        if month == MONTHS_IN_A_YEAR:
+            return date(year, 12, 31)
+        return date(year, month + 1, 1) - timedelta(days=1)
+
+    @staticmethod
+    def _check_national_holiday(date_to_check: date) -> bool:
+        # Placeholder for actual holiday checking logic
+        # TODO #2 Implement a real holiday checking mechanism
+        national_holidays = [
+            date(date_to_check.year, 1, 1),  # New Year's Day
+            date(date_to_check.year, 12, 25),  # Christmas Day
+            date(date_to_check.year, 12, 6),  # Constitution Day
+            date(date_to_check.year, 10, 12),  # Hispanic Day
+            date(date_to_check.year, 5, 1),  # Labour Day
+            date(date_to_check.year, 8, 15),  # Assumption of Mary
+            date(date_to_check.year, 11, 1),  # All Saints' Day
+            date(date_to_check.year, 12, 8),  # Immaculate Conception
+        ]
+        return date_to_check in national_holidays
