@@ -3,7 +3,5 @@
 {% block title %}Turnero{% endblock %}
 
 {% block content %}
-<h3>{{ user.first_name }} {{user.last_name }}</h3>
 {% include "calendarmonth.html" %}
-<a id="logoutLink" href="{{ url_for('main.logout') }}" class="btn btn-primary">Logout</a>
 {% endblock %}
