@@ -237,15 +237,16 @@ class MonthCalGen:
             .all()
         )
 
-        for day in days:
-            for shift in user_shifts:
-                if shift.date.date() == day.date:
-                    day.shift = Shift(
-                        period=period_from_code(shift.shift_type),
-                        code=shift.shift_type,
-                        description=description_from_code(shift.shift_type),
-                    )
-                    break
+        # Add a Shift dataclass for each day that has a shift
+        shifts_by_date = {dbshift.date.date(): dbshift for dbshift in user_shifts}
+
+        for day in (day for day in days if day.date in shifts_by_date):
+            dbshift = shifts_by_date[day.date]
+            day.shift = Shift(
+                period=period_from_code(dbshift.shift_type),
+                code=dbshift.shift_type,
+                description=description_from_code(dbshift.shift_type),
+            )
 
         return MonthCalendar(year=year, month=month, _days=days)
 

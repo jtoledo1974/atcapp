@@ -92,3 +92,7 @@ def test_load_weeks_from_user(atc: User, preloaded_session: Session) -> None:
     assert day.shift is not None
     assert day.shift.period == ShiftPeriod.M
     assert day.shift.code == "MB09"
+
+    # Count shifts for the month
+    shifts = [day for day in days if day.shift is not None]
+    assert len(shifts) == 22
