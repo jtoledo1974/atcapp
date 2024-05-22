@@ -9,7 +9,14 @@ RUN git clone https://github.com/jtoledo1974/cambios.git /app
 # Set the working directory
 WORKDIR /app
 
-# Install Python dependencies
+# Copy only requirements.txt first to leverage Docker cache
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install the application in editable mode
 RUN pip install -e .
+
 # Run the application
 CMD ["python", "-m", "cambios.app"]

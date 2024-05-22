@@ -15,5 +15,19 @@
                 "panel": "dedicated"
             }
         },
+        {
+            "label": "Run Pytest with Coverage",
+            "type": "shell",
+            "command": "pytest --cov=src --cov-report=xml:cov.xml",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
     ]
 }

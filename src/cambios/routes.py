@@ -22,7 +22,7 @@ from .firebase import verify_id_token
 from .models import Shift, User
 from .upload import process_file
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from flask import Flask
     from werkzeug import Response
 
@@ -35,7 +35,7 @@ def index() -> Response | str:
     if "user_id" not in session:
         return redirect(url_for("main.login"))
 
-    user = User.query.get(session["user_id"])
+    user = db.session.get(User, session["user_id"])
     shifts = Shift.query.order_by(Shift.date).all()
     shift_data: dict = defaultdict(lambda: {"M": "Open", "T": "Open", "N": "Open"})
     for shift in shifts:
@@ -55,7 +55,7 @@ def login() -> Response | str:
     try:
         email = verify_id_token(request.form["idToken"])["email"]
     except ValueError:
-        flash("Login failed. Please try again.", "danger")
+        flash("Autenticación fallida.", "danger")
         return redirect(url_for("main.login"))
 
     user = User.query.filter_by(email=email).first()
@@ -104,26 +104,32 @@ def upload() -> Response | str:
     For GET requests, render the upload page.
     For POST requests, upload the shift data to the server.
     """
+    if session.get("is_admin") is not True:
+        return redirect(url_for("main.index"))
     if request.method != "POST":
         return render_template("upload.html")
-
     file = request.files["file"]
     add_new = bool(request.form.get("add_new"))
     if not file.filename:
-        flash("No file selected", "danger")
+        flash("No se ha seleccionado un archivo", "danger")
         return redirect(url_for("main.upload"))
 
     try:
-        process_file(
+        n_users, n_shifts = process_file(
             file,
             db.session,
             add_new=add_new,
             app_logger=current_app.logger,
         )
-    except ValueError as e:
-        flash(str(e), "danger")
+    except ValueError:
+        flash("Formato de archivo no válido", "danger")
         return redirect(url_for("main.upload"))
 
+    flash(
+        "Archivo cargado con éxito. "
+        f"Usuarios reconocidos: {n_users}, turnos agregados: {n_shifts}",
+        "success",
+    )
     return redirect(url_for("main.index"))
 
 

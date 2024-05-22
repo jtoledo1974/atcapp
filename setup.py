@@ -1,6 +1,6 @@
 """Cambios setup file."""
 
-from setuptools import find_packages, setup
+from setuptools import find_packages, setup  # type: ignore[import-untyped]
 
 setup(
     name="cambios",
@@ -17,5 +17,14 @@ setup(
         "pdfplumber",
         # other dependencies
     ],
-    # other setup options
+    extras_require={
+        "dev": [
+            "pytest",
+            "pytest-mock",
+            "pytest-cov",
+            "mypy",
+            "ruff",
+            "pathspec",
+        ],
+    },  # other setup options
 )

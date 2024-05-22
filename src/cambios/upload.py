@@ -19,11 +19,12 @@ from io import BytesIO
 from typing import TYPE_CHECKING
 
 import pdfplumber
+from pdfminer.pdfparser import PDFSyntaxError
 
 from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
 from .models import Shift, User
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from logging import Logger
 
     from pdfplumber.page import Page
@@ -219,8 +220,13 @@ def insert_shift_data(
     year: str,
     user: User,
     db_session: scoped_session,
-) -> None:
-    """Insert shift data into the database."""
+) -> int:
+    """Insert shift data into the database.
+
+    The shifts list contains the shift codes for each day of the month.
+    Returns the number of shifts inserted.
+    """
+    n_shifts = 0
     logger.info("Inserting shifts for %s %s", user.first_name, user.last_name)
     for day, shift_code in enumerate(shifts, start=1):
         if shift_code:  # Skip empty shift codes
@@ -245,6 +251,9 @@ def insert_shift_data(
                 user_id=user.id,
             )
             db_session.add(new_shift)
+            n_shifts += 1
+
+    return n_shifts
 
 
 def normalize_string(s: str) -> str:
@@ -332,8 +341,17 @@ def parse_and_insert_data(
     db_session: scoped_session,
     *,
     add_new: bool = False,
-) -> None:
-    """Parse extracted data and insert it into the database."""
+) -> tuple[int, int]:
+    """Parse extracted data and insert it into the database.
+
+    The data is a list of dictionaries, each containing the name, role, team,
+    and shifts for a user. The function parses the data, finds or creates the
+    user in the database, and inserts the shift data for each user.
+
+    Returns the number of identified users and shifts inserted.
+    """
+    n_users = 0
+    n_shifts = 0
     for entry in all_data:
         if not is_valid_user_entry(entry):
             continue
@@ -350,8 +368,12 @@ def parse_and_insert_data(
             logger.warning("User not found for entry: %s", entry["name"])
             continue
 
-        insert_shift_data(entry["shifts"], month, year, user, db_session)
+        n_users += 1
+        n_shifts += insert_shift_data(entry["shifts"], month, year, user, db_session)
         db_session.commit()
+
+    logger.info("Inserted %d users and %d shifts", n_users, n_shifts)
+    return n_users, n_shifts
 
 
 def process_file(
@@ -360,19 +382,43 @@ def process_file(
     *,
     add_new: bool = False,
     app_logger: Logger | None = None,
-) -> None:
-    """Process the uploaded file and insert data into the database."""
+) -> tuple[int, int]:
+    """Process the uploaded file and insert data into the database.
+
+    The function extracts the schedule data from the uploaded file, parses the data,
+    and inserts it into the database. The add_new parameter determines whether new
+    users should be added to the database. The app_logger parameter can be used to
+    pass a logger instance to the function.
+
+    Returns the number of users and shifts inserted.
+    """
     setup_logger(app_logger)
-    with pdfplumber.open(BytesIO(file.read())) as pdf:
-        all_data = []
-        month, year = extract_month_year_from_first_page(pdf.pages[0])
+    try:
+        with pdfplumber.open(BytesIO(file.read())) as pdf:
+            all_data = []
+            month, year = extract_month_year_from_first_page(pdf.pages[0])
 
-        for page in pdf.pages:
-            page_data = extract_schedule_data(page)
-            all_data.extend(page_data)
+            for page in pdf.pages:
+                page_data = extract_schedule_data(page)
+                all_data.extend(page_data)
 
-        set_locale("es_ES")
-        try:
-            parse_and_insert_data(all_data, month, year, db_session, add_new=add_new)
-        finally:
-            reset_locale()
+            set_locale("es_ES")
+            try:
+                n_users, n_shifts = parse_and_insert_data(
+                    all_data,
+                    month,
+                    year,
+                    db_session,
+                    add_new=add_new,
+                )
+            finally:
+                reset_locale()
+    except PDFSyntaxError as e:
+        logger.exception("Error parsing PDF file")
+        _msg = "Error parsing PDF file"
+        raise ValueError(_msg) from e
+
+    logger.info("Processed %d pages", len(pdf.pages))
+    logger.info("Inserted %d users and %d shifts", n_users, n_shifts)
+
+    return n_users, n_shifts
