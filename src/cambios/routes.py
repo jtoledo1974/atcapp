@@ -35,7 +35,7 @@ def index() -> Response | str:
     if "user_id" not in session:
         return redirect(url_for("main.login"))
 
-    user = User.query.get(session["user_id"])
+    user = db.session.get(User, session["user_id"])
     shifts = Shift.query.order_by(Shift.date).all()
     shift_data: dict = defaultdict(lambda: {"M": "Open", "T": "Open", "N": "Open"})
     for shift in shifts:
