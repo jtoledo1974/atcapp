@@ -1,0 +1,21 @@
+/* Add this CSS to your existing stylesheet or create a new one */
+
+/* Style for the day number */
+.calendar-day {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+/* Style for the shift code */
+.shift-code {
+    font-size: 0.9em;
+    color: #007bff;
+    /* Bootstrap primary color */
+}
+
+/* Style for the shift description */
+.shift-description {
+    font-size: 0.8em;
+    color: #6c757d;
+    /* Bootstrap secondary color */
+}
