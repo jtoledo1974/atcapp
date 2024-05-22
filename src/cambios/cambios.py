@@ -2,7 +2,20 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta
+from enum import Enum
+
 from .models import User
+
+
+class ShiftType(Enum):
+    """Shift types."""
+
+    M = "Mañana"
+    T = "Tarde"
+    N = "Noche"
+
 
 BASIC_SHIFTS = ["M", "T", "N", "im", "it", "in"]
 
@@ -76,6 +89,9 @@ SHIFT_TYPES = {
 
 ATC_ROLES = {"TS", "IS", "TI", "INS", "PTD", "CON", "SUP", "N/A"}
 
+MONTHS_IN_A_YEAR = 12
+SUNDAY_DAY_NUMBER = 6
+
 
 def is_admin(email: str) -> bool:
     """Check if the user is an admin.
@@ -91,3 +107,88 @@ def is_admin(email: str) -> bool:
 
     # User is not an admin. Check whether anyone is an admin.
     return not User.query.filter_by(is_admin=True).first()
+
+
+@dataclass
+class Shift:
+    type: ShiftType
+    code: str
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+
+
+@dataclass
+class Day:
+    date: date
+    day_of_week: str
+    is_national_holiday: bool
+    shift: Shift | None = None
+
+
+@dataclass
+class MonthCalendar:
+    year: int
+    month: int
+    days: list[Day] = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Generate the days for the month."""
+        self.days = self._generate_days(self.year, self.month)
+
+    def _generate_days(self, year: int, month: int) -> list[Day]:
+        days = []
+        first_day = date(year, month, 1)
+        last_day = self._last_day_of_month(year, month)
+
+        # Determine the start of the calendar (possibly including days from the previous month)
+        start_date = first_day - timedelta(days=first_day.weekday())
+
+        # Determine the end of the calendar (possibly including days from the next month)
+        end_date = last_day + timedelta(days=(6 - last_day.weekday()))
+
+        current_date = start_date
+        while current_date <= end_date:
+            day_of_week = current_date.strftime("%A")
+            is_national_holiday = self._check_national_holiday(current_date)
+            days.append(
+                Day(
+                    date=current_date,
+                    day_of_week=day_of_week,
+                    is_national_holiday=is_national_holiday,
+                ),
+            )
+            current_date += timedelta(days=1)
+
+        return days
+
+    def _last_day_of_month(self, year: int, month: int) -> date:
+        if month == MONTHS_IN_A_YEAR:
+            return date(year, 12, 31)
+        return date(year, month + 1, 1) - timedelta(days=1)
+
+    def _check_national_holiday(self, date_to_check: date) -> bool:
+        # Placeholder for actual holiday checking logic
+        # TODO #2 Implement a real holiday checking mechanism
+        national_holidays = [
+            date(date_to_check.year, 1, 1),  # New Year's Day
+            date(date_to_check.year, 12, 25),  # Christmas Day
+            date(date_to_check.year, 12, 6),  # Constitution Day
+            date(date_to_check.year, 10, 12),  # Hispanic Day
+            date(date_to_check.year, 5, 1),  # Labour Day
+            date(date_to_check.year, 8, 15),  # Assumption of Mary
+            date(date_to_check.year, 11, 1),  # All Saints' Day
+            date(date_to_check.year, 12, 8),  # Immaculate Conception
+        ]
+        return date_to_check in national_holidays
+
+    def get_weeks(self) -> list[list[Day]]:
+        weeks = []
+        week = []
+        for day in self.days:
+            week.append(day)
+            if day.date.weekday() == SUNDAY_DAY_NUMBER:  # Sunday is the end of the week
+                weeks.append(week)
+                week = []
+        if week:
+            weeks.append(week)  # Add the last week if it wasn't added
+        return weeks
