@@ -1,6 +1,6 @@
 """Cambios setup file."""
 
-from setuptools import find_packages, setup
+from setuptools import find_packages, setup  # type: ignore[import-untyped]
 
 setup(
     name="cambios",
@@ -24,6 +24,7 @@ setup(
             "pytest-cov",
             "mypy",
             "ruff",
+            "pathspec",
         ],
     },  # other setup options
 )

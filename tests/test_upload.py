@@ -10,7 +10,6 @@ import pytest
 from cambios.models import Shift, User
 
 if TYPE_CHECKING:
-    from cambios.models import User
     from flask.testing import FlaskClient
     from sqlalchemy import SQLAlchemy
 
