@@ -104,6 +104,8 @@ def upload() -> Response | str:
     For GET requests, render the upload page.
     For POST requests, upload the shift data to the server.
     """
+    if session.get("is_admin") is not True:
+        return redirect(url_for("main.index"))
     if request.method != "POST":
         return render_template("upload.html")
     file = request.files["file"]

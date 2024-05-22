@@ -58,6 +58,15 @@ def test_logout(client: FlaskClient, regular_user: User) -> None:
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
 def test_upload_get(client: FlaskClient, regular_user: User) -> None:
+    """Test that the upload route redirects regular users to /."""
+    client.post("/login", data={"idToken": "test_token"})
+    response = client.get("/upload")
+    assert response.status_code == 302
+    assert response.location == "/"
+
+
+@pytest.mark.usefixtures("_verify_admin_id_token_mock")
+def test_upload_admin_get(client: FlaskClient, admin_user: User) -> None:
     """Test that the upload route renders the upload page."""
     client.post("/login", data={"idToken": "test_token"})
     response = client.get("/upload")
@@ -65,8 +74,8 @@ def test_upload_get(client: FlaskClient, regular_user: User) -> None:
     assert b"Carga de Turnero" in response.data
 
 
-@pytest.mark.usefixtures("_verify_id_token_mock")
-def test_upload_post_no_file(client: FlaskClient, regular_user: User) -> None:
+@pytest.mark.usefixtures("_verify_admin_id_token_mock")
+def test_upload_post_no_file(client: FlaskClient, admin_user: User) -> None:
     """Test that the upload route fails if no file is selected."""
     client.post("/login", data={"idToken": "test_token"})
     # Submit the upload form with an empty file field
