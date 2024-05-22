@@ -1,0 +1,64 @@
+"""Tests for the app module."""
+
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+import pytest
+
+if TYPE_CHECKING:
+    from cambios.models import User
+    from flask.testing import FlaskClient
+
+
+# Ensure the fixtures are defined in conftest.py
+@pytest.mark.usefixtures("_verify_id_token_mock")
+def test_admin_access(client: FlaskClient, admin_user: User) -> None:
+    """Test that an admin user can access the admin panel."""
+    # Log in as admin user
+    client.post("/login", data={"idToken": "test_token"})
+
+    # Access the admin panel
+    response = client.get("/admin/")
+    assert response.status_code == 200
+    assert b"Admin Panel" in response.data
+
+
+@pytest.mark.usefixtures("_verify_id_token_mock")
+def test_non_admin_access(client: FlaskClient, regular_user: User) -> None:
+    """Test that a non-admin user cannot access the admin panel."""
+    # Log in as regular user
+    client.post("/login", data={"idToken": "test_token"})
+
+    # Try to access the admin panel
+    response = client.get("/admin/", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Login" in response.data  # Check if redirected to login
+
+
+def test_logging_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that logging is enabled if the environment variable is set."""
+    # Set the environment variable to enable logging
+    monkeypatch.setenv("ENABLE_LOGGING", "true")
+
+    from cambios.app import Config, create_app
+
+    app = create_app(Config)
+
+    assert app.logger.level == logging.INFO
+
+    monkeypatch.delenv("ENABLE_LOGGING", raising=False)
+    app.logger.setLevel(logging.WARNING)  # manually set to warning again
+    app.logger.handlers.clear()  # remove all handlers
+
+
+def test_logging_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that logging is disabled if the environment variable is not set."""
+    # Unset the environment variable to disable logging
+    monkeypatch.delenv("ENABLE_LOGGING", raising=False)
+
+    from cambios.app import Config, create_app
+
+    app = create_app(Config)
+    assert app.logger.level != logging.INFO
