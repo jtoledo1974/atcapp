@@ -39,7 +39,8 @@ def init_firebase(app_logger: Logger) -> None:
         # Report error and shutdown
         app_logger.critical(
             "Firebase Admin SDK credentials not found or invalid: %s\n"
-            "Please set FIREBASE_CRED_FILE or FIREBASE_CRED_JSON environment variables.\n"
+            "Please set FIREBASE_CRED_FILE or FIREBASE_CRED_JSON "
+            "environment variables.\n"
             "Firebase credentials can be downloaded from Firebase Console.\n\n"
             "%s",
             CRED_FILE,

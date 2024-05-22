@@ -80,7 +80,16 @@ def _verify_id_token_mock(mocker: MockerFixture) -> None:
     """Mock the verify_id_token function from firebase."""
     mocker.patch(
         "src.cambios.firebase.auth.verify_id_token",
-        return_value={"uid": "test_uid", "email": "user@example.com"},
+        return_value={"uid": "user_uid", "email": "user@example.com"},
+    )
+
+
+@pytest.fixture()
+def _verify_admin_id_token_mock(mocker: MockerFixture) -> None:
+    """Mock the verify_id_token function from firebase."""
+    mocker.patch(
+        "src.cambios.firebase.auth.verify_id_token",
+        return_value={"uid": "admin_uid", "email": "admin@example.com"},
     )
 
 
