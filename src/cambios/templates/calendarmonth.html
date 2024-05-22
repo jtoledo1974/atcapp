@@ -11,13 +11,9 @@
 <table class="table table-bordered">
     <thead>
         <tr>
-            <th>Lunes</th>
-            <th>Martes</th>
-            <th>Miércoles</th>
-            <th>Jueves</th>
-            <th>Viernes</th>
-            <th>Sábado</th>
-            <th>Domingo</th>
+            {% for day in ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] %}
+            <th>{{ day }}</th>
+            {% endfor %}
         </tr>
     </thead>
     <tbody>
@@ -25,16 +21,16 @@
         <tr>
             {% for day in week %}
             <td>
-                <!-- Day number -->
-                <div class="calendar-day">{{ day.date.day }}</div>
-
-                {% if day.shift %}
-                <!-- Shift code -->
-                <div class="shift-code">{{ day.shift.code }}</div>
-
-                <!-- Shift description -->
-                <div class="shift-description">{{ day.shift.description }}</div>
-                {% endif %}
+                <div class="calendar-cell">
+                    <!-- Day number -->
+                    <div class="calendar-day">{{ day.date.day }}</div>
+                    {% if day.shift %}
+                    <!-- Shift code -->
+                    <div class="shift-code">{{ day.shift.code }}</div>
+                    <!-- Shift description -->
+                    <div class="shift-description">{{ day.shift.description }}</div>
+                    {% endif %}
+                </div>
             </td>
             {% endfor %}
         </tr>

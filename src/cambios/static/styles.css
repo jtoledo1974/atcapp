@@ -2,20 +2,39 @@
 
 /* Style for the day number */
 .calendar-day {
+    font-size: 0.8em;
+    /* Smaller font size */
     font-weight: bold;
+    text-align: center;
+    /* Centered */
     margin-bottom: 5px;
+    display: block;
 }
 
 /* Style for the shift code */
 .shift-code {
-    font-size: 0.9em;
+    font-size: 1.2em;
+    /* Largest font size */
     color: #007bff;
     /* Bootstrap primary color */
+    display: block;
+    /* Ensure it takes up a full line */
 }
 
 /* Style for the shift description */
 .shift-description {
-    font-size: 0.8em;
+    font-size: 0.9em;
+    /* Medium font size */
     color: #6c757d;
     /* Bootstrap secondary color */
+    display: block;
+    /* Ensure it takes up a full line */
+    text-align: right;
+    /* Right-aligned */
+}
+
+/* Positioning container */
+.calendar-cell {
+    padding-bottom: 1em;
+    /* Add space for the shift description */
 }
