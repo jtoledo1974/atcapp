@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import os
+import pickle
 import secrets
+from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 
 import pytest
 from cambios.app import Config, create_app
-from cambios.models import User
+from cambios.database import db as _db
+from cambios.models import Shift, ShiftTypes, User
+from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 if TYPE_CHECKING:
@@ -16,6 +20,9 @@ if TYPE_CHECKING:
     from flask.testing import FlaskClient
     from flask_sqlalchemy import SQLAlchemy
     from pytest_mock import MockerFixture
+    from sqlalchemy.orm import Session
+
+PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -54,7 +61,7 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
 
     session_factory = sessionmaker(bind=connection)
     session = scoped_session(session_factory)
-    db.session = session
+    db.session = session  # type: ignore[assignment]
 
     yield session
 
@@ -126,4 +133,40 @@ def regular_user(session: scoped_session) -> User:
     )
     session.add(user)
     session.commit()
+    return user
+
+
+@pytest.fixture()
+def preloaded_session() -> Generator[Session, None, None]:
+    """Load the database with test data."""
+    engine = create_engine("sqlite:///:memory:")
+    _db.metadata.create_all(engine)
+
+    session = sessionmaker(bind=engine)()
+
+    with Path.open(PICKLE_FILE, "rb") as file:
+        pickle_data = pickle.load(file)  # noqa: S301
+
+    for table, data in (
+        [User, pickle_data["users"]],
+        [Shift, pickle_data["shifts"]],
+        [ShiftTypes, pickle_data["shift_types"]],
+    ):
+        for item in data:
+            item.pop("_sa_instance_state", None)
+            session.add(table(**item))
+
+    yield session
+
+    _db.metadata.drop_all(engine)
+
+
+@pytest.fixture()
+def atc(preloaded_session: Session) -> User:
+    """Return an atc from a preloaded database."""
+    # Get the first user from the Users table
+    user = preloaded_session.query(User).first()
+    if not user:
+        _msg = "No users in the database."
+        raise ValueError(_msg)
     return user

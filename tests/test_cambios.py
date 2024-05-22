@@ -1,14 +1,21 @@
 """Test cases for the cambios module."""
 
-from datetime import date
+from __future__ import annotations
 
-from cambios.cambios import Day, MonthCalendar, MonthCalGen, Shift, ShiftType
+from datetime import date
+from typing import TYPE_CHECKING
+
+from cambios.cambios import Day, MonthCalGen, Shift, ShiftPeriod
+
+if TYPE_CHECKING:
+    from cambios.models import User
+    from sqlalchemy.orm import Session
 
 
 def test_shift() -> None:
     """Test the Shift data class."""
-    shift = Shift(type=ShiftType.M, code="M01", start_time=None, end_time=None)
-    assert shift.type == ShiftType.M
+    shift = Shift(period=ShiftPeriod.M, code="M01", start_time=None, end_time=None)
+    assert shift.period == ShiftPeriod.M
     assert shift.code == "M01"
     assert shift.start_time is None
     assert shift.end_time is None
@@ -74,3 +81,14 @@ def test_month_calendar_weeks() -> None:
     last_week = weeks[-1]
     assert last_week[0].date == date(2024, 5, 27)
     assert last_week[-1].date == date(2024, 6, 2)
+
+
+def test_load_weeks_from_user(atc: User, preloaded_session: Session) -> None:
+    """Test loading weeks from user data."""
+    calendar = MonthCalGen.generate(2024, 6, atc, preloaded_session)
+    days = calendar.days
+    day = days[0]
+
+    assert day.shift is not None
+    assert day.shift.period == ShiftPeriod.M
+    assert day.shift.code == "MB09"

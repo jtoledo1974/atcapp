@@ -5,11 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from enum import Enum
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
+from .models import Shift as DBShift
 from .models import User
 
 
-class ShiftType(Enum):
+class ShiftPeriod(Enum):
     """Shift types."""
 
     M = "Mañana"
@@ -93,6 +98,26 @@ MONTHS_IN_A_YEAR = 12
 SUNDAY_DAY_NUMBER = 6
 
 
+def period_from_code(code: str) -> ShiftPeriod:
+    """Get the period from a shift code."""
+    if code in BASIC_SHIFTS and code[1].upper() in BASIC_SHIFTS:
+        return ShiftPeriod[code[1].upper()]
+
+    if code[0] in BASIC_SHIFTS:
+        return ShiftPeriod[code[0].upper()]
+
+    return ShiftPeriod["M"]
+
+
+def description_from_code(code: str) -> str:
+    """Get the description from a shift code."""
+    if code in SHIFT_TYPES:
+        return SHIFT_TYPES[code]
+    if code[1:] in SHIFT_TYPES:
+        return SHIFT_TYPES[code[1:]]
+    return code
+
+
 def is_admin(email: str) -> bool:
     """Check if the user is an admin.
 
@@ -111,14 +136,19 @@ def is_admin(email: str) -> bool:
 
 @dataclass
 class Shift:
-    type: ShiftType
+    """Shift information."""
+
+    period: ShiftPeriod
     code: str
+    description: str | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
 
 
 @dataclass
 class Day:
+    """Day information."""
+
     date: date
     day_of_week: str
     is_national_holiday: bool
@@ -127,6 +157,8 @@ class Day:
 
 @dataclass
 class MonthCalendar:
+    """Calendar for a month."""
+
     year: int
     month: int
     _days: list[Day] = field(default_factory=list)
@@ -158,16 +190,23 @@ class MonthCalGen:
     """Generate a calendar for a month and year and user."""
 
     @staticmethod
-    def generate(year: int, month: int) -> MonthCalendar:
+    def generate(
+        year: int,
+        month: int,
+        user: User | None = None,
+        session: Session | None = None,
+    ) -> MonthCalendar:
         """Generate a calendar for a month and year."""
         days = []
         first_day = date(year, month, 1)
         last_day = MonthCalGen._last_day_of_month(year, month)
 
-        # Determine the start of the calendar (possibly including days from the previous month)
+        # Determine the start of the calendar
+        # (possibly including days from the previous month)
         start_date = first_day - timedelta(days=first_day.weekday())
 
-        # Determine the end of the calendar (possibly including days from the next month)
+        # Determine the end of the calendar
+        # (possibly including days from the next month)
         end_date = last_day + timedelta(days=(6 - last_day.weekday()))
 
         current_date = start_date
@@ -182,6 +221,31 @@ class MonthCalGen:
                 ),
             )
             current_date += timedelta(days=1)
+
+        if not user or not session:
+            return MonthCalendar(year=year, month=month, _days=days)
+
+        # Go through every shift in the database matching the user id
+        # and the date within the dates of the calendar
+        min_date, max_date = days[0].date, days[-1].date
+        user_shifts = (
+            session.query(DBShift)
+            .filter(
+                DBShift.user_id == user.id,
+                DBShift.date.between(min_date, max_date),
+            )
+            .all()
+        )
+
+        for day in days:
+            for shift in user_shifts:
+                if shift.date.date() == day.date:
+                    day.shift = Shift(
+                        period=period_from_code(shift.shift_type),
+                        code=shift.shift_type,
+                        description=description_from_code(shift.shift_type),
+                    )
+                    break
 
         return MonthCalendar(year=year, month=month, _days=days)
 
