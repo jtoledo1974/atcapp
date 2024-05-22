@@ -64,7 +64,7 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
 
 
 @pytest.fixture()
-def client(app: Flask) -> FlaskClient:
+def client(app: Flask, session: scoped_session) -> FlaskClient:
     """Create a test client for the app."""
     return app.test_client()
 
