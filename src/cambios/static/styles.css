@@ -38,3 +38,8 @@
     padding-bottom: 1em;
     /* Add space for the shift description */
 }
+
+/* Hidden class for toggling descriptions */
+.hidden-description {
+    display: none;
+}
