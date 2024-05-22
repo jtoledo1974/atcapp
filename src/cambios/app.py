@@ -36,20 +36,6 @@ class Config:
     # Can't set this here, because we need to wait until the fixtures are loaded
     # Check below for ENABLE_LOGGING
 
-    @staticmethod
-    def load_key() -> str:
-        """Load the secret key from the environment or .key file."""
-        if "SECRET_KEY" in os.environ:
-            return os.environ["SECRET_KEY"]
-        key_file = Path(".key")
-        if key_file.exists():
-            with key_file.open("r") as f:
-                return f.read().strip()
-        key = secrets.token_urlsafe(32)
-        with key_file.open("w") as f:
-            f.write(key)
-        return key
-
 
 class AdminModelView(ModelView):
     """Custom ModelView for the admin panel."""
