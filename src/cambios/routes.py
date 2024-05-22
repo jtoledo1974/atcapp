@@ -95,8 +95,6 @@ def login() -> Response | str:
     # Check for admin user.
     if is_admin(email):
         session["is_admin"] = True
-        return redirect(url_for("admin.index"))
-
     return redirect(url_for("main.index"))
 
 
