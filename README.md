@@ -46,3 +46,15 @@ Estas variables de entorno se utilizan para configurar la aplicación.
 docker run -d -p 80:80 toledo74/cambios
 ```
 
+## Instrucciones para desarrolladores
+
+### Crear un entorno virtual
+```sh
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### Instalar paquete y dependencias
+```sh
+pip install -e .[dev]
+```
