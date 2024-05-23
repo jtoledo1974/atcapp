@@ -66,7 +66,7 @@ def index() -> Response | str:
 
 
 @main.route("/toggle_descriptions")
-def toggle_descriptions() -> str:
+def toggle_descriptions() -> Response:
     """Toggle the descriptions on or off and save the state in the session."""
     session["toggleDescriptions"] = not session.get("toggleDescriptions", False)
     return redirect(url_for("main.index"))
@@ -81,12 +81,19 @@ def login() -> Response | str:
     try:
         email = verify_id_token(request.form["idToken"])["email"]
     except ValueError:
+        current_app.logger.exception(
+            "Error verifying ID token %s",
+            request.form["idToken"],
+        )
         flash("Autenticación fallida.", "danger")
         return redirect(url_for("main.login"))
 
     user = User.query.filter_by(email=email).first()
     if not user:
         # If the user database is empty we assume the first user is an admin.
+        current_app.logger.info(
+            "No users found in the database. Assuming first user is an admin.",
+        )
         if not User.query.all():
             user = User(
                 email=email,
@@ -101,10 +108,16 @@ def login() -> Response | str:
             session["is_admin"] = True
             return redirect(url_for("admin.index"))
 
+        current_app.logger.error("User not recognized. email=%s", email)
         flash("Usuario no reconocido. Hable con el administrador.", "danger")
         return redirect(url_for("main.logout"))
 
     session["user_id"] = user.id
+    current_app.logger.info(
+        "User %s logged in. email=%s",
+        user.first_name + " " + user.last_name,
+        email,
+    )
     flash("Login successful!", "success")
 
     # Check for admin user.
