@@ -7,15 +7,42 @@
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+<style>
+  /* Additional styles for better appearance */
+  .login-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 2em;
+    text-align: center;
+  }
+
+  .login-container h1 {
+    margin-bottom: 1em;
+  }
+
+  .login-container p.welcome-text {
+    margin-bottom: 2em;
+    font-size: 1.2em;
+  }
+
+  #loader {
+    margin-top: 1em;
+  }
+</style>
+
 {% endblock %}
 
 {% block content %}
-<h1>Login</h1>
-<div id="firebaseui-auth-container"></div>
-<div id="loader">Loading...</div>
-<form id="loginForm" method="POST" action="{{ url_for('main.login') }}">
-  <input type="hidden" id="idToken" name="idToken">
-</form>
+<div class="login-container">
+  <h1>Aplicación de cambios de LECS</h1>
+  <p class="welcome-text">Por favor, use la cuenta de Google que ha indicado previamente al administrador para iniciar
+    sesión.</p>
+  <div id="firebaseui-auth-container"></div>
+  <div id="loader">Cargando...</div>
+  <form id="loginForm" method="POST" action="{{ url_for('main.login') }}">
+    <input type="hidden" id="idToken" name="idToken">
+  </form>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -50,9 +77,7 @@
     signInFlow: 'popup',
     signInSuccessUrl: '/',
     signInOptions: [
-      firebase.auth.EmailAuthProvider.PROVIDER_ID,
       firebase.auth.GoogleAuthProvider.PROVIDER_ID,
-      firebase.auth.FacebookAuthProvider.PROVIDER_ID,
     ],
     tosUrl: '<your-tos-url>',
     privacyPolicyUrl: '<your-privacy-policy-url>'

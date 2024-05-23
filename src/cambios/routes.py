@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -19,7 +20,7 @@ from pytz import timezone as tzinfo
 
 from .cambios import MonthCalGen, is_admin
 from .database import db
-from .firebase import verify_id_token
+from .firebase import invalidate_token, verify_id_token
 from .models import User
 from .upload import process_file
 
@@ -79,22 +80,24 @@ def login() -> Response | str:
         return render_template("login.html")
 
     try:
-        email = verify_id_token(request.form["idToken"])["email"]
+        firebase_data = verify_id_token(request.form["idToken"])
+        email = firebase_data["email"]
+        session["firebase_uid"] = firebase_data["uid"]
     except ValueError:
         current_app.logger.exception(
             "Error verifying ID token %s",
             request.form["idToken"],
         )
         flash("Autenticación fallida.", "danger")
-        return redirect(url_for("main.login"))
+        return redirect(url_for("main.logout"))
 
     user = User.query.filter_by(email=email).first()
     if not user:
         # If the user database is empty we assume the first user is an admin.
-        current_app.logger.info(
-            "No users found in the database. Assuming first user is an admin.",
-        )
         if not User.query.all():
+            current_app.logger.info(
+                "No users found in the database. Assuming first user is an admin.",
+            )
             user = User(
                 email=email,
                 first_name="Admin",
@@ -106,6 +109,7 @@ def login() -> Response | str:
             db.session.add(user)
             db.session.commit()
             session["is_admin"] = True
+            flash("Usuario administrador creado.", "success")
             return redirect(url_for("admin.index"))
 
         current_app.logger.error("User not recognized. email=%s", email)
@@ -118,7 +122,7 @@ def login() -> Response | str:
         user.first_name + " " + user.last_name,
         email,
     )
-    flash("Login successful!", "success")
+    flash("Bienvenido, " + user.first_name + " " + user.last_name, "success")
 
     # Check for admin user.
     if is_admin(email):
@@ -127,11 +131,23 @@ def login() -> Response | str:
 
 
 @main.route("/logout")
-def logout() -> Response:
+def logout() -> str:
     """Logout the user."""
-    session.clear()
+    firebase_id_token = session.get("firebase_uid")
+    if firebase_id_token:
+        with contextlib.suppress(Exception):
+            invalidate_token(firebase_id_token)
 
-    return redirect(url_for("main.login"))
+    # Clear specific session keys related to user authentication
+    session.pop("current_user", None)
+    session.pop("firebase_uid", None)
+    session.pop("user_id", None)
+    session.pop("is_admin", None)
+    flash("Sesión cerrada.", "info")
+
+    res = render_template("logout.html")
+    session.clear()
+    return res
 
 
 @main.route("/upload", methods=["GET", "POST"])

@@ -21,7 +21,7 @@
             <span class="navbar-brand mb-0 h1">{{ current_user.first_name }} {{ current_user.last_name }}</span>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    {% if request.endpoint != 'main.index' %}
+                    {% if request.endpoint not in ['main.index', 'main.login', 'main.logout'] %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.index') }}">Inicio</a>
                     </li>
@@ -39,9 +39,15 @@
                 </ul>
 
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    {% if current_user %}
                     <li class="nav-item">
                         <a id="logoutLink" href="{{ url_for('main.logout') }}" class="btn btn-primary">Salir</a>
                     </li>
+                    {% elif request.endpoint != 'main.login' %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('main.login') }}" class="btn btn-primary">Entrar</a>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
