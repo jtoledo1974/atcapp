@@ -4,7 +4,20 @@
         const checkbox = document.getElementById('toggleDescriptions');
         const descriptions = document.querySelectorAll('.shift-description');
 
-        checkbox.addEventListener('change', function () {
+        // Check if the state is saved in localStorage
+        const savedState = localStorage.getItem('toggleDescriptions');
+        if (savedState !== null) {
+            checkbox.checked = JSON.parse(savedState);
+        } else {
+            // Default state for mobile devices
+            if (window.innerWidth <= 768) {
+                checkbox.checked = false;
+            } else {
+                checkbox.checked = true;
+            }
+        }
+
+        const updateDescriptions = () => {
             descriptions.forEach(description => {
                 if (checkbox.checked) {
                     description.classList.remove('hidden-description');
@@ -12,17 +25,19 @@
                     description.classList.add('hidden-description');
                 }
             });
+        };
+
+        checkbox.addEventListener('change', function () {
+            localStorage.setItem('toggleDescriptions', checkbox.checked);
+            updateDescriptions();
         });
 
         // Initialize the state based on the checkbox
-        if (!checkbox.checked) {
-            descriptions.forEach(description => {
-                description.classList.add('hidden-description');
-            });
-        }
+        updateDescriptions();
     });
 </script>
 {% endblock %}
+
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <a href="{{ url_for('main.index', year=(calendar.year - 1) if calendar.month == 1 else calendar.year, month=12 if calendar.month == 1 else calendar.month - 1) }}"

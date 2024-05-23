@@ -50,11 +50,26 @@ def index() -> Response | str:
 
     calendar = MonthCalGen.generate(year, month, user, db.session)  # type: ignore[arg-type]
 
+    # Check the session for the toggleDescriptions state
+    if "toggleDescriptions" not in session:
+        session["toggleDescriptions"] = request.user_agent.platform not in [
+            "android",
+            "iphone",
+        ]
+
     return render_template(
         "index.html",
         user=user,
         calendar=calendar,
+        toggle_descriptions=session["toggleDescriptions"],
     )
+
+
+@main.route("/toggle_descriptions")
+def toggle_descriptions() -> str:
+    """Toggle the descriptions on or off and save the state in the session."""
+    session["toggleDescriptions"] = not session.get("toggleDescriptions", False)
+    return redirect(url_for("main.index"))
 
 
 @main.route("/login", methods=["GET", "POST"])
