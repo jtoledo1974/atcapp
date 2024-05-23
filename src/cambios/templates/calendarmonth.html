@@ -1,4 +1,3 @@
-<!-- src/cambios/templates/calendarmonth.html -->
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -25,7 +24,6 @@
 </script>
 {% endblock %}
 
-
 <div class="d-flex justify-content-between align-items-center mb-3">
     <a href="{{ url_for('main.index', year=(calendar.year - 1) if calendar.month == 1 else calendar.year, month=12 if calendar.month == 1 else calendar.month - 1) }}"
         class="btn btn-primary">&laquo; Previo</a>
@@ -34,35 +32,37 @@
         class="btn btn-primary">Siguiente &raquo;</a>
 </div>
 
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            {% for day in ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] %}
-            <th>{{ day }}</th>
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                {% for day in ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] %}
+                <th>{{ day }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in calendar.weeks %}
+            <tr>
+                {% for day in week %}
+                <td>
+                    <div class="calendar-cell">
+                        <!-- Day number -->
+                        <div class="calendar-day">{{ day.date.day }}</div>
+                        {% if day.shift %}
+                        <!-- Shift code -->
+                        <div class="shift-code">{{ day.shift.code }}</div>
+                        <!-- Shift description -->
+                        <div class="shift-description">{{ day.shift.description }}</div>
+                        {% endif %}
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
             {% endfor %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for week in calendar.weeks %}
-        <tr>
-            {% for day in week %}
-            <td>
-                <div class="calendar-cell">
-                    <!-- Day number -->
-                    <div class="calendar-day">{{ day.date.day }}</div>
-                    {% if day.shift %}
-                    <!-- Shift code -->
-                    <div class="shift-code">{{ day.shift.code }}</div>
-                    <!-- Shift description -->
-                    <div class="shift-description">{{ day.shift.description }}</div>
-                    {% endif %}
-                </div>
-            </td>
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        </tbody>
+    </table>
+</div>
 
 <!-- Checkbox to toggle shift descriptions -->
 <div class="form-check">

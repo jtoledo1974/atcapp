@@ -43,3 +43,35 @@
 .hidden-description {
     display: none;
 }
+
+/* Media query for mobile devices */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .navbar-brand {
+        flex-grow: 1;
+        text-align: center;
+    }
+
+    .navbar-nav {
+        flex-direction: column;
+        width: 100%;
+        text-align: center;
+    }
+
+    .navbar-nav .nav-item {
+        margin: 0;
+        width: 100%;
+    }
+
+    .navbar-nav .nav-link {
+        padding: 10px;
+    }
+}
