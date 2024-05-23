@@ -34,7 +34,7 @@ def test_non_admin_access(client: FlaskClient, regular_user: User) -> None:
     # Try to access the admin panel
     response = client.get("/admin/", follow_redirects=True)
     assert response.status_code == 200
-    assert b"Login" in response.data  # Check if redirected to login
+    assert b"Bienvenido" in response.data  # Check if redirected to login
 
 
 def test_logging_enabled(monkeypatch: pytest.MonkeyPatch) -> None:

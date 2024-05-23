@@ -60,9 +60,9 @@ def test_shift() -> None:
 
 def test_day() -> None:
     """Test the Day data class."""
-    day = Day(date=date(2024, 5, 1), day_of_week="Wednesday", is_national_holiday=False)
+    day = Day(date=date(2024, 5, 1), day_of_week="Miércoles", is_national_holiday=False)
     assert day.date == date(2024, 5, 1)
-    assert day.day_of_week == "Wednesday"
+    assert day.day_of_week == "Miércoles"
     assert not day.is_national_holiday
     assert day.shift is None
 
@@ -83,11 +83,11 @@ def test_month_calendar_days() -> None:
 
     # Check specific day details
     assert days[0].date == date(2024, 5, 1)
-    assert days[0].day_of_week == "Wednesday"
+    assert days[0].day_of_week == "miércoles"
     assert days[0].is_national_holiday
 
     assert days[30].date == date(2024, 5, 31)
-    assert days[30].day_of_week == "Friday"
+    assert days[30].day_of_week == "viernes"
     assert not days[30].is_national_holiday
 
 
