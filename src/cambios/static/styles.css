@@ -74,4 +74,21 @@
     .navbar-nav .nav-link {
         padding: 10px;
     }
+
+    /* Adjust font sizes for better readability on mobile */
+    .calendar-day,
+    .shift-code,
+    .shift-description {
+        font-size: 1.1em;
+    }
+
+    /* Adjust container margin for mobile */
+    .container {
+        margin-top: 1rem;
+    }
+
+    /* Increase padding for better spacing on mobile */
+    .calendar-cell {
+        padding-bottom: 2em;
+    }
 }
