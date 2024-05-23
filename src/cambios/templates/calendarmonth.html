@@ -1,0 +1,103 @@
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const checkbox = document.getElementById('toggleDescriptions');
+        const descriptions = document.querySelectorAll('.shift-description');
+
+        // Check if the state is saved in localStorage
+        const savedState = localStorage.getItem('toggleDescriptions');
+        if (savedState !== null) {
+            checkbox.checked = JSON.parse(savedState);
+        } else {
+            // Default state for mobile devices
+            if (window.innerWidth <= 768) {
+                checkbox.checked = false;
+            } else {
+                checkbox.checked = true;
+            }
+        }
+
+        const updateDescriptions = () => {
+            descriptions.forEach(description => {
+                if (checkbox.checked) {
+                    description.classList.remove('hidden-description');
+                } else {
+                    description.classList.add('hidden-description');
+                }
+            });
+        };
+
+        checkbox.addEventListener('change', function () {
+            localStorage.setItem('toggleDescriptions', checkbox.checked);
+            updateDescriptions();
+        });
+
+        // Initialize the state based on the checkbox
+        updateDescriptions();
+    });
+</script>
+{% endblock %}
+
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{ url_for('main.index', year=(calendar.year - 1) if calendar.month == 1 else calendar.year, month=12 if calendar.month == 1 else calendar.month - 1) }}"
+        class="btn btn-primary">&laquo; Previo</a>
+    <h2>{{ calendar.month_name }} {{ calendar.year }}</h2>
+    <a href="{{ url_for('main.index', year=(calendar.year + 1) if calendar.month == 12 else calendar.year, month=1 if calendar.month == 12 else calendar.month + 1) }}"
+        class="btn btn-primary">Siguiente &raquo;</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <!-- Full day names for desktop -->
+            <tr class="full-day-names">
+                <th>Lunes</th>
+                <th>Martes</th>
+                <th>Miércoles</th>
+                <th>Jueves</th>
+                <th>Viernes</th>
+                <th>Sábado</th>
+                <th>Domingo</th>
+            </tr>
+            <!-- Abbreviated day names for mobile -->
+            <tr class="abbreviated-day-names">
+                <th>L</th>
+                <th>M</th>
+                <th>X</th>
+                <th>J</th>
+                <th>V</th>
+                <th>S</th>
+                <th>D</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in calendar.weeks %}
+            <tr>
+                {% for day in week %}
+                <td>
+                    <div class="calendar-cell">
+                        <!-- Day number -->
+                        <div class="calendar-day">{{ day.date.day }}</div>
+                        {% if day.shift %}
+                        <!-- Shift code -->
+                        <div class="shift-code">{{ day.shift.code }}</div>
+                        <!-- Shift description -->
+                        <div class="shift-description">{{ day.shift.description }}</div>
+                        {% endif %}
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Checkbox to toggle shift descriptions -->
+<div class="form-check">
+    <input class="form-check-input" type="checkbox" id="toggleDescriptions" checked>
+    <label class="form-check-label" for="toggleDescriptions">
+        Mostrar descripciones de turnos
+    </label>
+</div>

@@ -67,3 +67,13 @@ def verify_id_token(id_token: str) -> dict[str, str]:
         raise ValueError(_msg) from None
     else:
         return decoded_token
+
+
+def invalidate_token(id_token: str) -> None:
+    """Invalidate the Firebase ID token."""
+    try:
+        auth.revoke_refresh_tokens(id_token)
+    except Exception:
+        _msg = "Token invalidation failed"
+        logger.exception(_msg)
+        raise ValueError(_msg) from None

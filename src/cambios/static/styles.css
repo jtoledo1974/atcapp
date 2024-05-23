@@ -1,0 +1,111 @@
+/* Add this CSS to your existing stylesheet or create a new one */
+
+/* Style for the day number */
+.calendar-day {
+    font-size: 0.8em;
+    /* Smaller font size */
+    font-weight: bold;
+    text-align: center;
+    /* Centered */
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* Style for the shift code */
+.shift-code {
+    font-size: 1.2em;
+    /* Largest font size */
+    color: #007bff;
+    /* Bootstrap primary color */
+    display: block;
+    /* Ensure it takes up a full line */
+}
+
+/* Style for the shift description */
+.shift-description {
+    font-size: 0.9em;
+    /* Medium font size */
+    color: #6c757d;
+    /* Bootstrap secondary color */
+    display: block;
+    /* Ensure it takes up a full line */
+    text-align: right;
+    /* Right-aligned */
+}
+
+/* Positioning container */
+.calendar-cell {
+    padding-bottom: 1em;
+    /* Add space for the shift description */
+}
+
+/* Hidden class for toggling descriptions */
+.hidden-description {
+    display: none;
+}
+
+/* Additional styles for header rows */
+.full-day-names {
+    display: table-row;
+}
+
+.abbreviated-day-names {
+    display: none;
+}
+
+/* Media query for mobile devices */
+@media (max-width: 768px) {
+    .full-day-names {
+        display: none;
+    }
+
+    .abbreviated-day-names {
+        display: table-row;
+    }
+}
+
+.container {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.navbar-brand {
+    flex-grow: 1;
+    text-align: center;
+}
+
+.navbar-nav {
+    flex-direction: column;
+    width: 100%;
+    text-align: center;
+}
+
+.navbar-nav .nav-item {
+    margin: 0;
+    width: 100%;
+}
+
+.navbar-nav .nav-link {
+    padding: 10px;
+}
+
+/* Adjust font sizes for better readability on mobile */
+.calendar-day,
+.shift-code,
+.shift-description {
+    font-size: 1.1em;
+}
+
+/* Adjust container margin for mobile */
+.container {
+    margin-top: 1rem;
+}
+
+/* Increase padding for better spacing on mobile */
+.calendar-cell {
+    padding-bottom: 2em;
+}

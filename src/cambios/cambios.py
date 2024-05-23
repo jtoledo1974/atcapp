@@ -100,8 +100,11 @@ SUNDAY_DAY_NUMBER = 6
 
 def period_from_code(code: str) -> ShiftPeriod:
     """Get the period from a shift code."""
-    if code in BASIC_SHIFTS and code[1].upper() in BASIC_SHIFTS:
+    if code in BASIC_SHIFTS and len(code) > 1 and code[1].upper() in BASIC_SHIFTS:
         return ShiftPeriod[code[1].upper()]
+
+    if code in ("MSM", "TSM", "ME", "TE", "MR", "TR"):
+        return ShiftPeriod[code[0]]
 
     if code[0] in BASIC_SHIFTS:
         return ShiftPeriod[code[0].upper()]
@@ -184,6 +187,11 @@ class MonthCalendar:
         if week:
             weeks.append(week)  # Add the last week if it wasn't added
         return weeks
+
+    @property
+    def month_name(self) -> str:
+        """Return the name of the month."""
+        return self.days[0].date.strftime("%B").capitalize()
 
 
 class MonthCalGen:

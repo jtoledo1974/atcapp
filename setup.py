@@ -15,6 +15,7 @@ setup(
         "alembic",
         "firebase-admin",
         "pdfplumber",
+        "pytz",
         # other dependencies
     ],
     extras_require={
@@ -25,6 +26,7 @@ setup(
             "mypy",
             "ruff",
             "pathspec",
+            "types-pytz",
         ],
     },  # other setup options
 )

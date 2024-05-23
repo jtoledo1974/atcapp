@@ -5,11 +5,48 @@ from __future__ import annotations
 from datetime import date
 from typing import TYPE_CHECKING
 
-from cambios.cambios import Day, MonthCalGen, Shift, ShiftPeriod
+from cambios.cambios import (
+    Day,
+    MonthCalGen,
+    Shift,
+    ShiftPeriod,
+    description_from_code,
+    period_from_code,
+)
 
 if TYPE_CHECKING:
     from cambios.models import User
     from sqlalchemy.orm import Session
+
+
+def test_period_from_code() -> None:
+    """Test the period_from_code function."""
+    assert period_from_code("M") == ShiftPeriod.M
+    assert period_from_code("T") == ShiftPeriod.T
+    assert period_from_code("N") == ShiftPeriod.N
+    assert period_from_code("im") == ShiftPeriod.M
+    assert period_from_code("it") == ShiftPeriod.T
+    assert period_from_code("in") == ShiftPeriod.N
+    assert period_from_code("X") == ShiftPeriod.M  # Default case
+    assert period_from_code("ME") == ShiftPeriod.M
+    assert period_from_code("TR") == ShiftPeriod.T
+
+
+def test_description_from_code() -> None:
+    """Test the description_from_code function."""
+    assert description_from_code("SUP") == "SUPERVISIÓN"
+    assert description_from_code("A1") == "TRABAJO EN FRECUENCIA"
+    assert description_from_code("B01") == "MOTIVO MÉDICO: BAJA CON PARTE IT"
+    assert description_from_code("TB01") == "MOTIVO MÉDICO: BAJA CON PARTE IT"
+    assert description_from_code("NB01") == "MOTIVO MÉDICO: BAJA CON PARTE IT"
+    assert description_from_code("C01") == "INSTRUCTOR IMPARTIENDO FORMACIÓN TEÓRICA"
+    assert description_from_code("B01v") == "VACUNACION COVID19"
+    assert (
+        description_from_code("M1") == "M1"
+    )  # No matching description, return code itself
+    assert (
+        description_from_code("X") == "X"
+    )  # No matching description, return code itself
 
 
 def test_shift() -> None:
@@ -23,9 +60,9 @@ def test_shift() -> None:
 
 def test_day() -> None:
     """Test the Day data class."""
-    day = Day(date=date(2024, 5, 1), day_of_week="Wednesday", is_national_holiday=False)
+    day = Day(date=date(2024, 5, 1), day_of_week="Miércoles", is_national_holiday=False)
     assert day.date == date(2024, 5, 1)
-    assert day.day_of_week == "Wednesday"
+    assert day.day_of_week == "Miércoles"
     assert not day.is_national_holiday
     assert day.shift is None
 
@@ -46,11 +83,11 @@ def test_month_calendar_days() -> None:
 
     # Check specific day details
     assert days[0].date == date(2024, 5, 1)
-    assert days[0].day_of_week == "Wednesday"
+    assert days[0].day_of_week == "miércoles"
     assert days[0].is_national_holiday
 
     assert days[30].date == date(2024, 5, 31)
-    assert days[30].day_of_week == "Friday"
+    assert days[30].day_of_week == "viernes"
     assert not days[30].is_national_holiday
 
 

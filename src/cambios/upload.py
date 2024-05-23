@@ -10,7 +10,6 @@ the data into the database.
 
 from __future__ import annotations
 
-import locale
 import logging
 import re
 import unicodedata
@@ -189,29 +188,6 @@ def extract_month_year_from_first_page(page: Page) -> tuple[str, str]:
     """Extract month and year from the first page."""
     text = page.extract_text()
     return extract_month_year(text)
-
-
-_original_locale = None
-
-
-def set_locale(locale_name: str) -> None:
-    """Set the locale to the specified locale name."""
-    global _original_locale  # noqa: PLW0603
-    _original_locale = locale.getlocale(locale.LC_TIME)
-    try:
-        locale.setlocale(locale.LC_TIME, locale_name)
-    except locale.Error:
-        logger.exception(
-            "Locale %s not available. Please ensure it's installed.",
-            locale_name,
-        )
-        raise
-
-
-def reset_locale() -> None:
-    """Reset the locale to the original locale."""
-    if _original_locale:
-        locale.setlocale(locale.LC_TIME, _original_locale)
 
 
 def insert_shift_data(
@@ -402,17 +378,14 @@ def process_file(
                 page_data = extract_schedule_data(page)
                 all_data.extend(page_data)
 
-            set_locale("es_ES")
-            try:
-                n_users, n_shifts = parse_and_insert_data(
-                    all_data,
-                    month,
-                    year,
-                    db_session,
-                    add_new=add_new,
-                )
-            finally:
-                reset_locale()
+            n_users, n_shifts = parse_and_insert_data(
+                all_data,
+                month,
+                year,
+                db_session,
+                add_new=add_new,
+            )
+
     except PDFSyntaxError as e:
         logger.exception("Error parsing PDF file")
         _msg = "Error parsing PDF file"
