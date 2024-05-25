@@ -68,6 +68,13 @@
         // or whether we leave that to developer to handle.
         return true;
       },
+      signInFailure: function (error) {
+        // Handle sign-in errors here
+        console.error("Sign-in error: ", error);
+        if (error.code === 'auth/email-already-in-use') {
+          alert('Este correo ya está registrado. Por favor, intenta iniciar sesión.');
+        }
+      },
       uiShown: function () {
         // The widget is rendered
         // Hide the loader
@@ -78,6 +85,10 @@
     signInSuccessUrl: '/',
     signInOptions: [
       firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+      {
+        provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
+        requireDisplayName: false
+      }
     ],
     tosUrl: '<your-tos-url>',
     privacyPolicyUrl: '<your-privacy-policy-url>'
@@ -94,6 +105,8 @@
       user.getIdToken().then((idToken) => {
         document.getElementById("idToken").value = idToken;
         document.getElementById("loginForm").submit();
+      }).catch((error) => {
+        console.error("Error getting ID token:", error);
       });
     }
   });
