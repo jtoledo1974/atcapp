@@ -76,7 +76,17 @@ def toggle_descriptions() -> Response:
 @main.route("/login", methods=["GET", "POST"])
 def login() -> Response | str:
     """Render the login page."""
-    if request.method != "POST":
+    if request.method == "GET":
+        if request.args.get("verify_email"):
+            flash(
+                "Se ha enviado un correo de verificación."
+                " Por favor, verifica tu correo electrónico e inicia sesión de nuevo.",
+                "info",
+            )
+        if request.args.get("logged_out"):
+            flash("Has cerrado sesión.", "info")
+        if request.args.get("error"):
+            flash(request.args.get("error"), "danger")
         return render_template("login.html")
 
     try:
@@ -88,8 +98,7 @@ def login() -> Response | str:
             "Error verifying ID token %s",
             request.form["idToken"],
         )
-        flash("Autenticación fallida.", "danger")
-        return redirect(url_for("main.logout"))
+        return redirect(url_for("main.logout", error="Autenticación fallida"))
 
     user = User.query.filter_by(email=email).first()
     if not user:
@@ -113,8 +122,12 @@ def login() -> Response | str:
             return redirect(url_for("admin.index"))
 
         current_app.logger.error("User not recognized. email=%s", email)
-        flash("Usuario no reconocido. Hable con el administrador.", "danger")
-        return redirect(url_for("main.logout"))
+        return redirect(
+            url_for(
+                "main.logout",
+                error="Usuario no reconocido. Hable con el administrador.",
+            ),
+        )
 
     session["user_id"] = user.id
     current_app.logger.info(
@@ -131,23 +144,18 @@ def login() -> Response | str:
 
 
 @main.route("/logout")
-def logout() -> str:
+def logout() -> Response:
     """Logout the user."""
     firebase_id_token = session.get("firebase_uid")
     if firebase_id_token:
         with contextlib.suppress(Exception):
             invalidate_token(firebase_id_token)
 
-    # Clear specific session keys related to user authentication
-    session.pop("current_user", None)
-    session.pop("firebase_uid", None)
-    session.pop("user_id", None)
-    session.pop("is_admin", None)
-    flash("Sesión cerrada.", "info")
-
-    res = render_template("logout.html")
     session.clear()
-    return res
+    error = request.args.get("error")
+    if error:
+        return redirect(url_for("main.login", logged_out=True, error=error))
+    return redirect(url_for("main.login", logged_out=True))
 
 
 @main.route("/upload", methods=["GET", "POST"])

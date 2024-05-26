@@ -4,9 +4,9 @@
 
 {% block head %}
 <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.js"></script>
 <style>
   /* Additional styles for better appearance */
   .login-container {
@@ -29,7 +29,6 @@
     margin-top: 1em;
   }
 </style>
-
 {% endblock %}
 
 {% block content %}
@@ -64,9 +63,33 @@
     callbacks: {
       signInSuccessWithAuthResult: function (authResult, redirectUrl) {
         // User successfully signed in
-        // Return type determines whether we continue the redirect automatically
-        // or whether we leave that to developer to handle.
-        return true;
+        if (authResult.user.emailVerified) {
+          // If email is verified, proceed
+          authResult.user.getIdToken().then((idToken) => {
+            document.getElementById("idToken").value = idToken;
+            document.getElementById("loginForm").submit();
+          }).catch((error) => {
+            console.error("Error getting ID token:", error);
+          });
+          return false;
+        } else {
+          // If email is not verified, send verification email and log out
+          authResult.user.sendEmailVerification().then(() => {
+            firebase.auth().signOut().then(() => {
+              window.location.href = "{{ url_for('main.login', verify_email='true') }}";
+            });
+          }).catch((error) => {
+            console.error("Error sending email verification:", error);
+          });
+          return false;
+        }
+      },
+      signInFailure: function (error) {
+        // Handle sign-in errors here
+        console.error("Sign-in error: ", error);
+        if (error.code === 'auth/email-already-in-use') {
+          alert('Este correo ya está registrado. Por favor, intenta iniciar sesión.');
+        }
       },
       uiShown: function () {
         // The widget is rendered
@@ -78,6 +101,10 @@
     signInSuccessUrl: '/',
     signInOptions: [
       firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+      {
+        provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
+        requireDisplayName: false
+      }
     ],
     tosUrl: '<your-tos-url>',
     privacyPolicyUrl: '<your-privacy-policy-url>'
@@ -87,15 +114,5 @@
   const ui = new firebaseui.auth.AuthUI(firebase.auth());
   // The start method will wait until the DOM is loaded
   ui.start('#firebaseui-auth-container', uiConfig);
-
-  // Handle sign-in success
-  firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-      user.getIdToken().then((idToken) => {
-        document.getElementById("idToken").value = idToken;
-        document.getElementById("loginForm").submit();
-      });
-    }
-  });
 </script>
 {% endblock %}
