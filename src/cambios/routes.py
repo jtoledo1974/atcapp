@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import contextlib
 from datetime import datetime
-from typing import TYPE_CHECKING
+from functools import wraps
+from typing import TYPE_CHECKING, Callable
 
 from flask import (
     Blueprint,
@@ -31,7 +32,28 @@ if TYPE_CHECKING:  # pragma: no cover
 main = Blueprint("main", __name__)
 
 
+def privacy_policy_accepted(f: Callable) -> Callable:
+    """Decorate a route to check if the user has accepted the privacy policy."""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs) -> Response | str:  # noqa: ANN002, ANN003
+        """Check if the user has accepted the privacy policy."""
+        user_id = session.get("user_id")
+        if not user_id:
+            return redirect(url_for("main.login"))
+
+        user = db.session.get(User, user_id)
+        if user and not user.has_accepted_terms:
+            flash("Debes aceptar la política de privacidad para continuar.", "warning")
+            return redirect(url_for("main.privacy_policy"))
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 @main.route("/")
+@privacy_policy_accepted
 def index() -> Response | str:
     """Render the index page."""
     if "user_id" not in session:
@@ -85,8 +107,9 @@ def login() -> Response | str:
             )
         if request.args.get("logged_out"):
             flash("Has cerrado sesión.", "info")
-        if request.args.get("error"):
-            flash(request.args.get("error"), "danger")
+        error = request.args.get("error")
+        if error and isinstance(error, str):
+            flash(error, "danger")
         return render_template("login.html")
 
     try:
@@ -179,6 +202,7 @@ def privacy_policy() -> Response | str:
 
 
 @main.route("/upload", methods=["GET", "POST"])
+@privacy_policy_accepted
 def upload() -> Response | str:
     """Upload shift data to the server.
 
