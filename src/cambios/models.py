@@ -26,6 +26,7 @@ class User(db.Model):  # type: ignore[name-defined]
     team: str = Column(String(1))  # type: ignore[assignment]
     license_number: str = Column(String(50), nullable=False)  # type: ignore[assignment]
     is_admin: bool = Column(Boolean, default=False)  # type: ignore[assignment]
+    has_accepted_terms: bool = Column(Boolean, default=False)  # type: ignore[assignment]
 
 
 class Shift(db.Model):  # type: ignore[name-defined]

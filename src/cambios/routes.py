@@ -140,6 +140,11 @@ def login() -> Response | str:
     # Check for admin user.
     if is_admin(email):
         session["is_admin"] = True
+
+    # Verificar si el usuario ha aceptado la política de privacidad
+    if not user.has_accepted_terms:
+        return redirect(url_for("main.privacy_policy"))
+
     return redirect(url_for("main.index"))
 
 
@@ -156,6 +161,21 @@ def logout() -> Response:
     if error:
         return redirect(url_for("main.login", logged_out=True, error=error))
     return redirect(url_for("main.login", logged_out=True))
+
+
+@main.route("/privacy_policy", methods=["GET", "POST"])
+def privacy_policy() -> Response | str:
+    """Render the privacy policy page and handle acceptance."""
+    if request.method == "POST":
+        if "accept_policy" in request.form:
+            user = db.session.get(User, session["user_id"])
+            if user:
+                user.has_accepted_terms = True
+                db.session.commit()
+                return redirect(url_for("main.index"))
+        flash("Debe aceptar la política de privacidad para continuar.", "danger")
+
+    return render_template("lopd.html")
 
 
 @main.route("/upload", methods=["GET", "POST"])
