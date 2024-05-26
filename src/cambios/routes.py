@@ -175,7 +175,7 @@ def privacy_policy() -> Response | str:
                 return redirect(url_for("main.index"))
         flash("Debe aceptar la política de privacidad para continuar.", "danger")
 
-    return render_template("lopd.html")
+    return render_template("privacy_policy.html")
 
 
 @main.route("/upload", methods=["GET", "POST"])
