@@ -11,6 +11,7 @@
 </head>
 
 <body>
+    {% if request.endpoint not in ['main.login'] %}
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
@@ -52,6 +53,7 @@
             </div>
         </div>
     </nav>
+    {% endif %}
 
     <div class="container mt-5">
         {% with messages = get_flashed_messages(with_categories=true) %}
