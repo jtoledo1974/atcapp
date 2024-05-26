@@ -7,8 +7,8 @@ file_listings.md
 logs/
 
 # virtualenv
-.venv/
-venv/
+.venv*/
+venv*/
 ENV/
 cambios.egg-info/
 
