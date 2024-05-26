@@ -73,10 +73,11 @@
           });
           return false;
         } else {
-          // If email is not verified, send verification email
+          // If email is not verified, send verification email and log out
           authResult.user.sendEmailVerification().then(() => {
-            alert('Se ha enviado un correo de verificación a ' + authResult.user.email + '. Por favor, verifica tu correo electrónico e inicia sesión de nuevo.');
-            firebase.auth().signOut();
+            firebase.auth().signOut().then(() => {
+              window.location.href = "{{ url_for('main.login', verify_email='true') }}";
+            });
           }).catch((error) => {
             console.error("Error sending email verification:", error);
           });

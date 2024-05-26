@@ -76,7 +76,13 @@ def toggle_descriptions() -> Response:
 @main.route("/login", methods=["GET", "POST"])
 def login() -> Response | str:
     """Render the login page."""
-    if request.method != "POST":
+    if request.method == "GET":
+        if request.args.get("verify_email"):
+            flash(
+                "Se ha enviado un correo de verificación."
+                " Por favor, verifica tu correo electrónico e inicia sesión de nuevo.",
+                "info",
+            )
         return render_template("login.html")
 
     try:
