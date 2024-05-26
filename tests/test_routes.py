@@ -42,7 +42,7 @@ def test_login_failure(client: FlaskClient, mocker: MockerFixture) -> None:
         follow_redirects=True,
     )
     assert response.status_code == 200
-    assert "Autenticación fallida.".encode() in response.data
+    assert "Autenticación fallida".encode() in response.data
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")

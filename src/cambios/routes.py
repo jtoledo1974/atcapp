@@ -85,6 +85,8 @@ def login() -> Response | str:
             )
         if request.args.get("logged_out"):
             flash("Has cerrado sesión.", "info")
+        if request.args.get("error"):
+            flash(request.args.get("error"), "danger")
         return render_template("login.html")
 
     try:
@@ -96,8 +98,7 @@ def login() -> Response | str:
             "Error verifying ID token %s",
             request.form["idToken"],
         )
-        flash("Autenticación fallida.", "danger")
-        return redirect(url_for("main.logout"))
+        return redirect(url_for("main.logout", error="Autenticación fallida"))
 
     user = User.query.filter_by(email=email).first()
     if not user:
@@ -121,8 +122,12 @@ def login() -> Response | str:
             return redirect(url_for("admin.index"))
 
         current_app.logger.error("User not recognized. email=%s", email)
-        flash("Usuario no reconocido. Hable con el administrador.", "danger")
-        return redirect(url_for("main.logout"))
+        return redirect(
+            url_for(
+                "main.logout",
+                error="Usuario no reconocido. Hable con el administrador.",
+            ),
+        )
 
     session["user_id"] = user.id
     current_app.logger.info(
@@ -147,6 +152,9 @@ def logout() -> Response:
             invalidate_token(firebase_id_token)
 
     session.clear()
+    error = request.args.get("error")
+    if error:
+        return redirect(url_for("main.login", logged_out=True, error=error))
     return redirect(url_for("main.login", logged_out=True))
 
 
