@@ -30,7 +30,7 @@ PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 def _set_env() -> None:
     """Set up logging using the environment variable."""
     os.environ["ENABLE_LOGGING"] = "true"
-    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
+    locale.setlocale(locale.LC_ALL, "es_ES.UTF-8")
 
 
 @pytest.fixture()
