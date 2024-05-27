@@ -40,7 +40,9 @@ def privacy_policy_accepted(f: Callable) -> Callable:
         """Check if the user has accepted the privacy policy."""
         user_id = session.get("user_id")
         if not user_id:
-            return redirect(url_for("main.login"))
+            # This decorator is meant for logged in users.
+            # Do nothing if the user is not logged in.
+            return f(*args, **kwargs)
 
         user = db.session.get(User, user_id)
         if user and not user.has_accepted_terms:

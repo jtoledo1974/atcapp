@@ -82,3 +82,45 @@ def test_upload_post_no_file(client: FlaskClient, admin_user: User) -> None:
     response = client.post("/upload", data={"file": (None, "")}, follow_redirects=True)
     assert response.status_code == 200
     assert b"No se ha seleccionado un archivo" in response.data
+
+
+@pytest.mark.usefixtures("_verify_id_token_mock")
+def test_privacy_policy_redirect(client: FlaskClient, new_user: User) -> None:
+    """Test that a user is redirected to the privacy policy page if they have not accepted the policy."""  # noqa: E501
+    # Log in the user
+    response = client.post("/login", data={"idToken": "test_token"})
+    # Ensure the user has not accepted the policy
+    assert response.status_code == 302
+    assert response.location == "/privacy_policy"
+
+
+@pytest.mark.usefixtures("_verify_id_token_mock")
+def test_privacy_policy_accept(client: FlaskClient, new_user: User) -> None:
+    """Test that accepting the privacy policy updates the database and redirects to the main page."""  # noqa: E501
+    # Log in the user
+    client.post("/login", data={"idToken": "test_token"})
+    # Accept the privacy policy
+    response = client.post(
+        "/privacy_policy",
+        data={"accept_policy": "true"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert b"Turnero" in response.data
+
+
+@pytest.mark.usefixtures("_verify_id_token_mock")
+def test_login_redirect_to_privacy_policy(
+    client: FlaskClient,
+    new_user: User,
+) -> None:
+    """Test that a user is redirected to the privacy policy page after login if they have not accepted the policy."""  # noqa: E501
+    # Log in the user
+    response = client.post("/login", data={"idToken": "test_token"})
+    # Ensure the user has not accepted the policy
+    assert response.status_code == 302
+    assert response.location == "/privacy_policy"
+    # Try to access the main page
+    response = client.get("/")
+    assert response.status_code == 302
+    assert response.location == "/privacy_policy"
