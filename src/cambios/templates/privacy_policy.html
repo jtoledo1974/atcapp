@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Política de Privacidad{% endblock %}
+
+{% block head %}
+<style>
+    body,
+    html {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .content-wrapper {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .footer {
+        background-color: #f1f1f1;
+        padding: 10px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <h1>Política de Privacidad</h1>
+    <p>Última actualización: 24 de mayo de 2024</p>
+
+    {% set contact_data = "toledo@lazaro.es o 617060607" %}
+
+    <div class="content-wrapper">
+        <h2>1. Introducción</h2>
+        <p>Esta aplicación es utilizada internamente por los Controladores de Tránsito Aéreo de Enaire. La
+            protección de tus datos personales es importante para nosotros.</p>
+
+        <h2>2. Datos que Recopilamos</h2>
+        <p>Recopilamos los siguientes datos personales:</p>
+        <ul>
+            <li>Nombre y apellidos</li>
+            <li>Correo electrónico</li>
+            <li>Número de teléfono</li>
+            <li>Foto (opcional)</li>
+            <li>Turnos de trabajo</li>
+        </ul>
+
+        <h2>3. Finalidad del Tratamiento</h2>
+        <p>Utilizamos tus datos personales para:</p>
+        <ul>
+            <li>Gestionar los turnos de trabajo</li>
+            <li>Facilitar la comunicación entre los compañeros de trabajo</li>
+        </ul>
+
+        <h2>4. Seguridad de los Datos</h2>
+        <p>Implementamos medidas de seguridad adecuadas para proteger tus datos personales contra accesos no
+            autorizados y otras amenazas. La gestión de las contraseñas la hace Google, la aplicación no almacena
+            contraseñas. La base de datos se encuentra en un servidor protegido con cortafuegos y actualizaciones de
+            seguridad periódicas. Las comunicaciones entre la aplicación y el servidor se realizan a través de una
+            conexión segura (HTTPS).</p>
+
+        <h2>5. Derechos de los Usuarios</h2>
+        <p>Tienes derecho a acceder, rectificar y suprimir tus datos personales, así como a oponerte a su
+            tratamiento. Para ejercer estos derechos, por favor, puedes hacerlo en {{ contact_data }}.</p>
+
+        <h2>6. Contacto</h2>
+        <p>Si tienes alguna pregunta sobre esta política de privacidad, por favor puedes hacerlo en {{ contact_data }}.
+        </p>
+    </div>
+
+    {% if current_user and not current_user.has_accepted_terms %}
+    <div class="footer">
+        <form method="POST">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="accepted" id="privacyPolicyCheck"
+                    name="accept_policy">
+                <label class="form-check-label" for="privacyPolicyCheck">
+                    He leído y acepto la política de privacidad
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Aceptar</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -103,24 +103,6 @@ def _verify_admin_id_token_mock(mocker: MockerFixture) -> None:
 
 
 @pytest.fixture()
-def admin_user(session: scoped_session) -> User:
-    """Create an admin user for testing."""
-    admin = User(
-        email="admin@example.com",
-        firebase_uid="admin_uid",
-        first_name="Admin",
-        last_name="User",
-        category="Admin",
-        team=None,
-        license_number="123456",
-        is_admin=True,
-    )
-    session.add(admin)
-    session.commit()
-    return admin
-
-
-@pytest.fixture()
 def regular_user(session: scoped_session) -> User:
     """Create a regular user for testing."""
     user = User(
@@ -132,10 +114,33 @@ def regular_user(session: scoped_session) -> User:
         team=None,
         license_number="654321",
         is_admin=False,
+        has_accepted_terms=True,
     )
     session.add(user)
     session.commit()
     return user
+
+
+@pytest.fixture()
+def admin_user(regular_user: User, session: scoped_session) -> User:
+    """Create an admin user for testing."""
+    session.delete(regular_user)
+    admin = regular_user
+    admin.email = "admin@example.com"
+    admin.is_admin = True
+    session.add(admin)
+    session.commit()
+    return admin
+
+
+@pytest.fixture()
+def new_user(regular_user: User, session: scoped_session) -> User:
+    """Create a new regular user for testing."""
+    session.delete(regular_user)
+    regular_user.has_accepted_terms = False
+    session.add(regular_user)
+    session.commit()
+    return regular_user
 
 
 @pytest.fixture()

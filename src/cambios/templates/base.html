@@ -11,7 +11,7 @@
 </head>
 
 <body>
-    {% if request.endpoint not in ['main.login'] %}
+    {% if request.endpoint not in ['main.login'] and current_user.has_accepted_terms %}
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
@@ -37,6 +37,13 @@
                     </li>
                     {% endif %}
                     {% endif %}
+                </ul>
+
+                {# Política de privacidad #}
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.privacy_policy') }}">Política de Privacidad</a>
+                    </li>
                 </ul>
 
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
