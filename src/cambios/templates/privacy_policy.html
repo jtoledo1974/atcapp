@@ -32,9 +32,11 @@
     <h1>Política de Privacidad</h1>
     <p>Última actualización: 24 de mayo de 2024</p>
 
+    {% set contact_data = "toledo@lazaro.es o 617060607" %}
+
     <div class="content-wrapper">
         <h2>1. Introducción</h2>
-        <p>Esta aplicación es utilizada internamente por los Controladores de Tránsito Aéreo (ATCS) de Enaire. La
+        <p>Esta aplicación es utilizada internamente por los Controladores de Tránsito Aéreo de Enaire. La
             protección de tus datos personales es importante para nosotros.</p>
 
         <h2>2. Datos que Recopilamos</h2>
@@ -63,14 +65,14 @@
 
         <h2>5. Derechos de los Usuarios</h2>
         <p>Tienes derecho a acceder, rectificar y suprimir tus datos personales, así como a oponerte a su
-            tratamiento. Para ejercer estos derechos, por favor, puedes hacerlo en toledo@lazaro.es o 617060607.</p>
+            tratamiento. Para ejercer estos derechos, por favor, puedes hacerlo en {{ contact_data }}.</p>
 
         <h2>6. Contacto</h2>
-        <p>Si tienes alguna pregunta sobre esta política de privacidad, por favor puedes hacerlo en toledo@lazaro.es
-            o 617060607.</p>
+        <p>Si tienes alguna pregunta sobre esta política de privacidad, por favor puedes hacerlo en {{ contact_data }}.
+        </p>
     </div>
 
-    {% if not current_user.has_accepted_terms %}
+    {% if current_user and not current_user.has_accepted_terms %}
     <div class="footer">
         <form method="POST">
             <div class="form-check">
