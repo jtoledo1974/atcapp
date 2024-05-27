@@ -66,4 +66,11 @@ def test_extract_shift_data() -> None:
     expected_sectors = {"TPR1", "ASN", "ASV", "CEN", "MAR", "NO1", "SEV", "SUR"}
     assert data.sectores == expected_sectors
 
+    assert (
+        data.controladores["SEGURA OCAMPO CARLOS"].comments
+        == "BASELGA VICENTE FERNANDO"
+    )
+    # Only two controllers have comments for them
+    assert len([c.comments for c in data.controladores.values() if c.comments]) == 2
+
     assert len(data.controladores) == 21

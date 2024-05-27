@@ -40,6 +40,7 @@ class Controller:
     name: str
     role: str
     sectors: set[str] = field(default_factory=set)
+    comments: str = ""
 
 
 @dataclass
@@ -95,15 +96,18 @@ def extract_shift_data(page: pdfplumber.page.Page) -> TextShiftData:
         elif row[1] and row[1].startswith("C"):
             controller_name = row[2]
             controller_role = row[3]
-            if controller_name:
-                data.controladores[controller_name] = Controller(
-                    name=controller_name,
-                    role=controller_role,  # type: ignore[arg-type]
-                )
-                sectors = [row[5], row[6], row[7]]
-                for sector in sectors:
-                    if sector:
-                        data.sectores.add(sector)
-                        data.controladores[controller_name].sectors.add(sector)
+            if not controller_name:
+                continue
+            controller = Controller(
+                name=controller_name,
+                role=controller_role,  # type: ignore[arg-type]
+            )
+            data.controladores[controller_name] = controller
+            sectors = [row[5], row[6], row[7]]
+            for sector in sectors:
+                if sector:
+                    data.sectores.add(sector)
+                    controller.sectors.add(sector)
+            controller.comments = row[8]
 
     return data
