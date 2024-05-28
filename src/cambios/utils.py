@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import unicodedata
+from logging import getLogger
 from typing import TYPE_CHECKING
 
 from .models import User
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import scoped_session
+
+logger = getLogger(__name__)
 
 
 def parse_name(name: str) -> tuple[str, str]:
@@ -91,6 +94,7 @@ def create_user(
     Args:
     ----
         name: The full name as a single string or a tuple of (first_name, last_name).
+              If a full name is provided it's expected to be in the format "LAST_NAME FIRST_NAME".
         role: The role of the user. (CON, PDT, etc.)
         team: The team of the user (A, B, C, ...).
         db_session (scoped_session): The database session.
@@ -112,6 +116,15 @@ def create_user(
     if not email:
         email = f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com"
 
+    # Check first whether the user already exists
+    existing_user = find_user(f"{last_name} {first_name}", db_session)
+    if existing_user:
+        logger.warning(
+            "Controlador existente: %s. No creamos uno nuevo con el mismo nombre.",
+            existing_user,
+        )
+        return existing_user
+
     new_user = User(
         first_name=first_name,
         last_name=last_name,
@@ -126,7 +139,7 @@ def create_user(
 
 def update_user(user: User, role: str, team: str | None) -> User:
     """Update the user's team and role if they differ from the provided values."""
-    if user.category != role:
+    if role and user.category != role:
         user.category = role
     if team and user.team != team.upper():
         user.team = team.upper()

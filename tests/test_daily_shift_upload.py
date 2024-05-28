@@ -2,19 +2,28 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generator
 
 import pdfplumber
 import pytest
-from cambios.daily_shift_upload import (
+from cambios.carga_estadillo import (
     TextShiftData,
     extract_shift_data,
+    guardar_datos_estadillo,
 )
+from cambios.models import (
+    ControlRoomShift,
+)
+from cambios.utils import find_user
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 if TYPE_CHECKING:
+    from typing import Any, Generator
+
+    from pdfplumber import PDF
     from sqlalchemy.orm import Session
 
 
@@ -35,13 +44,17 @@ def db_session() -> Generator[scoped_session[Session], Any, Any]:
     engine.dispose()
 
 
-def test_extract_shift_data() -> None:
-    """Test extracting the people data from the first page."""
+@pytest.fixture(scope="session")
+def pdf() -> Generator[PDF, Any, Any]:
+    """Open the test PDF file."""
     test_file_path = Path(__file__).parent / "resources" / "test_daily_schedule.pdf"
+    with pdfplumber.open(test_file_path):
+        yield pdfplumber.open(test_file_path)
 
-    with pdfplumber.open(test_file_path) as pdf:
-        first_page = pdf.pages[0]
-        data = extract_shift_data(first_page)
+
+def test_extract_shift_data(pdf: PDF) -> None:
+    """Test extracting the people data from the first page."""
+    data = extract_shift_data(pdf.pages[0])
 
     assert data
     assert isinstance(data, TextShiftData)
@@ -74,3 +87,34 @@ def test_extract_shift_data() -> None:
     assert len([c.comments for c in data.controladores.values() if c.comments]) == 2
 
     assert len(data.controladores) == 21
+
+
+def test_shift_data_to_tables(
+    pdf: PDF,
+    db_session: scoped_session,
+) -> None:
+    """Test populating the model tables with the data extracted."""
+    data = extract_shift_data(pdf.pages[0])
+    guardar_datos_estadillo(data, db_session, logging.getLogger())
+
+    # Check the control room shift
+    shift = db_session.query(ControlRoomShift).first()
+    assert shift
+    assert shift.unit == data.dependencia
+    assert shift.date.strftime("%d.%m.%Y") == data.fecha
+
+    for nombre_controlador in data.jefes_de_sala:
+        assert find_user(nombre_controlador, db_session) is not None
+
+    for nombre_controlador in data.supervisores:
+        assert find_user(nombre_controlador, db_session) is not None
+
+    for nombre_controlador in data.tcas:
+        assert find_user(nombre_controlador, db_session) is not None
+
+    # Any controllers names mentioned on the first page should now exist
+    # in the Users table
+    for controller in data.controladores:
+        user = find_user(controller, db_session)
+        assert user
+        assert user.category == data.controladores[controller].role

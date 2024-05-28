@@ -12,12 +12,18 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pdfplumber
 
+from .models import ControlRoomShift
+from .utils import create_user, find_user, update_user
+
 if TYPE_CHECKING:  # pragma: no cover
     from logging import Logger
+
+    from sqlalchemy.orm import scoped_session
 
 
 logger: Logger
@@ -54,6 +60,9 @@ class TextShiftData:
     supervisores: list[str] = field(default_factory=list)
     tcas: list[str] = field(default_factory=list)
     controladores: dict[str, Controller] = field(default_factory=dict)
+    """Dictionary of controllers extracted from the first page of the daily shift.
+    
+    The key is the controller's name."""
     sectores: set[str] = field(default_factory=set)
 
 
@@ -108,6 +117,51 @@ def extract_shift_data(page: pdfplumber.page.Page) -> TextShiftData:
                 if sector:
                     data.sectores.add(sector)
                     controller.sectors.add(sector)
-            controller.comments = row[8]
+            controller.comments = row[8] if row[8] else ""
 
     return data
+
+
+def guardar_datos_estadillo(
+    data: TextShiftData,
+    db_session: scoped_session,
+    logger: Logger,
+) -> None:
+    """Guardar los datos generales del estadillo en la base de datos."""
+    logger.info("Saving shift data to the database")
+    # 27.05.2024 to python date
+    date = datetime.strptime(data.fecha, "%d.%m.%Y")  # noqa: DTZ007
+
+    control_room_shift = ControlRoomShift(
+        date=date,
+        unit=data.dependencia,
+        shift_type=data.turno,
+    )
+    db_session.add(control_room_shift)
+
+    for nombre_jefe_de_sala in data.jefes_de_sala:
+        if find_user(nombre_jefe_de_sala, db_session):
+            continue
+        create_user(nombre_jefe_de_sala, "JDS", None, db_session)
+
+    for nombre_supervisor in data.supervisores:
+        if find_user(nombre_supervisor, db_session):
+            continue
+        create_user(nombre_supervisor, "SUP", None, db_session)
+
+    for nombre_tca in data.tcas:
+        if find_user(nombre_tca, db_session):
+            continue
+        create_user(nombre_tca, "TCA", None, db_session)
+
+    for nombre_controlador, controller in data.controladores.items():
+        if user := find_user(nombre_controlador, db_session):
+            update_user(user, controller.role, None)
+        create_user(
+            nombre_controlador,
+            controller.role,
+            None,
+            db_session,
+        )
+
+    logger.info("Shift data saved to the database")
