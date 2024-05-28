@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
 
-from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
+from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
 from .models import ATC, Turno
 from .utils import create_user, find_user, update_user
 
@@ -35,12 +35,12 @@ def is_valid_shift_code(shift_code: str) -> bool:
     """Check if the shift code is valid."""
     if not shift_code:
         return False
-    if shift_code in BASIC_SHIFTS:
+    if shift_code in TURNOS_BASICOS:
         return True
-    if shift_code in SHIFT_TYPES:
+    if shift_code in CODIGOS_DE_TURNO:
         return True
-    for prefix in BASIC_SHIFTS:
-        if shift_code.startswith(prefix) and shift_code[1:] in SHIFT_TYPES:
+    for prefix in TURNOS_BASICOS:
+        if shift_code.startswith(prefix) and shift_code[1:] in CODIGOS_DE_TURNO:
             return True
     return False
 
@@ -80,7 +80,7 @@ def extract_schedule_data(page: Page) -> list[dict]:
 
             # Identify role by finding the first occurrence of a known role
             role_index = next(
-                (i for i, part in enumerate(parts) if part in ATC_ROLES),
+                (i for i, part in enumerate(parts) if part in PUESTOS_CARRERA),
                 None,
             )
             if role_index is None:
@@ -209,7 +209,7 @@ def parse_and_insert_data(
     return n_users, n_shifts
 
 
-def process_file(
+def procesa_turnero(
     file: FileStorage,
     db_session: scoped_session,
     *,

@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 from cambios.cambios import (
     Dia,
-    MonthCalGen,
-    ShiftPeriod,
+    GenCalMensual,
+    TipoTurno,
     Turno,
     description_from_code,
     period_from_code,
@@ -21,15 +21,15 @@ if TYPE_CHECKING:
 
 def test_period_from_code() -> None:
     """Test the period_from_code function."""
-    assert period_from_code("M") == ShiftPeriod.M
-    assert period_from_code("T") == ShiftPeriod.T
-    assert period_from_code("N") == ShiftPeriod.N
-    assert period_from_code("im") == ShiftPeriod.M
-    assert period_from_code("it") == ShiftPeriod.T
-    assert period_from_code("in") == ShiftPeriod.N
-    assert period_from_code("X") == ShiftPeriod.M  # Default case
-    assert period_from_code("ME") == ShiftPeriod.M
-    assert period_from_code("TR") == ShiftPeriod.T
+    assert period_from_code("M") == TipoTurno.M
+    assert period_from_code("T") == TipoTurno.T
+    assert period_from_code("N") == TipoTurno.N
+    assert period_from_code("im") == TipoTurno.M
+    assert period_from_code("it") == TipoTurno.T
+    assert period_from_code("in") == TipoTurno.N
+    assert period_from_code("X") == TipoTurno.M  # Default case
+    assert period_from_code("ME") == TipoTurno.M
+    assert period_from_code("TR") == TipoTurno.T
 
 
 def test_description_from_code() -> None:
@@ -51,8 +51,8 @@ def test_description_from_code() -> None:
 
 def test_shift() -> None:
     """Test the Shift data class."""
-    shift = Turno(period=ShiftPeriod.M, codigo="M01", start_time=None, end_time=None)
-    assert shift.period == ShiftPeriod.M
+    shift = Turno(period=TipoTurno.M, codigo="M01", start_time=None, end_time=None)
+    assert shift.period == TipoTurno.M
     assert shift.codigo == "M01"
     assert shift.start_time is None
     assert shift.end_time is None
@@ -73,7 +73,7 @@ def test_day() -> None:
 
 def test_month_calendar_days() -> None:
     """Test the generation of days in MonthCalendar."""
-    calendar = MonthCalGen.generate(2024, 5)
+    calendar = GenCalMensual.generate(2024, 5)
     days = calendar.dias
 
     # Check the number of days including the days
@@ -97,7 +97,7 @@ def test_month_calendar_days() -> None:
 
 def test_month_calendar_holidays() -> None:
     """Test the identification of national holidays in MonthCalendar."""
-    calendar = MonthCalGen.generate(2024, 1)
+    calendar = GenCalMensual.generate(2024, 1)
     holidays = [day for day in calendar.dias if day.es_festivo_nacional]
 
     # Check if the holidays are correctly identified
@@ -107,7 +107,7 @@ def test_month_calendar_holidays() -> None:
 
 def test_month_calendar_weeks() -> None:
     """Test the week-wise iteration in MonthCalendar."""
-    calendar = MonthCalGen.generate(2024, 5)
+    calendar = GenCalMensual.generate(2024, 5)
     weeks = calendar.semanas
 
     # Check the number of weeks
@@ -126,12 +126,12 @@ def test_month_calendar_weeks() -> None:
 
 def test_load_weeks_from_user(atc: ATC, preloaded_session: Session) -> None:
     """Test loading weeks from user data."""
-    calendar = MonthCalGen.generate(2024, 6, atc, preloaded_session)
+    calendar = GenCalMensual.generate(2024, 6, atc, preloaded_session)
     days = calendar.dias
     day = days[0]
 
     assert day.turno is not None
-    assert day.turno.period == ShiftPeriod.M
+    assert day.turno.period == TipoTurno.M
     assert day.turno.codigo == "MB09"
 
     # Count shifts for the month

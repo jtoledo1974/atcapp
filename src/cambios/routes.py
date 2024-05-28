@@ -19,11 +19,11 @@ from flask import (
 )
 from pytz import timezone as tzinfo
 
-from .cambios import MonthCalGen, es_admin
+from .cambios import GenCalMensual, es_admin
+from .carga_turnero import procesa_turnero
 from .database import db
 from .firebase import invalidate_token, verify_id_token
 from .models import ATC
-from .upload import process_file
 
 if TYPE_CHECKING:  # pragma: no cover
     from flask import Flask
@@ -76,7 +76,7 @@ def index() -> Response | str:
     year = request.args.get("year", type=int, default=today.year)
 
     logger.debug("Generando calendario para %s %s", month, year)
-    calendar = MonthCalGen.generate(year, month, user, db.session)  # type: ignore[arg-type]
+    calendar = GenCalMensual.generate(year, month, user, db.session)  # type: ignore[arg-type]
 
     # Check the session for the toggleDescriptions state
     if "toggleDescriptions" not in session:
@@ -225,7 +225,7 @@ def upload() -> Response | str:
         return redirect(url_for("main.upload"))
 
     try:
-        n_users, n_shifts = process_file(
+        n_users, n_shifts = procesa_turnero(
             file,
             db.session,
             add_new=add_new,

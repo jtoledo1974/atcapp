@@ -7,9 +7,9 @@ import locale
 import pickle
 from pathlib import Path
 
+from cambios.carga_turnero import procesa_turnero
 from cambios.database import db
 from cambios.models import ATC, TipoTurno, Turno
-from cambios.upload import process_file
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -30,7 +30,7 @@ def create_test_data(session):
         Path(__file__).parent.parent / "tests" / "resources" / "test_schedule.pdf"
     )
     with test_file_path.open("rb") as file:
-        process_file(file, session, add_new=True)
+        procesa_turnero(file, session, add_new=True)
 
     # Print the number of rows in the users and shifts tables
     print(
