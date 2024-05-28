@@ -133,7 +133,8 @@ def login() -> Response | str:
         # If the user database is empty we assume the first user is an admin.
         if not ATC.query.all():
             logger.info(
-                "No users found in the database. Assuming first user is an admin.",
+                "No hay usuarios en la base de datos."
+                " Se asume que el primer usuario es un administrador.",
             )
             user = ATC(
                 email=email,

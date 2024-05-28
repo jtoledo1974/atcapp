@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generator
 
 import pdfplumber
 import pytest
 from cambios.carga_estadillo import (
-    TextShiftData,
-    extract_shift_data,
+    DatosEstadilloTexto,
+    extraer_datos_estadillo,
     guardar_datos_estadillo,
 )
 from cambios.models import (
@@ -54,10 +53,10 @@ def pdf() -> Generator[PDF, Any, Any]:
 
 def test_extract_shift_data(pdf: PDF) -> None:
     """Test extracting the people data from the first page."""
-    data = extract_shift_data(pdf.pages[0])
+    data = extraer_datos_estadillo(pdf.pages[0])
 
     assert data
-    assert isinstance(data, TextShiftData)
+    assert isinstance(data, DatosEstadilloTexto)
     assert data.dependencia == "LECS"
     assert data.fecha == "27.05.2024"
     assert data.turno == "M"
@@ -94,8 +93,8 @@ def test_shift_data_to_tables(
     db_session: scoped_session,
 ) -> None:
     """Test populating the model tables with the data extracted."""
-    data = extract_shift_data(pdf.pages[0])
-    guardar_datos_estadillo(data, db_session, logging.getLogger())
+    data = extraer_datos_estadillo(pdf.pages[0])
+    guardar_datos_estadillo(data, db_session)
 
     # Check the control room shift
     shift = db_session.query(EstadilloDiario).first()

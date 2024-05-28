@@ -1,18 +1,18 @@
-"""Processes the uploaded daily schedule file.
+"""Procesa la carga del archivo de estadillo diario.
 
-process_file is the main function that processes the uploaded daily schedule file.
-It extracts the schedule data from the file, parses the data, and inserts it
-into the database. The function uses the extract_schedule_data function to
-extract the schedule data from each page of the uploaded file. The extracted
-data is then parsed using the parse_and_insert_data function, which inserts
-the data into the database.
+procesa_estadillo es la función principal que procesa el archivo de estadillo diario.
+Extrae los datos del estadillo del archivo, analiza los datos e inserta los datos
+en la base de datos. La función utiliza la función extraer_datos_estadillo para
+extraer los datos del estadillo de cada página del archivo cargado. Los datos
+extraídos se analizan utilizando la función parse_and_insert_data, que inserta
+los datos en la base de datos.
 """
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from datetime import datetime
+from logging import getLogger
 from typing import TYPE_CHECKING
 
 import pdfplumber
@@ -21,22 +21,9 @@ from .models import EstadilloDiario
 from .utils import create_user, find_user, update_user
 
 if TYPE_CHECKING:  # pragma: no cover
-    from logging import Logger
-
     from sqlalchemy.orm import scoped_session
 
-
-logger: Logger
-
-
-def setup_logger(app_logger: Logger | None) -> None:
-    """Set up the logger."""
-    global logger  # noqa: PLW0603
-    if app_logger:
-        logger = app_logger
-        return
-
-    logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 @dataclass
@@ -50,8 +37,8 @@ class Controller:
 
 
 @dataclass
-class TextShiftData:
-    """Text data extracted from the first page of the daily shift."""
+class DatosEstadilloTexto:
+    """Datos en texto extraídos de la primera página del estadillo."""
 
     dependencia: str = ""
     fecha: str = ""
@@ -60,22 +47,22 @@ class TextShiftData:
     supervisores: list[str] = field(default_factory=list)
     tcas: list[str] = field(default_factory=list)
     controladores: dict[str, Controller] = field(default_factory=dict)
-    """Dictionary of controllers extracted from the first page of the daily shift.
+    """Diccionario de controladores extraídos de la primera página del turno diario.
     
-    The key is the controller's name."""
+    La clave es el nombre del controlador."""
     sectores: set[str] = field(default_factory=set)
 
 
-def extract_shift_data(page: pdfplumber.page.Page) -> TextShiftData:
-    """Extract the schedule data from the first page.
+def extraer_datos_estadillo(page: pdfplumber.page.Page) -> DatosEstadilloTexto:
+    """Extraer los datos del la primera página del estadillo.
 
-    Mainly the people working and the sectors they are working in.
+    Principalmente las personas que trabajan y los sectores en los que trabajan.
     """
     table = page.extract_table()
     if table is None:
-        return TextShiftData()
+        return DatosEstadilloTexto()
 
-    data = TextShiftData()
+    data = DatosEstadilloTexto()
 
     # Extract dependencia, fecha, and turno from the first row
     header = table[0][0].split()  # type: ignore[union-attr]
@@ -123,9 +110,8 @@ def extract_shift_data(page: pdfplumber.page.Page) -> TextShiftData:
 
 
 def guardar_datos_estadillo(
-    data: TextShiftData,
+    data: DatosEstadilloTexto,
     db_session: scoped_session,
-    logger: Logger,
 ) -> None:
     """Guardar los datos generales del estadillo en la base de datos."""
     logger.info("Saving shift data to the database")
