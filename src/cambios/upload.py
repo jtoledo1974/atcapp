@@ -21,7 +21,7 @@ from pdfminer.pdfparser import PDFSyntaxError
 
 from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
 from .models import Shift, User
-from .utils import find_user
+from .utils import create_user, find_user, update_user
 
 if TYPE_CHECKING:  # pragma: no cover
     from logging import Logger
@@ -196,14 +196,15 @@ def parse_and_insert_data(
         user = find_user(
             entry["name"],
             db_session,
-            entry["role"],
-            team=entry["team"],
-            add_new=add_new,
         )
 
-        if not user:
+        if user:
+            user = update_user(user, entry["role"], entry["team"])
+        elif not add_new:
             logger.warning("User not found for entry: %s", entry["name"])
             continue
+        else:
+            user = create_user(entry["name"], entry["role"], entry["team"], db_session)
 
         n_users += 1
         n_shifts += insert_shift_data(entry["shifts"], month, year, user, db_session)

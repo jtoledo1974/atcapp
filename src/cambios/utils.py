@@ -79,15 +79,39 @@ def normalize_string(s: str) -> str:
     ).lower()
 
 
-def create_user(  # noqa: PLR0913
-    first_name: str,
-    last_name: str,
-    email: str,
+def create_user(
+    name: str | tuple[str, str],
     role: str,
     team: str | None,
     db_session: scoped_session,
+    email: str | None = None,
 ) -> User:
-    """Create a new user in the database."""
+    """Create a new user in the database.
+
+    Args:
+    ----
+        name: The full name as a single string or a tuple of (first_name, last_name).
+        role: The role of the user. (CON, PDT, etc.)
+        team: The team of the user (A, B, C, ...).
+        db_session (scoped_session): The database session.
+        email: The email of the user. If not provided, a fake email will be generated.
+
+    Returns:
+    -------
+        User: The created user.
+
+    """
+    if isinstance(name, str):
+        first_name, last_name = parse_name(name)
+    elif isinstance(name, tuple) and len(name) == 2:  # noqa: PLR2004
+        first_name, last_name = name
+    else:
+        _msg = "name either full name string or tuple of (first_name, last_name)"
+        raise ValueError(_msg)
+
+    if not email:
+        email = f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com"
+
     new_user = User(
         first_name=first_name,
         last_name=last_name,
@@ -109,19 +133,13 @@ def update_user(user: User, role: str, team: str | None) -> User:
     return user
 
 
-def find_user(  # noqa: PLR0913
+def find_user(
     name: str,
     db_session: scoped_session,
-    role: str,
-    team: str | None,
-    *,
-    add_new: bool = False,
-    edit_existing: bool = True,
 ) -> User | None:
     """Find a user in the database by name.
 
-    If the user is not found, create a new user if add_new is True.
-    If the user is found, update the user's role and team if edit_existing is True.
+    The name is expected to be in the format "LAST_NAME FIRST_NAME".
     """
     first_name, last_name = parse_name(name)
     normalized_first_name = normalize_string(first_name)
@@ -139,12 +157,6 @@ def find_user(  # noqa: PLR0913
             normalize_string(f"{user.last_name} {user.first_name}")
             == normalized_full_name
         ):
-            if edit_existing:
-                return update_user(user, role, team)
             return user
-
-    if add_new:
-        email = f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com"
-        return create_user(first_name, last_name, email, role, team, db_session)
 
     return None
