@@ -10,10 +10,10 @@ the data into the database.
 
 from __future__ import annotations
 
-import logging
 import re
 from datetime import datetime
 from io import BytesIO
+from logging import getLogger
 from typing import TYPE_CHECKING
 
 import pdfplumber
@@ -23,24 +23,12 @@ from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
 from .models import Shift, User
 from .utils import create_user, find_user, update_user
 
-if TYPE_CHECKING:  # pragma: no cover
-    from logging import Logger
+logger = getLogger(__name__)
 
+if TYPE_CHECKING:  # pragma: no cover
     from pdfplumber.page import Page
     from sqlalchemy.orm.scoping import scoped_session
     from werkzeug.datastructures import FileStorage
-
-logger: Logger
-
-
-def setup_logger(app_logger: Logger | None) -> None:
-    """Set up the logger."""
-    global logger  # noqa: PLW0603
-    if app_logger:
-        logger = app_logger
-        return
-
-    logger = logging.getLogger(__name__)
 
 
 def is_valid_shift_code(shift_code: str) -> bool:
@@ -219,7 +207,6 @@ def process_file(
     db_session: scoped_session,
     *,
     add_new: bool = False,
-    app_logger: Logger | None = None,
 ) -> tuple[int, int]:
     """Process the uploaded file and insert data into the database.
 
@@ -230,7 +217,6 @@ def process_file(
 
     Returns the number of users and shifts inserted.
     """
-    setup_logger(app_logger)
     try:
         with pdfplumber.open(BytesIO(file.read())) as pdf:
             all_data = []
