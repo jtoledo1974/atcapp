@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Generator
 import pytest
 from cambios.app import Config, create_app
 from cambios.database import db as _db
-from cambios.models import Shift, ShiftTypes, User
+from cambios.models import ATC, TipoTurno, Turno
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -103,18 +103,18 @@ def _verify_admin_id_token_mock(mocker: MockerFixture) -> None:
 
 
 @pytest.fixture()
-def regular_user(session: scoped_session) -> User:
+def regular_user(session: scoped_session) -> ATC:
     """Create a regular user for testing."""
-    user = User(
+    user = ATC(
         email="user@example.com",
         firebase_uid="user_uid",
-        first_name="Regular",
-        last_name="User",
-        category="User",
-        team=None,
-        license_number="654321",
-        is_admin=False,
-        has_accepted_terms=True,
+        nombre="Regular",
+        apellidos="User",
+        categoria="User",
+        equipo=None,
+        numero_de_licencia="654321",
+        es_admin=False,
+        politica_aceptada=True,
     )
     session.add(user)
     session.commit()
@@ -122,22 +122,22 @@ def regular_user(session: scoped_session) -> User:
 
 
 @pytest.fixture()
-def admin_user(regular_user: User, session: scoped_session) -> User:
+def admin_user(regular_user: ATC, session: scoped_session) -> ATC:
     """Create an admin user for testing."""
     session.delete(regular_user)
     admin = regular_user
     admin.email = "admin@example.com"
-    admin.is_admin = True
+    admin.es_admin = True
     session.add(admin)
     session.commit()
     return admin
 
 
 @pytest.fixture()
-def new_user(regular_user: User, session: scoped_session) -> User:
+def new_user(regular_user: ATC, session: scoped_session) -> ATC:
     """Create a new regular user for testing."""
     session.delete(regular_user)
-    regular_user.has_accepted_terms = False
+    regular_user.politica_aceptada = False
     session.add(regular_user)
     session.commit()
     return regular_user
@@ -155,9 +155,9 @@ def preloaded_session() -> Generator[Session, None, None]:
         pickle_data = pickle.load(file)  # noqa: S301
 
     for table, data in (
-        [User, pickle_data["users"]],
-        [Shift, pickle_data["shifts"]],
-        [ShiftTypes, pickle_data["shift_types"]],
+        [ATC, pickle_data["users"]],
+        [Turno, pickle_data["shifts"]],
+        [TipoTurno, pickle_data["shift_types"]],
     ):
         for item in data:
             item.pop("_sa_instance_state", None)
@@ -169,10 +169,10 @@ def preloaded_session() -> Generator[Session, None, None]:
 
 
 @pytest.fixture()
-def atc(preloaded_session: Session) -> User:
+def atc(preloaded_session: Session) -> ATC:
     """Return an atc from a preloaded database."""
     # Get the first user from the Users table
-    user = preloaded_session.query(User).first()
+    user = preloaded_session.query(ATC).first()
     if not user:
         _msg = "No users in the database."
         raise ValueError(_msg)

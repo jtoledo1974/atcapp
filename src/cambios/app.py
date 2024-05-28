@@ -15,16 +15,14 @@ from flask_admin.contrib.sqla import ModelView  # type: ignore[import-untyped]
 
 from .database import db, init_db
 from .firebase import init_firebase
-from .models import User
+from .models import ATC
 from .routes import register_routes
 
 if TYPE_CHECKING:  # pragma: no cover
     from werkzeug import Response
 
 LOGFILE = "logs/cambios.log"
-LOGFORMAT = (
-    "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d] %(name)s"
-)
+LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
 
 
 class Config:
@@ -48,18 +46,20 @@ class AdminModelView(ModelView):
 
     def is_accessible(self) -> bool:
         """Only allow access to the admin panel if the user is an admin."""
-        return bool(session.get("is_admin"))
+        return bool(session.get("es_admin"))
 
     def inaccessible_callback(self, _name: str, **_kwargs: dict[str, Any]) -> Response:
         """Redirect to the login page if the user is not an admin."""
         return redirect(url_for("main.login"))
 
 
-def configure_logging(app: Flask, debug_level: int = logging.INFO) -> None:
+def configure_logging(app: Flask) -> None:
     """Configure logging based on the environment variable."""
     # Configure logging
     # ENABLE_LOGGING forces logs to be written to a file
     enable_logging = os.getenv("ENABLE_LOGGING", "False").lower() in ["true", "1", "t"]
+    env_log_level = os.getenv("LOG_LEVEL", "INFO")
+    debug_level = logging.getLevelName(env_log_level)
 
     if not enable_logging:
         return
@@ -108,12 +108,12 @@ def create_app(config_class: type[Config] = Config) -> Flask:
         name="Admin Panel",
         template_mode="bootstrap4",
     )
-    admin.add_view(AdminModelView(User, db.session))
+    admin.add_view(AdminModelView(ATC, db.session))
 
     # Context processor to make user info available in templates
     @app.context_processor
     def inject_user() -> dict[str, str]:
-        user = User.query.filter_by(id=session.get("user_id")).first()
+        user = ATC.query.filter_by(id=session.get("id_atc")).first()
         return {
             "current_user": user,
         }

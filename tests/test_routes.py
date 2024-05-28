@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 if TYPE_CHECKING:
-    from cambios.models import User
+    from cambios.models import ATC
     from flask.testing import FlaskClient
     from pytest_mock import MockerFixture
 
@@ -20,7 +20,7 @@ def test_index_redirect(client: FlaskClient) -> None:
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
-def test_login_success(client: FlaskClient, regular_user: User) -> None:
+def test_login_success(client: FlaskClient, regular_user: ATC) -> None:
     """Test that the login route logs in a user."""
     response = client.post(
         "/login",
@@ -30,7 +30,7 @@ def test_login_success(client: FlaskClient, regular_user: User) -> None:
     assert response.status_code == 302
     assert response.location == "/"
     with client.session_transaction() as sess:
-        assert sess["user_id"] == regular_user.id
+        assert sess["id_atc"] == regular_user.id
 
 
 def test_login_failure(client: FlaskClient, mocker: MockerFixture) -> None:
@@ -46,18 +46,18 @@ def test_login_failure(client: FlaskClient, mocker: MockerFixture) -> None:
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
-def test_logout(client: FlaskClient, regular_user: User) -> None:
+def test_logout(client: FlaskClient, regular_user: ATC) -> None:
     """Test that the logout route logs out a user."""
     client.post("/login", data={"idToken": "test_token"})
     response = client.get("/logout", follow_redirects=True)
     assert response.status_code == 200
     assert b"Login" in response.data
     with client.session_transaction() as sess:
-        assert "user_id" not in sess
+        assert "id_atc" not in sess
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
-def test_upload_get(client: FlaskClient, regular_user: User) -> None:
+def test_upload_get(client: FlaskClient, regular_user: ATC) -> None:
     """Test that the upload route redirects regular users to /."""
     client.post("/login", data={"idToken": "test_token"})
     response = client.get("/upload")
@@ -66,7 +66,7 @@ def test_upload_get(client: FlaskClient, regular_user: User) -> None:
 
 
 @pytest.mark.usefixtures("_verify_admin_id_token_mock")
-def test_upload_admin_get(client: FlaskClient, admin_user: User) -> None:
+def test_upload_admin_get(client: FlaskClient, admin_user: ATC) -> None:
     """Test that the upload route renders the upload page."""
     client.post("/login", data={"idToken": "test_token"})
     response = client.get("/upload")
@@ -75,7 +75,7 @@ def test_upload_admin_get(client: FlaskClient, admin_user: User) -> None:
 
 
 @pytest.mark.usefixtures("_verify_admin_id_token_mock")
-def test_upload_post_no_file(client: FlaskClient, admin_user: User) -> None:
+def test_upload_post_no_file(client: FlaskClient, admin_user: ATC) -> None:
     """Test that the upload route fails if no file is selected."""
     client.post("/login", data={"idToken": "test_token"})
     # Submit the upload form with an empty file field
@@ -85,7 +85,7 @@ def test_upload_post_no_file(client: FlaskClient, admin_user: User) -> None:
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
-def test_privacy_policy_redirect(client: FlaskClient, new_user: User) -> None:
+def test_privacy_policy_redirect(client: FlaskClient, new_user: ATC) -> None:
     """Test that a user is redirected to the privacy policy page if they have not accepted the policy."""  # noqa: E501
     # Log in the user
     response = client.post("/login", data={"idToken": "test_token"})
@@ -95,7 +95,7 @@ def test_privacy_policy_redirect(client: FlaskClient, new_user: User) -> None:
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
-def test_privacy_policy_accept(client: FlaskClient, new_user: User) -> None:
+def test_privacy_policy_accept(client: FlaskClient, new_user: ATC) -> None:
     """Test that accepting the privacy policy updates the database and redirects to the main page."""  # noqa: E501
     # Log in the user
     client.post("/login", data={"idToken": "test_token"})
@@ -112,7 +112,7 @@ def test_privacy_policy_accept(client: FlaskClient, new_user: User) -> None:
 @pytest.mark.usefixtures("_verify_id_token_mock")
 def test_login_redirect_to_privacy_policy(
     client: FlaskClient,
-    new_user: User,
+    new_user: ATC,
 ) -> None:
     """Test that a user is redirected to the privacy policy page after login if they have not accepted the policy."""  # noqa: E501
     # Log in the user

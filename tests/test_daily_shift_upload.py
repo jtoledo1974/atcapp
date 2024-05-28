@@ -14,7 +14,7 @@ from cambios.carga_estadillo import (
     guardar_datos_estadillo,
 )
 from cambios.models import (
-    ControlRoomShift,
+    EstadilloDiario,
 )
 from cambios.utils import find_user
 from sqlalchemy import create_engine
@@ -98,10 +98,10 @@ def test_shift_data_to_tables(
     guardar_datos_estadillo(data, db_session, logging.getLogger())
 
     # Check the control room shift
-    shift = db_session.query(ControlRoomShift).first()
+    shift = db_session.query(EstadilloDiario).first()
     assert shift
-    assert shift.unit == data.dependencia
-    assert shift.date.strftime("%d.%m.%Y") == data.fecha
+    assert shift.dependencia == data.dependencia
+    assert shift.fecha.strftime("%d.%m.%Y") == data.fecha
 
     for nombre_controlador in data.jefes_de_sala:
         assert find_user(nombre_controlador, db_session) is not None
@@ -117,4 +117,4 @@ def test_shift_data_to_tables(
     for controller in data.controladores:
         user = find_user(controller, db_session)
         assert user
-        assert user.category == data.controladores[controller].role
+        assert user.categoria == data.controladores[controller].role

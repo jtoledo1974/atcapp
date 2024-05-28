@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 import pdfplumber
 
-from .models import ControlRoomShift
+from .models import EstadilloDiario
 from .utils import create_user, find_user, update_user
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -132,10 +132,10 @@ def guardar_datos_estadillo(
     # 27.05.2024 to python date
     date = datetime.strptime(data.fecha, "%d.%m.%Y")  # noqa: DTZ007
 
-    control_room_shift = ControlRoomShift(
-        date=date,
-        unit=data.dependencia,
-        shift_type=data.turno,
+    control_room_shift = EstadilloDiario(
+        fecha=date,
+        dependencia=data.dependencia,
+        turno=data.turno,
     )
     db_session.add(control_room_shift)
 

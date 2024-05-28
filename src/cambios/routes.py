@@ -19,10 +19,10 @@ from flask import (
 )
 from pytz import timezone as tzinfo
 
-from .cambios import MonthCalGen, is_admin
+from .cambios import MonthCalGen, es_admin
 from .database import db
 from .firebase import invalidate_token, verify_id_token
-from .models import User
+from .models import ATC
 from .upload import process_file
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -40,14 +40,14 @@ def privacy_policy_accepted(f: Callable) -> Callable:
     @wraps(f)
     def decorated_function(*args, **kwargs) -> Response | str:  # noqa: ANN002, ANN003
         """Check if the user has accepted the privacy policy."""
-        user_id = session.get("user_id")
-        if not user_id:
+        id_atc = session.get("id_atc")
+        if not id_atc:
             # This decorator is meant for logged in users.
             # Do nothing if the user is not logged in.
             return f(*args, **kwargs)
 
-        user = db.session.get(User, user_id)
-        if user and not user.has_accepted_terms:
+        user = db.session.get(ATC, id_atc)
+        if user and not user.politica_aceptada:
             flash("Debes aceptar la política de privacidad para continuar.", "warning")
             return redirect(url_for("main.privacy_policy"))
 
@@ -60,10 +60,10 @@ def privacy_policy_accepted(f: Callable) -> Callable:
 @privacy_policy_accepted
 def index() -> Response | str:
     """Render the index page."""
-    if "user_id" not in session:
+    if "id_atc" not in session:
         return redirect(url_for("main.login"))
 
-    user = db.session.get(User, session["user_id"])
+    user = db.session.get(ATC, session["id_atc"])
     if not user:
         return redirect(url_for("main.logout"))
 
@@ -75,6 +75,7 @@ def index() -> Response | str:
     month = request.args.get("month", type=int, default=today.month)
     year = request.args.get("year", type=int, default=today.year)
 
+    logger.debug("Generando calendario para %s %s", month, year)
     calendar = MonthCalGen.generate(year, month, user, db.session)  # type: ignore[arg-type]
 
     # Check the session for the toggleDescriptions state
@@ -127,24 +128,24 @@ def login() -> Response | str:
         )
         return redirect(url_for("main.logout", error="Autenticación fallida"))
 
-    user = User.query.filter_by(email=email).first()
+    user = ATC.query.filter_by(email=email).first()
     if not user:
         # If the user database is empty we assume the first user is an admin.
-        if not User.query.all():
+        if not ATC.query.all():
             logger.info(
                 "No users found in the database. Assuming first user is an admin.",
             )
-            user = User(
+            user = ATC(
                 email=email,
-                first_name="Admin",
-                last_name="User",
-                category="Admin",
-                license_number=0,
-                is_admin=True,
+                nombre="Admin",
+                apellidos="User",
+                categoria="Admin",
+                numero_de_licencia=0,
+                es_admin=True,
             )
             db.session.add(user)
             db.session.commit()
-            session["is_admin"] = True
+            session["es_admin"] = True
             flash("Usuario administrador creado.", "success")
             return redirect(url_for("admin.index"))
 
@@ -156,20 +157,20 @@ def login() -> Response | str:
             ),
         )
 
-    session["user_id"] = user.id
+    session["id_atc"] = user.id
     logger.info(
         "User %s logged in. email=%s",
-        user.first_name + " " + user.last_name,
+        user.nombre + " " + user.apellidos,
         email,
     )
-    flash("Bienvenido, " + user.first_name + " " + user.last_name, "success")
+    flash("Bienvenido, " + user.nombre + " " + user.apellidos, "success")
 
     # Check for admin user.
-    if is_admin(email):
-        session["is_admin"] = True
+    if es_admin(email):
+        session["es_admin"] = True
 
     # Verificar si el usuario ha aceptado la política de privacidad
-    if not user.has_accepted_terms:
+    if not user.politica_aceptada:
         return redirect(url_for("main.privacy_policy"))
 
     return redirect(url_for("main.index"))
@@ -195,9 +196,9 @@ def privacy_policy() -> Response | str:
     """Render the privacy policy page and handle acceptance."""
     if request.method == "POST":
         if "accept_policy" in request.form:
-            user = db.session.get(User, session["user_id"])
+            user = db.session.get(ATC, session["id_atc"])
             if user:
-                user.has_accepted_terms = True
+                user.politica_aceptada = True
                 db.session.commit()
                 return redirect(url_for("main.index"))
         flash("Debe aceptar la política de privacidad para continuar.", "danger")
@@ -213,7 +214,7 @@ def upload() -> Response | str:
     For GET requests, render the upload page.
     For POST requests, upload the shift data to the server.
     """
-    if session.get("is_admin") is not True:
+    if session.get("es_admin") is not True:
         return redirect(url_for("main.index"))
     if request.method != "POST":
         return render_template("upload.html")

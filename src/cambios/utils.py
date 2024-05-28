@@ -6,7 +6,7 @@ import unicodedata
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from .models import User
+from .models import ATC
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import scoped_session
@@ -38,11 +38,11 @@ def parse_name(name: str) -> tuple[str, str]:
     """
     parts = name.split()
     prepositions = {"DE", "DEL", "DE LA", "DE LOS", "DE LAS"}
-    last_name_parts: list[str] = []
+    apellidos_parts: list[str] = []
     i = 0
 
     # Identify the last names
-    while i < len(parts) and len(last_name_parts) < 2:  # noqa: PLR2004 Dos apellidos
+    while i < len(parts) and len(apellidos_parts) < 2:  # noqa: PLR2004 Dos apellidos
         if parts[i].upper() in prepositions:
             # Handle multi-word prepositions (e.g., "DE LA", "DE LOS")
             if i + 1 < len(parts):
@@ -52,27 +52,27 @@ def parse_name(name: str) -> tuple[str, str]:
                         "LOS",
                         "LAS",
                     }:
-                        last_name_parts.append(" ".join(parts[i : i + 3]))
+                        apellidos_parts.append(" ".join(parts[i : i + 3]))
                         i += 3
                     else:
-                        last_name_parts.append(" ".join(parts[i : i + 2]))
+                        apellidos_parts.append(" ".join(parts[i : i + 2]))
                         i += 2
                 else:
-                    last_name_parts.append(" ".join(parts[i : i + 2]))
+                    apellidos_parts.append(" ".join(parts[i : i + 2]))
                     i += 2
             else:
                 break
         else:
-            last_name_parts.append(parts[i])
+            apellidos_parts.append(parts[i])
             i += 1
 
     # The rest is the first name
-    first_name_parts = parts[i:]
+    nombre_parts = parts[i:]
 
-    last_name = " ".join(last_name_parts)
-    first_name = " ".join(first_name_parts)
+    apellidos = " ".join(apellidos_parts)
+    nombre = " ".join(nombre_parts)
 
-    return first_name, last_name
+    return nombre, apellidos
 
 
 def normalize_string(s: str) -> str:
@@ -85,18 +85,18 @@ def normalize_string(s: str) -> str:
 def create_user(
     name: str | tuple[str, str],
     role: str,
-    team: str | None,
+    equipo: str | None,
     db_session: scoped_session,
     email: str | None = None,
-) -> User:
+) -> ATC:
     """Create a new user in the database.
 
     Args:
     ----
-        name: The full name as a single string or a tuple of (first_name, last_name).
-              If a full name is provided it's expected to be in the format "LAST_NAME FIRST_NAME".
+        name: The full name as a single string or a tuple of (nombre, apellidos).
+              If a full name is provided it's expected to be in the format "apellidos nombre".
         role: The role of the user. (CON, PDT, etc.)
-        team: The team of the user (A, B, C, ...).
+        equipo: The equipo of the user (A, B, C, ...).
         db_session (scoped_session): The database session.
         email: The email of the user. If not provided, a fake email will be generated.
 
@@ -106,18 +106,18 @@ def create_user(
 
     """
     if isinstance(name, str):
-        first_name, last_name = parse_name(name)
+        nombre, apellidos = parse_name(name)
     elif isinstance(name, tuple) and len(name) == 2:  # noqa: PLR2004
-        first_name, last_name = name
+        nombre, apellidos = name
     else:
-        _msg = "name either full name string or tuple of (first_name, last_name)"
+        _msg = "name either full name string or tuple of (nombre, apellidos)"
         raise ValueError(_msg)
 
     if not email:
-        email = f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com"
+        email = f"fixme{nombre.strip()}{apellidos.strip()}fixme@example.com"
 
     # Check first whether the user already exists
-    existing_user = find_user(f"{last_name} {first_name}", db_session)
+    existing_user = find_user(f"{apellidos} {nombre}", db_session)
     if existing_user:
         logger.warning(
             "Controlador existente: %s. No creamos uno nuevo con el mismo nombre.",
@@ -125,50 +125,49 @@ def create_user(
         )
         return existing_user
 
-    new_user = User(
-        first_name=first_name,
-        last_name=last_name,
+    new_user = ATC(
+        nombre=nombre,
+        apellidos=apellidos,
         email=email,
-        category=role,
-        team=team.upper() if team else None,
-        license_number="",
+        categoria=role,
+        equipo=equipo.upper() if equipo else None,
+        numero_de_licencia="",
     )
     db_session.add(new_user)
     return new_user
 
 
-def update_user(user: User, role: str, team: str | None) -> User:
-    """Update the user's team and role if they differ from the provided values."""
-    if role and user.category != role:
-        user.category = role
-    if team and user.team != team.upper():
-        user.team = team.upper()
+def update_user(user: ATC, role: str, equipo: str | None) -> ATC:
+    """Update the user's equipo and role if they differ from the provided values."""
+    if role and user.categoria != role:
+        user.categoria = role
+    if equipo and user.equipo != equipo.upper():
+        user.equipo = equipo.upper()
     return user
 
 
 def find_user(
     name: str,
     db_session: scoped_session,
-) -> User | None:
+) -> ATC | None:
     """Find a user in the database by name.
 
-    The name is expected to be in the format "LAST_NAME FIRST_NAME".
+    The name is expected to be in the format "apellidos nombre".
     """
-    first_name, last_name = parse_name(name)
-    normalized_first_name = normalize_string(first_name)
-    normalized_last_name = normalize_string(last_name)
-    normalized_full_name = normalize_string(f"{last_name} {first_name}")
+    nombre, apellidos = parse_name(name)
+    normalized_nombre = normalize_string(nombre)
+    normalized_apellidos = normalize_string(apellidos)
+    normalized_full_name = normalize_string(f"{apellidos} {nombre}")
 
     # Fetch all users and normalize names for comparison
-    users = db_session.query(User).all()
+    users = db_session.query(ATC).all()
 
     for user in users:
         if (
-            normalize_string(user.first_name) == normalized_first_name
-            and normalize_string(user.last_name) == normalized_last_name
+            normalize_string(user.nombre) == normalized_nombre
+            and normalize_string(user.apellidos) == normalized_apellidos
         ) or (
-            normalize_string(f"{user.last_name} {user.first_name}")
-            == normalized_full_name
+            normalize_string(f"{user.apellidos} {user.nombre}") == normalized_full_name
         ):
             return user
 
