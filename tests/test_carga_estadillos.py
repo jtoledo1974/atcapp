@@ -71,28 +71,30 @@ def test_extract_shift_data(pdf: PDF) -> None:
     assert "GALLEGO PAGAN ANTONIO GINES" in data.tcas
 
     assert "ASENSIO GONZALEZ JUAN CARLOS" in data.controladores
-    assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].role == "CON"
-    assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].sectors == {"TPR1"}
-    assert data.controladores["TRUJILLO GUERRA RAFAEL"].sectors == {"SUR", "SEV"}
+    assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].puesto == "CON"
+    assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].sectores == {"TPR1"}
+    assert data.controladores["TRUJILLO GUERRA RAFAEL"].sectores == {"SUR", "SEV"}
 
     expected_sectors = {"TPR1", "ASN", "ASV", "CEN", "MAR", "NO1", "SEV", "SUR"}
     assert data.sectores == expected_sectors
 
     assert (
-        data.controladores["SEGURA OCAMPO CARLOS"].comments
+        data.controladores["SEGURA OCAMPO CARLOS"].comentarios
         == "BASELGA VICENTE FERNANDO"
     )
     # Only two controllers have comments for them
-    assert len([c.comments for c in data.controladores.values() if c.comments]) == 2
+    assert (
+        len([c.comentarios for c in data.controladores.values() if c.comentarios]) == 2
+    )
 
     assert len(data.controladores) == 21
 
 
-def test_shift_data_to_tables(
+def test_datos_generales_estadillo_a_db(
     pdf: PDF,
     db_session: scoped_session,
 ) -> None:
-    """Test populating the model tables with the data extracted."""
+    """Comprobar que los datos del estadillo se guardan en la base de datos."""
     data = extraer_datos_estadillo(pdf.pages[0])
     guardar_datos_estadillo(data, db_session)
 
@@ -113,7 +115,27 @@ def test_shift_data_to_tables(
 
     # Any controllers names mentioned on the first page should now exist
     # in the Users table
-    for controller in data.controladores:
-        user = find_user(controller, db_session)
+    for nombre_controlador in data.controladores:
+        user = find_user(nombre_controlador, db_session)
         assert user
-        assert user.categoria == data.controladores[controller].role
+        assert user.categoria == data.controladores[nombre_controlador].puesto
+
+    # Verificar sectores
+    for sector in data.sectores:
+        assert (
+            db_session.query(EstadilloDiario)
+            .filter(EstadilloDiario.sectores.any(nombre=sector))
+            .first()
+        )
+
+    # Verificar que cada controlador mencionado tiene en el estadillo
+    # los sectores que le tocan
+    for nombre_controlador, controlador in data.controladores.items():
+        user = find_user(nombre_controlador, db_session)
+        assert user
+        for sector_name in controlador.sectores:
+            assert (
+                db_session.query(EstadilloDiario)
+                .filter(EstadilloDiario.sectores.any(nombre=sector_name))
+                .first()
+            )

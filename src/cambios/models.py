@@ -86,6 +86,14 @@ class EstadilloDiario(db.Model):  # type: ignore[name-defined]
     """Tipo de turno: M, T, N."""
 
 
+class Sector(db.Model):  # type: ignore[name-defined]
+    """Modelo de la tabla sectores."""
+
+    __tablename__ = "sectores"
+    id = Column(Integer, primary_key=True)
+    nombre: str = Column(String(20), nullable=False)  # type: ignore[assignment]
+
+
 # Many-to-many relationship tables for roles in control room shifts
 jefes_estadillos = Table(
     "jefes_estadillos",
@@ -108,6 +116,13 @@ tcas_estadillos = Table(
     Column("id_atc", Integer, ForeignKey("atcs.id")),
 )
 
+sectores_estadillos = Table(
+    "sectores_estadillos",
+    db.Model.metadata,
+    Column("id_estadillo", Integer, ForeignKey("estadillos_diarios.id")),
+    Column("id_sector", Integer, ForeignKey("sectores.id")),
+)
+
 # Updating ControlRoomShift model to include relationships
 EstadilloDiario.jefes = relationship(
     "ATC",
@@ -123,4 +138,9 @@ EstadilloDiario.tcas = relationship(
     "ATC",
     secondary=tcas_estadillos,
     backref="turnos_de_tca",
+)
+EstadilloDiario.sectores = relationship(
+    "Sector",
+    secondary=sectores_estadillos,
+    backref="estadillos",
 )

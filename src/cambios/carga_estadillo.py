@@ -17,23 +17,29 @@ from typing import TYPE_CHECKING
 
 import pdfplumber
 
-from .models import EstadilloDiario
+from .models import EstadilloDiario, Sector
 from .utils import create_user, find_user, update_user
 
 if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import scoped_session
+    from sqlalchemy.orm.collections import InstrumentedList
+
+    from .models import ATC
 
 logger = getLogger(__name__)
 
 
 @dataclass
 class Controller:
-    """Text data for controllers extracted from the first page of the daily shift."""
+    """Datos de un controlador extraídos de la primera página del estadillo."""
 
-    name: str
-    role: str
-    sectors: set[str] = field(default_factory=set)
-    comments: str = ""
+    nombre: str
+    puesto: str
+    """Puesto del controlador, como aparece en el estadillo (CON, PTD, IS, etc.)."""
+    sectores: set[str] = field(default_factory=set)
+    """Conjunto de sectores en los que trabaja el controlador en un turno."""
+    comentarios: str = ""
+    """Comentarios adicionales. Puede ser el instruyendo."""
 
 
 @dataclass
@@ -95,21 +101,21 @@ def extraer_datos_estadillo(page: pdfplumber.page.Page) -> DatosEstadilloTexto:
             if not controller_name:
                 continue
             controller = Controller(
-                name=controller_name,
-                role=controller_role,  # type: ignore[arg-type]
+                nombre=controller_name,
+                puesto=controller_role,  # type: ignore[arg-type]
             )
             data.controladores[controller_name] = controller
             sectors = [row[5], row[6], row[7]]
             for sector in sectors:
                 if sector:
                     data.sectores.add(sector)
-                    controller.sectors.add(sector)
-            controller.comments = row[8] if row[8] else ""
+                    controller.sectores.add(sector)
+            controller.comentarios = row[8] if row[8] else ""
 
     return data
 
 
-def guardar_datos_estadillo(
+def guardar_datos_estadillo(  # noqa: C901
     data: DatosEstadilloTexto,
     db_session: scoped_session,
 ) -> None:
@@ -118,36 +124,50 @@ def guardar_datos_estadillo(
     # 27.05.2024 to python date
     date = datetime.strptime(data.fecha, "%d.%m.%Y")  # noqa: DTZ007
 
-    control_room_shift = EstadilloDiario(
+    estadillo = EstadilloDiario(
         fecha=date,
         dependencia=data.dependencia,
         turno=data.turno,
     )
-    db_session.add(control_room_shift)
+    db_session.add(estadillo)
 
+    def procesar_atc(
+        name: str,
+        role: str,
+        relationship_list: InstrumentedList | list,
+    ) -> ATC:
+        """Procesar un ATC y añadirlo a la lista de relación si no está ya."""
+        user = find_user(name, db_session)
+        if not user:
+            user = create_user(name, role, None, db_session)
+        if user not in relationship_list:
+            relationship_list.append(user)
+        return user
+
+    # Procesar jefes de sala
     for nombre_jefe_de_sala in data.jefes_de_sala:
-        if find_user(nombre_jefe_de_sala, db_session):
-            continue
-        create_user(nombre_jefe_de_sala, "JDS", None, db_session)
+        procesar_atc(nombre_jefe_de_sala, "JDS", estadillo.jefes)
 
+    # Procesar supervisores
     for nombre_supervisor in data.supervisores:
-        if find_user(nombre_supervisor, db_session):
-            continue
-        create_user(nombre_supervisor, "SUP", None, db_session)
+        procesar_atc(nombre_supervisor, "SUP", estadillo.supervisores)
 
+    # Procesar TCAs
     for nombre_tca in data.tcas:
-        if find_user(nombre_tca, db_session):
-            continue
-        create_user(nombre_tca, "TCA", None, db_session)
+        procesar_atc(nombre_tca, "TCA", estadillo.tcas)
 
+    # Procesar controladores y sus sectores
     for nombre_controlador, controller in data.controladores.items():
-        if user := find_user(nombre_controlador, db_session):
-            update_user(user, controller.role, None)
-        create_user(
-            nombre_controlador,
-            controller.role,
-            None,
-            db_session,
-        )
+        user = procesar_atc(nombre_controlador, controller.puesto, [])
+        update_user(user, controller.puesto, None)
+
+        for sector_name in controller.sectores:
+            sector = db_session.query(Sector).filter_by(nombre=sector_name).first()
+            if not sector:
+                sector = Sector(nombre=sector_name)
+                db_session.add(sector)
+            if sector not in estadillo.sectores:
+                estadillo.sectores.append(sector)
 
     logger.info("Shift data saved to the database")
+    db_session.commit()
