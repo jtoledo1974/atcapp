@@ -22,6 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from werkzeug import Response
 
 LOGFILE = "logs/cambios.log"
+SQLLOGFILE = "logs/cambios-sql.log"
 LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
 
 
@@ -51,6 +52,9 @@ def configure_logging(
     file_handler = logging.FileHandler(LOGFILE)
     file_handler.setFormatter(formatter)
     file_handler.setLevel(debug_level)
+    sql_file_handler = logging.FileHandler(SQLLOGFILE)
+    sql_file_handler.setFormatter(formatter)
+    sql_file_handler.setLevel(debug_level)
 
     # Crear un handler para sacar por pantalla
     console_handler = logging.StreamHandler()
@@ -61,6 +65,7 @@ def configure_logging(
 
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+    logger.addHandler(sql_file_handler)
     logger.setLevel(debug_level)
     logger.info("Cambios startup")
 
