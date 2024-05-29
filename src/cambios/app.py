@@ -130,7 +130,7 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     # Context processor to make user info available in templates
     @app.context_processor
     def inject_user() -> dict[str, str]:
-        user = ATC.query.filter_by(id=session.get("id_atc")).first()
+        user = ATC.query.filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
         return {"current_user": user}
 
     return app

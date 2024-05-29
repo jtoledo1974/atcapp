@@ -108,7 +108,6 @@ def regular_user(session: scoped_session) -> ATC:
     """Create a regular user for testing."""
     user = ATC(
         email="user@example.com",
-        firebase_uid="user_uid",
         nombre="Regular",
         apellidos="User",
         categoria="User",

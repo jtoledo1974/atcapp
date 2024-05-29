@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import date, time  # noqa: TCH003  # Necesario para el mapping
 
 from sqlalchemy import (
     Boolean,
@@ -14,12 +14,9 @@ from sqlalchemy import (
     Table,
     Time,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import db
-
-if TYPE_CHECKING:  # pragma: no cover
-    from datetime import date, time
 
 # This is a hack due to flask_sqlalchemy seeming incompatible with mypy
 # It is explained in https://github.com/pallets-eco/flask-sqlalchemy/issues/1327
@@ -42,21 +39,19 @@ class ATC(db.Model):  # type: ignore[name-defined]
     """Modelo de la tabla controladores."""
 
     __tablename__ = "atcs"
-    id = Column(Integer, primary_key=True)
-    firebase_uid = Column(String, unique=True)
-    email: str = Column(String(80), unique=True, nullable=False)  # type: ignore[assignment]
-    nombre: str = Column(String(100), nullable=False)  # type: ignore[assignment]
-    apellidos: str = Column(String(100), nullable=False)  # type: ignore[assignment]
-    categoria: str = Column(String(50), nullable=False)  # type: ignore[assignment]
-    """Categoría profesional: CON, PTD, IS, etc."""
-    equipo: str = Column(String(1))  # type: ignore[assignment]
-    numero_de_licencia: str = Column(String(50), nullable=False)  # type: ignore[assignment]
-    es_admin: bool = Column(Boolean, default=False)  # type: ignore[assignment]
-    politica_aceptada: bool = Column(Boolean, default=False)  # type: ignore[assignment]
-    """Indica que el usuario ha aceptado la política de privacidad."""
 
-    servicios = relationship("Servicio", back_populates="atc")
-    estadillos = relationship(
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    nombre: Mapped[str] = mapped_column(String(100), nullable=False)
+    apellidos: Mapped[str] = mapped_column(String(100), nullable=False)
+    categoria: Mapped[str] = mapped_column(String(50), nullable=False)
+    equipo: Mapped[str | None] = mapped_column(String(1), nullable=True)
+    numero_de_licencia: Mapped[str] = mapped_column(String(50), nullable=False)
+    es_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    politica_aceptada: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    servicios: Mapped[list[Servicio]] = relationship("Servicio", back_populates="atc")
+    estadillos: Mapped[list[Estadillo]] = relationship(
         "Estadillo",
         secondary="servicios",
         back_populates="atcs",
@@ -72,21 +67,22 @@ class Turno(db.Model):  # type: ignore[name-defined]
     """Modelo de la tabla Turno."""
 
     __tablename__ = "turnos"
-    id = Column(Integer, primary_key=True)
-    fecha = Column(DateTime, nullable=False)
-    turno: str = Column(String(10), nullable=False)  # type: ignore[assignment]
-    """Es el código completo del servicio, como aparece en el turnero mensual.
-       Puede ser M,T, o N más o código, o sólo un código."""
-    id_atc = Column(Integer, ForeignKey("atcs.id"), nullable=False)
-    atc = relationship("ATC", backref="turnos")
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    fecha: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
+    turno: Mapped[str] = mapped_column(String(10), nullable=False)
+    id_atc: Mapped[int] = mapped_column(Integer, ForeignKey("atcs.id"), nullable=False)
+
+    atc: Mapped[ATC] = relationship("ATC", backref="turnos")
 
 
 class TipoTurno(db.Model):  # type: ignore[name-defined]
     """Modelo de la tabla "tipos_de_turno."""
 
     __tablename__ = "tipos_de_turno"
-    codigo: str = Column(String(10), primary_key=True, nullable=False)  # type: ignore[assignment]
-    descripcion: str = Column(String(50), nullable=False)  # type: ignore[assignment]
+
+    codigo: Mapped[str] = mapped_column(String(10), primary_key=True, nullable=False)
+    descripcion: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
 class Estadillo(db.Model):  # type: ignore[name-defined]
@@ -97,17 +93,22 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
     """
 
     __tablename__ = "estadillos"
-    id = Column(Integer, primary_key=True)
-    fecha: date = Column(DateTime, nullable=False)  # type: ignore[assignment]
-    dependencia: str = Column(String(4), nullable=False)  # type: ignore[assignment]
-    """Dependencia de control: LECS, LECM, etc."""
-    turno: str = Column(
-        String(1),
-        nullable=False,
-    )  # type: ignore[assignment]
-    atcs = relationship("ATC", secondary="servicios", back_populates="estadillos")
-    servicios = relationship("Servicio", back_populates="estadillo")
-    sectores = relationship(
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    fecha: Mapped[date] = mapped_column(DateTime, nullable=False)
+    dependencia: Mapped[str] = mapped_column(String(4), nullable=False)
+    turno: Mapped[str] = mapped_column(String(1), nullable=False)
+
+    atcs: Mapped[list[ATC]] = relationship(
+        "ATC",
+        secondary="servicios",
+        back_populates="estadillos",
+    )
+    servicios: Mapped[list[Servicio]] = relationship(
+        "Servicio",
+        back_populates="estadillo",
+    )
+    sectores: Mapped[list[Sector]] = relationship(
         "Sector",
         secondary=sectores_estadillo,
         back_populates="estadillos",
@@ -118,9 +119,11 @@ class Sector(db.Model):  # type: ignore[name-defined]
     """Modelo de la tabla sectores."""
 
     __tablename__ = "sectores"
-    id = Column(Integer, primary_key=True)
-    nombre: str = Column(String(20), nullable=False)  # type: ignore[assignment]
-    estadillos = relationship(
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    estadillos: Mapped[list[Estadillo]] = relationship(
         "Estadillo",
         secondary=sectores_estadillo,
         back_populates="sectores",
@@ -136,34 +139,49 @@ class Periodo(db.Model):  # type: ignore[name-defined]
     """
 
     __tablename__ = "periodos"
-    id = Column(Integer, primary_key=True)
-    id_controlador = Column(Integer, ForeignKey("atcs.id"), nullable=False)
-    id_estadillo = Column(
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    id_controlador: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("atcs.id"),
+        nullable=False,
+    )
+    id_estadillo: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("estadillos.id"),
         nullable=False,
     )
-    id_sector: int = Column(Integer, ForeignKey("sectores.id"), nullable=False)  # type: ignore[assignment]
-    hora_inicio: time = Column(Time, nullable=False)  # type: ignore[assignment]
-    hora_fin: time = Column(Time, nullable=False)  # type: ignore[assignment]
-    actividad = Column(String(20), nullable=False)
-    controlador = relationship("ATC", backref="periodos")
-    turno_sala_control = relationship("Estadillo", backref="periodos")
-    sector = relationship("Sector", backref="periodos")
+    id_sector: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("sectores.id"),
+        nullable=False,
+    )
+    hora_inicio: Mapped[time] = mapped_column(Time, nullable=False)
+    hora_fin: Mapped[time] = mapped_column(Time, nullable=False)
+    actividad: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    controlador: Mapped[ATC] = relationship("ATC", backref="periodos")
+    turno_sala_control: Mapped[Estadillo] = relationship(
+        "Estadillo",
+        backref="periodos",
+    )
+    sector: Mapped[Sector] = relationship("Sector", backref="periodos")
 
 
 class Servicio(db.Model):  # type: ignore[name-defined]
     """Modelo intermedio para gestionar la relación entre ATC y Estadillo."""
 
     __tablename__ = "servicios"
-    id = Column(Integer, primary_key=True)
-    id_atc = Column(Integer, ForeignKey("atcs.id"), nullable=False)
-    id_estadillo = Column(Integer, ForeignKey("estadillos.id"), nullable=False)
-    categoria = Column(String(50), nullable=False)
-    """Categoría profesional del ATC en el momento del servicio."""
-    rol = Column(String(50), nullable=False)
-    """Rol del ATC durante el servicio: Controlador, Supervisor, 
-    Jefe de Sala, Evaluador, etc."""
 
-    atc = relationship("ATC", back_populates="servicios")
-    estadillo = relationship("Estadillo", back_populates="servicios")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    id_atc: Mapped[int] = mapped_column(Integer, ForeignKey("atcs.id"), nullable=False)
+    id_estadillo: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("estadillos.id"),
+        nullable=False,
+    )
+    categoria: Mapped[str] = mapped_column(String(50), nullable=False)
+    rol: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    atc: Mapped[ATC] = relationship("ATC", back_populates="servicios")
+    estadillo: Mapped[Estadillo] = relationship("Estadillo", back_populates="servicios")
