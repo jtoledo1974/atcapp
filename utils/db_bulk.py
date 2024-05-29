@@ -27,7 +27,7 @@ def create_in_memory_db():
 
 def create_test_data(session):
     test_file_path = (
-        Path(__file__).parent.parent / "tests" / "resources" / "test_schedule.pdf"
+        Path(__file__).parent.parent / "tests" / "resources" / "test_turnero.pdf"
     )
     with test_file_path.open("rb") as file:
         procesa_turnero(file, session, add_new=True)

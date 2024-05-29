@@ -46,7 +46,7 @@ def db_session() -> Generator[scoped_session[Session], Any, Any]:
 @pytest.fixture(scope="session")
 def pdf() -> Generator[PDF, Any, Any]:
     """Open the test PDF file."""
-    test_file_path = Path(__file__).parent / "resources" / "test_daily_schedule.pdf"
+    test_file_path = Path(__file__).parent / "resources" / "test_estadillo.pdf"
     with pdfplumber.open(test_file_path):
         yield pdfplumber.open(test_file_path)
 

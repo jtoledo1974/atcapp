@@ -40,7 +40,7 @@ def test_upload_admin_post(client: FlaskClient, admin_user: ATC) -> None:
     client.post("/login", data={"idToken": "test_token"})
 
     # Path to the test PDF file
-    test_file_path = Path(__file__).parent / "resources" / "test_schedule.pdf"
+    test_file_path = Path(__file__).parent / "resources" / "test_turnero.pdf"
 
     with test_file_path.open("rb") as file:
         response = client.post(
@@ -69,7 +69,7 @@ def test_upload_admin_post_add_new(
     client.post("/login", data={"idToken": "test_token"})
 
     # Path to the test PDF file
-    test_file_path = Path(__file__).parent / "resources" / "test_schedule.pdf"
+    test_file_path = Path(__file__).parent / "resources" / "test_turnero.pdf"
 
     with test_file_path.open("rb") as file:
         response = client.post(
