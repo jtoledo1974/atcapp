@@ -120,7 +120,15 @@ class Periodo(db.Model):  # type: ignore[name-defined]
     sector = relationship("Sector", backref="periodos")
 
 
-# Many-to-many relationship tables for roles in control room shifts
+# Relaciones de muchos a muchos entre tablas
+
+atcs_estadillos = Table(
+    "atcs_estadillos",
+    db.Model.metadata,
+    Column("id_estadillo", Integer, ForeignKey("estadillos.id")),
+    Column("id_atc", Integer, ForeignKey("atcs.id")),
+)
+
 jefes_estadillos = Table(
     "jefes_estadillos",
     db.Model.metadata,
@@ -149,21 +157,27 @@ sectores_estadillos = Table(
     Column("id_sector", Integer, ForeignKey("sectores.id")),
 )
 
-# Updating ControlRoomShift model to include relationships
+# Actualizar relaciones en los modelos
+Estadillo.atcs = relationship(
+    "ATC",
+    secondary=atcs_estadillos,
+    backref="servicios",
+)
+
 Estadillo.jefes = relationship(
     "ATC",
     secondary=jefes_estadillos,
-    backref="turnos_de_jefe",
+    backref="servicios_de_jefe",
 )
 Estadillo.supervisores = relationship(
     "ATC",
     secondary=supervisores_estadillos,
-    backref="turnos_de_supervisor",
+    backref="servicios_de_supervisor",
 )
 Estadillo.tcas = relationship(
     "ATC",
     secondary=tcas_estadillos,
-    backref="turnos_de_tca",
+    backref="servicios_de_tca",
 )
 Estadillo.sectores = relationship(
     "Sector",
