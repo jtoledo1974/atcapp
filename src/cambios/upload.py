@@ -10,11 +10,10 @@ the data into the database.
 
 from __future__ import annotations
 
-import logging
 import re
-import unicodedata
 from datetime import datetime
 from io import BytesIO
+from logging import getLogger
 from typing import TYPE_CHECKING
 
 import pdfplumber
@@ -22,25 +21,14 @@ from pdfminer.pdfparser import PDFSyntaxError
 
 from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
 from .models import Shift, User
+from .utils import create_user, find_user, update_user
+
+logger = getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover
-    from logging import Logger
-
     from pdfplumber.page import Page
     from sqlalchemy.orm.scoping import scoped_session
     from werkzeug.datastructures import FileStorage
-
-logger: Logger
-
-
-def setup_logger(app_logger: Logger | None) -> None:
-    """Set up the logger."""
-    global logger  # noqa: PLW0603
-    if app_logger:
-        logger = app_logger
-        return
-
-    logger = logging.getLogger(__name__)
 
 
 def is_valid_shift_code(shift_code: str) -> bool:
@@ -115,67 +103,6 @@ def extract_schedule_data(page: Page) -> list[dict]:
     return data
 
 
-def parse_name(name: str) -> tuple[str, str]:
-    """Parse the name into first and last name.
-
-    El archivo tiene los dos apellidos primero y luego el nombre, pero
-    no identifica las partes. Tanto los apellidos como el nombre pueden
-    ser compuestos.
-
-    El algoritmo a seguir será identificar dos apellidos, lo que reste
-    será el nombre.
-
-    Entendemos como un apellido bien una única palabra, o bien:
-      - DE APELLIDO
-      - DEL APELLIDO
-      - DE LA APELLIDO
-      - DE LOS APELLIDOS
-      - DE LAS APELLIDOS
-
-    Ejemplos:
-    CASTILLO PINTO JAIME -> Nombre: JAIME, Apellidos: CASTILLO PINTO
-    MARTINEZ MORALES MARIA VIRGINIA: Nombre: MARIA VIRGINIA, Apellidos: MARTINEZ MORALES
-    DE ANDRES RICO MARIO -> Nombre: MARIO, Apellidos: DE ANDRES RICO
-    """
-    parts = name.split()
-    prepositions = {"DE", "DEL", "DE LA", "DE LOS", "DE LAS"}
-    last_name_parts: list[str] = []
-    i = 0
-
-    # Identify the last names
-    while i < len(parts) and len(last_name_parts) < 2:  # noqa: PLR2004 Dos apellidos
-        if parts[i].upper() in prepositions:
-            # Handle multi-word prepositions (e.g., "DE LA", "DE LOS")
-            if i + 1 < len(parts):
-                if parts[i].upper() in {"DE", "DEL"}:
-                    if i + 2 < len(parts) and parts[i + 1].upper() in {
-                        "LA",
-                        "LOS",
-                        "LAS",
-                    }:
-                        last_name_parts.append(" ".join(parts[i : i + 3]))
-                        i += 3
-                    else:
-                        last_name_parts.append(" ".join(parts[i : i + 2]))
-                        i += 2
-                else:
-                    last_name_parts.append(" ".join(parts[i : i + 2]))
-                    i += 2
-            else:
-                break
-        else:
-            last_name_parts.append(parts[i])
-            i += 1
-
-    # The rest is the first name
-    first_name_parts = parts[i:]
-
-    last_name = " ".join(last_name_parts)
-    first_name = " ".join(first_name_parts)
-
-    return first_name, last_name
-
-
 def is_valid_user_entry(entry: dict) -> bool:
     """Check if the user entry is valid."""
     days_of_week = {"S", "D", "L", "M", "X", "J", "V"}
@@ -232,84 +159,6 @@ def insert_shift_data(
     return n_shifts
 
 
-def normalize_string(s: str) -> str:
-    """Normalize string by removing accents and converting to lowercase."""
-    return "".join(
-        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
-    ).lower()
-
-
-def create_user(  # noqa: PLR0913
-    first_name: str,
-    last_name: str,
-    email: str,
-    role: str,
-    team: str | None,
-    db_session: scoped_session,
-) -> User:
-    """Create a new user in the database."""
-    new_user = User(
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-        category=role,
-        team=team.upper() if team else None,
-        license_number="",
-    )
-    db_session.add(new_user)
-    return new_user
-
-
-def update_user(user: User, role: str, team: str | None) -> User:
-    """Update the user's team and role if they differ from the provided values."""
-    if user.category != role:
-        user.category = role
-    if team and user.team != team.upper():
-        user.team = team.upper()
-    return user
-
-
-def find_user(  # noqa: PLR0913
-    name: str,
-    db_session: scoped_session,
-    role: str,
-    team: str | None,
-    *,
-    add_new: bool = False,
-    edit_existing: bool = True,
-) -> User | None:
-    """Find a user in the database by name.
-
-    If the user is not found, create a new user if add_new is True.
-    If the user is found, update the user's role and team if edit_existing is True.
-    """
-    first_name, last_name = parse_name(name)
-    normalized_first_name = normalize_string(first_name)
-    normalized_last_name = normalize_string(last_name)
-    normalized_full_name = normalize_string(f"{last_name} {first_name}")
-
-    # Fetch all users and normalize names for comparison
-    users = db_session.query(User).all()
-
-    for user in users:
-        if (
-            normalize_string(user.first_name) == normalized_first_name
-            and normalize_string(user.last_name) == normalized_last_name
-        ) or (
-            normalize_string(f"{user.last_name} {user.first_name}")
-            == normalized_full_name
-        ):
-            if edit_existing:
-                return update_user(user, role, team)
-            return user
-
-    if add_new:
-        email = f"fixme{first_name.strip()}{last_name.strip()}fixme@example.com"
-        return create_user(first_name, last_name, email, role, team, db_session)
-
-    return None
-
-
 def parse_and_insert_data(
     all_data: list[dict],
     month: str,
@@ -335,14 +184,15 @@ def parse_and_insert_data(
         user = find_user(
             entry["name"],
             db_session,
-            entry["role"],
-            team=entry["team"],
-            add_new=add_new,
         )
 
-        if not user:
+        if user:
+            user = update_user(user, entry["role"], entry["team"])
+        elif not add_new:
             logger.warning("User not found for entry: %s", entry["name"])
             continue
+        else:
+            user = create_user(entry["name"], entry["role"], entry["team"], db_session)
 
         n_users += 1
         n_shifts += insert_shift_data(entry["shifts"], month, year, user, db_session)
@@ -357,7 +207,6 @@ def process_file(
     db_session: scoped_session,
     *,
     add_new: bool = False,
-    app_logger: Logger | None = None,
 ) -> tuple[int, int]:
     """Process the uploaded file and insert data into the database.
 
@@ -368,7 +217,6 @@ def process_file(
 
     Returns the number of users and shifts inserted.
     """
-    setup_logger(app_logger)
     try:
         with pdfplumber.open(BytesIO(file.read())) as pdf:
             all_data = []

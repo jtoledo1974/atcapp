@@ -21,6 +21,11 @@ from .routes import register_routes
 if TYPE_CHECKING:  # pragma: no cover
     from werkzeug import Response
 
+LOGFILE = "logs/cambios.log"
+LOGFORMAT = (
+    "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d] %(name)s"
+)
+
 
 class Config:
     """Base configuration."""
@@ -50,19 +55,52 @@ class AdminModelView(ModelView):
         return redirect(url_for("main.login"))
 
 
+def configure_logging(app: Flask, debug_level: int = logging.INFO) -> None:
+    """Configure logging based on the environment variable."""
+    # Configure logging
+    # ENABLE_LOGGING forces logs to be written to a file
+    enable_logging = os.getenv("ENABLE_LOGGING", "False").lower() in ["true", "1", "t"]
+
+    if not enable_logging:
+        return
+
+    logs_dir = Path(LOGFILE).parent
+    if not logs_dir.exists():
+        logs_dir.mkdir()
+
+    formatter = logging.Formatter(LOGFORMAT)
+    file_handler = logging.FileHandler(LOGFILE)
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(debug_level)
+
+    # Crear un handler para sacar por pantalla
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(debug_level)
+
+    logger = logging.getLogger("cambios")
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    logger.setLevel(debug_level)
+    logger.info("Cambios startup")
+
+
 def create_app(config_class: type[Config] = Config) -> Flask:
     """Create the Flask app."""
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
 
-    app = Flask(__name__)
+    app = Flask("cambios.app")
     app.config.from_object(config_class)
     app.config.from_envvar("APP_SETTINGS", silent=True)
+
+    configure_logging(app)
 
     db.init_app(app)
     with app.app_context():
         init_db()
 
-    init_firebase(app.logger)
+    init_firebase()
     register_routes(app)
 
     admin = Admin(
@@ -79,25 +117,6 @@ def create_app(config_class: type[Config] = Config) -> Flask:
         return {
             "current_user": user,
         }
-
-    # Configure logging
-    enable_logging = os.getenv("ENABLE_LOGGING", "False").lower() in ["true", "1", "t"]
-
-    if enable_logging:
-        logs_dir = Path("logs")
-        if not logs_dir.exists():
-            logs_dir.mkdir()
-        file_handler = logging.FileHandler("logs/cambios.log")
-        file_handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]",
-            ),
-        )
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
-
-        app.logger.setLevel(logging.INFO)
-        app.logger.info("Cambios startup")
 
     return app
 

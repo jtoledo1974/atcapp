@@ -46,7 +46,7 @@ def test_logging_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
 
     app = create_app(Config)
 
-    assert app.logger.level == logging.INFO
+    assert app.logger.parent.level == logging.INFO
 
     monkeypatch.delenv("ENABLE_LOGGING", raising=False)
     app.logger.setLevel(logging.WARNING)  # manually set to warning again

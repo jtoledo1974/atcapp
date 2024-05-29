@@ -5,11 +5,11 @@ from __future__ import annotations
 import contextlib
 from datetime import datetime
 from functools import wraps
+from logging import getLogger
 from typing import TYPE_CHECKING, Callable
 
 from flask import (
     Blueprint,
-    current_app,
     flash,
     redirect,
     render_template,
@@ -28,6 +28,8 @@ from .upload import process_file
 if TYPE_CHECKING:  # pragma: no cover
     from flask import Flask
     from werkzeug import Response
+
+logger = getLogger(__name__)
 
 main = Blueprint("main", __name__)
 
@@ -119,7 +121,7 @@ def login() -> Response | str:
         email = firebase_data["email"]
         session["firebase_uid"] = firebase_data["uid"]
     except ValueError:
-        current_app.logger.exception(
+        logger.exception(
             "Error verifying ID token %s",
             request.form["idToken"],
         )
@@ -129,7 +131,7 @@ def login() -> Response | str:
     if not user:
         # If the user database is empty we assume the first user is an admin.
         if not User.query.all():
-            current_app.logger.info(
+            logger.info(
                 "No users found in the database. Assuming first user is an admin.",
             )
             user = User(
@@ -146,7 +148,7 @@ def login() -> Response | str:
             flash("Usuario administrador creado.", "success")
             return redirect(url_for("admin.index"))
 
-        current_app.logger.error("User not recognized. email=%s", email)
+        logger.error("User not recognized. email=%s", email)
         return redirect(
             url_for(
                 "main.logout",
@@ -155,7 +157,7 @@ def login() -> Response | str:
         )
 
     session["user_id"] = user.id
-    current_app.logger.info(
+    logger.info(
         "User %s logged in. email=%s",
         user.first_name + " " + user.last_name,
         email,
@@ -226,7 +228,6 @@ def upload() -> Response | str:
             file,
             db.session,
             add_new=add_new,
-            app_logger=current_app.logger,
         )
     except ValueError:
         flash("Formato de archivo no válido", "danger")
