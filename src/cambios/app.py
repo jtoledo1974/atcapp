@@ -25,41 +25,16 @@ LOGFILE = "logs/cambios.log"
 LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
 
 
-class Config:
-    """Base configuration."""
-
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "SQLALCHEMY_DATABASE_URI",
-        "sqlite:///shifts.db",
-    )
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
-    DEBUG = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1", "t"]
-    HOST = os.getenv("HOST", "localhost")
-    PORT = int(os.getenv("PORT", "80"))
-    # Can't set this here, because we need to wait until the fixtures are loaded
-    # Check below for ENABLE_LOGGING
-
-
-class AdminModelView(ModelView):
-    """Custom ModelView for the admin panel."""
-
-    def is_accessible(self) -> bool:
-        """Only allow access to the admin panel if the user is an admin."""
-        return bool(session.get("es_admin"))
-
-    def inaccessible_callback(self, _name: str, **_kwargs: dict[str, Any]) -> Response:
-        """Redirect to the login page if the user is not an admin."""
-        return redirect(url_for("main.login"))
-
-
-def configure_logging() -> None:
+def configure_logging(
+    log_level: int = logging.INFO,
+    *,
+    enable_logging: bool = False,
+) -> None:
     """Configure logging based on the environment variable."""
     # Configure logging
     # ENABLE_LOGGING forces logs to be written to a file
-    enable_logging = os.getenv("ENABLE_LOGGING", "False").lower() in ["true", "1", "t"]
-    env_log_level = os.getenv("LOG_LEVEL", "INFO")
-    debug_level = logging.getLevelName(env_log_level)
+
+    debug_level = logging.getLevelName(log_level)
 
     if not enable_logging:
         return
@@ -86,6 +61,39 @@ def configure_logging() -> None:
     logger.info("Cambios startup")
 
 
+class Config:
+    """Base configuration."""
+
+    ENABLE_LOGGING = os.getenv("ENABLE_LOGGING", "False").lower() in ["true", "1", "t"]
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "SQLALCHEMY_DATABASE_URI",
+        "sqlite:///shifts.db",
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
+    DEBUG = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1", "t"]
+    HOST = os.getenv("HOST", "localhost")
+    PORT = int(os.getenv("PORT", "80"))
+    # Can't set this here, because we need to wait until the fixtures are loaded
+    # Check below for ENABLE_LOGGING
+
+    configure_logging(logging.getLevelName(LOG_LEVEL), enable_logging=ENABLE_LOGGING)
+
+
+class AdminModelView(ModelView):
+    """Custom ModelView for the admin panel."""
+
+    def is_accessible(self) -> bool:
+        """Only allow access to the admin panel if the user is an admin."""
+        return bool(session.get("es_admin"))
+
+    def inaccessible_callback(self, _name: str, **_kwargs: dict[str, Any]) -> Response:
+        """Redirect to the login page if the user is not an admin."""
+        return redirect(url_for("main.login"))
+
+
 def create_app(config_class: type[Config] = Config) -> Flask:
     """Create the Flask app."""
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
@@ -103,20 +111,14 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     init_firebase()
     register_routes(app)
 
-    admin = Admin(
-        app,
-        name="Admin Panel",
-        template_mode="bootstrap4",
-    )
+    admin = Admin(app, name="Admin Panel", template_mode="bootstrap4")
     admin.add_view(AdminModelView(ATC, db.session))
 
     # Context processor to make user info available in templates
     @app.context_processor
     def inject_user() -> dict[str, str]:
         user = ATC.query.filter_by(id=session.get("id_atc")).first()
-        return {
-            "current_user": user,
-        }
+        return {"current_user": user}
 
     return app
 
