@@ -17,7 +17,7 @@ from sqlalchemy.orm import relationship
 
 from .database import db
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from datetime import date
 
 # This is a hack due to flask_sqlalchemy seeming incompatible with mypy

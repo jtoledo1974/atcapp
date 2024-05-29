@@ -123,6 +123,6 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     return app
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     app = create_app()
     app.run(debug=True, port=app.config["PORT"], host=app.config["HOST"])

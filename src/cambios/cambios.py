@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import Session
 
 from .models import ATC

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from .models import ATC
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import scoped_session
 
 logger = getLogger(__name__)
