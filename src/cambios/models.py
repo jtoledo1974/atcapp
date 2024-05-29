@@ -46,6 +46,11 @@ class ATC(db.Model):  # type: ignore[name-defined]
     politica_aceptada: bool = Column(Boolean, default=False)  # type: ignore[assignment]
     """Indica que el usuario ha aceptado la política de privacidad."""
 
+    @property
+    def apellidos_nombre(self) -> str:
+        """Nombre completo del controlador."""
+        return f"{self.apellidos} {self.nombre}"
+
 
 class Turno(db.Model):  # type: ignore[name-defined]
     """Modelo de la tabla Turno."""

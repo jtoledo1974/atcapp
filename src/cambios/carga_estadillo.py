@@ -185,50 +185,43 @@ def extraer_periodos(page: pdfplumber.page.Page) -> dict[str, list[PeriodosTexto
     return periodos
 
 
-def guardar_datos_estadillo(  # noqa: C901
-    data: EstadilloTexto,
+def guardar_atc_en_estadillo(
+    name: str,
+    role: str,
+    relationship_list: InstrumentedList,
+    db_session: scoped_session,
+) -> ATC:
+    """Incluye a un atc en un estadillo.
+
+    El atc se almacena como controlador, jefe, supervisor o atc
+    en función de la relación que se pase como argumento.
+
+    Si el atc no existe en la base de datos, se crea.
+    """
+    user = find_user(name, db_session)
+    if not user:
+        user = create_user(name, role, None, db_session)
+    if user not in relationship_list:
+        relationship_list.append(user)
+    return user
+
+
+def procesar_controladores_y_sectores(
+    controladores: dict[str, Controller],
+    estadillo: Estadillo,
     db_session: scoped_session,
 ) -> None:
-    """Guardar los datos generales del estadillo en la base de datos."""
-    logger.info("Saving shift data to the database")
-    # 27.05.2024 to python date
-    date = datetime.strptime(data.fecha, "%d.%m.%Y")  # noqa: DTZ007
+    """Procesar los controladores y sus sectores.
 
-    estadillo = Estadillo(
-        fecha=date,
-        dependencia=data.dependencia,
-        turno=data.turno,
-    )
-    db_session.add(estadillo)
-
-    def procesar_atc(
-        name: str,
-        role: str,
-        relationship_list: InstrumentedList | list,
-    ) -> ATC:
-        """Procesar un ATC y añadirlo a la lista de relación si no está ya."""
-        user = find_user(name, db_session)
-        if not user:
-            user = create_user(name, role, None, db_session)
-        if user not in relationship_list:
-            relationship_list.append(user)
-        return user
-
-    # Procesar jefes de sala
-    for nombre_jefe_de_sala in data.jefes_de_sala:
-        procesar_atc(nombre_jefe_de_sala, "JDS", estadillo.jefes)
-
-    # Procesar supervisores
-    for nombre_supervisor in data.supervisores:
-        procesar_atc(nombre_supervisor, "SUP", estadillo.supervisores)
-
-    # Procesar TCAs
-    for nombre_tca in data.tcas:
-        procesar_atc(nombre_tca, "TCA", estadillo.tcas)
-
-    # Procesar controladores y sus sectores
-    for nombre_controlador, controller in data.controladores.items():
-        user = procesar_atc(nombre_controlador, controller.puesto, [])
+    Añade a la base de datos a los controladores y sectores que no existan.
+    """
+    for nombre_controlador, controller in controladores.items():
+        user = guardar_atc_en_estadillo(
+            nombre_controlador,
+            controller.puesto,
+            estadillo.atcs,
+            db_session,
+        )
         update_user(user, controller.puesto, None)
 
         for sector_name in controller.sectores:
@@ -239,5 +232,48 @@ def guardar_datos_estadillo(  # noqa: C901
             if sector not in estadillo.sectores:
                 estadillo.sectores.append(sector)
 
-    logger.info("Shift data saved to the database")
+
+def guardar_datos_estadillo(
+    data: EstadilloTexto,
+    db_session: scoped_session,
+) -> None:
+    """Guardar los datos generales del estadillo en la base de datos."""
+    logger.info("Guardando datos del estadillo en la base de datos")
+    # Convertir la fecha "27.05.2024" a un objeto date de Python
+    date = datetime.strptime(data.fecha, "%d.%m.%Y")  # noqa: DTZ007
+
+    # Crear el objeto Estadillo y añadirlo a la sesión
+    estadillo = Estadillo(
+        fecha=date,
+        dependencia=data.dependencia,
+        turno=data.turno,
+    )
+    db_session.add(estadillo)
+
+    # Procesar jefes de sala
+    for nombre_jefe_de_sala in data.jefes_de_sala:
+        guardar_atc_en_estadillo(
+            nombre_jefe_de_sala,
+            "JDS",
+            estadillo.jefes,
+            db_session,
+        )
+
+    # Procesar supervisores
+    for nombre_supervisor in data.supervisores:
+        guardar_atc_en_estadillo(
+            nombre_supervisor,
+            "SUP",
+            estadillo.supervisores,
+            db_session,
+        )
+
+    # Procesar TCAs
+    for nombre_tca in data.tcas:
+        guardar_atc_en_estadillo(nombre_tca, "TCA", estadillo.tcas, db_session)
+
+    # Procesar controladores y sus sectores
+    procesar_controladores_y_sectores(data.controladores, estadillo, db_session)
+
+    logger.info("Datos del estadillo guardados en la base de datos")
     db_session.commit()

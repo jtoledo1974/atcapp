@@ -178,3 +178,16 @@ def test_datos_generales_estadillo_a_db(
                 .filter(Estadillo.sectores.any(nombre=sector_name))
                 .first()
             )
+
+    # Verificar que podemos encontrar este estadillo referenciado
+    # en la tabla atcs_estadillos
+    db_estadillo = db_session.query(Estadillo).first()
+    assert db_estadillo
+    assert db_estadillo.atcs
+    assert db_estadillo.jefes
+    assert db_estadillo.supervisores
+    assert db_estadillo.tcas
+
+    assert len(db_estadillo.atcs) == len(data.controladores)
+    for atc in db_estadillo.atcs:
+        assert atc.apellidos_nombre in data.controladores
