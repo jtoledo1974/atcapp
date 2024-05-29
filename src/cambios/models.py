@@ -12,13 +12,14 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    Time,
 )
 from sqlalchemy.orm import relationship
 
 from .database import db
 
 if TYPE_CHECKING:  # pragma: no cover
-    from datetime import date
+    from datetime import date, time
 
 # This is a hack due to flask_sqlalchemy seeming incompatible with mypy
 # It is explained in https://github.com/pallets-eco/flask-sqlalchemy/issues/1327
@@ -92,6 +93,31 @@ class Sector(db.Model):  # type: ignore[name-defined]
     __tablename__ = "sectores"
     id = Column(Integer, primary_key=True)
     nombre: str = Column(String(20), nullable=False)  # type: ignore[assignment]
+
+
+class Periodo(db.Model):  # type: ignore[name-defined]
+    """Modelo de la tabla periodos.
+
+    Periodos es cada uno de los tramos en que un controlador
+    ejecuta una única tarea en un sector. Esto es, el tiempo
+    que está de ejecutivo en un sector o de plani en otro.
+    """
+
+    __tablename__ = "periodos"
+    id = Column(Integer, primary_key=True)
+    id_controlador = Column(Integer, ForeignKey("atcs.id"), nullable=False)
+    id_estadillo = Column(
+        Integer,
+        ForeignKey("estadillos.id"),
+        nullable=False,
+    )
+    id_sector: int = Column(Integer, ForeignKey("sectores.id"), nullable=False)  # type: ignore[assignment]
+    hora_inicio: time = Column(Time, nullable=False)  # type: ignore[assignment]
+    hora_fin: time = Column(Time, nullable=False)  # type: ignore[assignment]
+    actividad = Column(String(20), nullable=False)
+    controlador = relationship("ATC", backref="periodos")
+    turno_sala_control = relationship("Estadillo", backref="periodos")
+    sector = relationship("Sector", backref="periodos")
 
 
 # Many-to-many relationship tables for roles in control room shifts

@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING, Any, Generator
 import pdfplumber
 import pytest
 from cambios.carga_estadillo import (
-    DatosEstadilloTexto,
+    EstadilloTexto,
     extraer_datos_estadillo,
+    extraer_periodos,
     guardar_datos_estadillo,
 )
 from cambios.models import (
@@ -51,12 +52,12 @@ def pdf() -> Generator[PDF, Any, Any]:
         yield pdfplumber.open(test_file_path)
 
 
-def test_extract_shift_data(pdf: PDF) -> None:
-    """Test extracting the people data from the first page."""
+def test_extraer_datos_generales(pdf: PDF) -> None:
+    """Comprueba que se extraen los datos generales del estadillo."""
     data = extraer_datos_estadillo(pdf.pages[0])
 
     assert data
-    assert isinstance(data, DatosEstadilloTexto)
+    assert isinstance(data, EstadilloTexto)
     assert data.dependencia == "LECS"
     assert data.fecha == "27.05.2024"
     assert data.turno == "M"
@@ -88,6 +89,30 @@ def test_extract_shift_data(pdf: PDF) -> None:
     )
 
     assert len(data.controladores) == 21
+
+
+def test_extraer_periodos(pdf: PDF) -> None:
+    """Comprueba que se extraen los periodos de los controladores."""
+    data = extraer_datos_estadillo(pdf.pages[0])
+    periodos = extraer_periodos(pdf.pages[1])
+
+    assert isinstance(data, EstadilloTexto)
+    # Comprobar que los los controladores en los datos
+    # son los mismos que en los periodos
+    assert len(data.controladores.keys()) == len(periodos.keys())
+
+    # comprobar que todo el mundo tiene o bien uno, o bien seis o más periodos
+    for nombre_controlador in periodos:
+        n_periodos = len(periodos[nombre_controlador])
+        assert n_periodos == 1 or n_periodos >= 6
+
+    # Comprobar que todo el mundo tiene un periodo que comienza bien a las
+    # 07:30, a las 8:07 a las 8:20
+    for nombre_controlador in periodos:
+        assert any(
+            periodo.hora_inicio in ("07:30", "08:07", "08:20")
+            for periodo in periodos[nombre_controlador]
+        )
 
 
 def test_datos_generales_estadillo_a_db(
