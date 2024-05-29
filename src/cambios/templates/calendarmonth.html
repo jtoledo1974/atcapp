@@ -40,10 +40,10 @@
 
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="{{ url_for('main.index', year=(calendar.year - 1) if calendar.month == 1 else calendar.year, month=12 if calendar.month == 1 else calendar.month - 1) }}"
+    <a href="{{ url_for('main.index', year=(calendar.ano - 1) if calendar.mes == 1 else calendar.ano, month=12 if calendar.mes == 1 else calendar.mes - 1) }}"
         class="btn btn-primary">&laquo; Previo</a>
-    <h2>{{ calendar.month_name }} {{ calendar.year }}</h2>
-    <a href="{{ url_for('main.index', year=(calendar.year + 1) if calendar.month == 12 else calendar.year, month=1 if calendar.month == 12 else calendar.month + 1) }}"
+    <h2>{{ calendar.nombre_mes }} {{ calendar.year }}</h2>
+    <a href="{{ url_for('main.index', year=(calendar.ano + 1) if calendar.mes == 12 else calendar.ano, month=1 if calendar.mes == 12 else calendar.mes + 1) }}"
         class="btn btn-primary">Siguiente &raquo;</a>
 </div>
 
@@ -72,18 +72,18 @@
             </tr>
         </thead>
         <tbody>
-            {% for week in calendar.weeks %}
+            {% for week in calendar.semanas %}
             <tr>
                 {% for day in week %}
                 <td>
                     <div class="calendar-cell">
                         <!-- Day number -->
-                        <div class="calendar-day">{{ day.date.day }}</div>
-                        {% if day.shift %}
+                        <div class="calendar-day">{{ day.fecha.day }}</div>
+                        {% if day.turno %}
                         <!-- Shift code -->
-                        <div class="shift-code">{{ day.shift.code }}</div>
+                        <div class="shift-code">{{ day.turno.codigo }}</div>
                         <!-- Shift description -->
-                        <div class="shift-description">{{ day.shift.description }}</div>
+                        <div class="shift-description">{{ day.turno.descripcion }}</div>
                         {% endif %}
                     </div>
                 </td>

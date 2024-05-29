@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
 
-from .cambios import ATC_ROLES, BASIC_SHIFTS, SHIFT_TYPES
-from .models import Shift, User
+from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
+from .models import ATC, Turno
 from .utils import create_user, find_user, update_user
 
 logger = getLogger(__name__)
@@ -35,12 +35,12 @@ def is_valid_shift_code(shift_code: str) -> bool:
     """Check if the shift code is valid."""
     if not shift_code:
         return False
-    if shift_code in BASIC_SHIFTS:
+    if shift_code in TURNOS_BASICOS:
         return True
-    if shift_code in SHIFT_TYPES:
+    if shift_code in CODIGOS_DE_TURNO:
         return True
-    for prefix in BASIC_SHIFTS:
-        if shift_code.startswith(prefix) and shift_code[1:] in SHIFT_TYPES:
+    for prefix in TURNOS_BASICOS:
+        if shift_code.startswith(prefix) and shift_code[1:] in CODIGOS_DE_TURNO:
             return True
     return False
 
@@ -65,22 +65,22 @@ def extract_schedule_data(page: Page) -> list[dict]:
         return []
 
     data = []
-    team: str | None = None
+    equipo: str | None = None
 
-    # Regular expression to find the team
-    team_pattern = re.compile(r"EQUIPO: (\w+)")
+    # Regular expression to find the equipo
+    equipo_pattern = re.compile(r"EQUIPO: (\w+)")
 
     for row in table:
         if row and any(row):
             parts = [cell.strip() if cell else "" for cell in row]
 
-            if not team:
-                team_match = team_pattern.search(parts[0])
-                team = team_match.group(1) if team_match else None
+            if not equipo:
+                equipo_match = equipo_pattern.search(parts[0])
+                equipo = equipo_match.group(1) if equipo_match else None
 
             # Identify role by finding the first occurrence of a known role
             role_index = next(
-                (i for i, part in enumerate(parts) if part in ATC_ROLES),
+                (i for i, part in enumerate(parts) if part in PUESTOS_CARRERA),
                 None,
             )
             if role_index is None:
@@ -98,7 +98,9 @@ def extract_schedule_data(page: Page) -> list[dict]:
             if len(shifts) < MAX_DAYS_IN_MONTH:
                 shifts.extend([""] * (MAX_DAYS_IN_MONTH - len(shifts)))
 
-            data.append({"name": name, "role": role, "team": team, "shifts": shifts})
+            data.append(
+                {"name": name, "role": role, "equipo": equipo, "shifts": shifts},
+            )
 
     return data
 
@@ -121,7 +123,7 @@ def insert_shift_data(
     shifts: list[str],
     month: str,
     year: str,
-    user: User,
+    user: ATC,
     db_session: scoped_session,
 ) -> int:
     """Insert shift data into the database.
@@ -130,7 +132,7 @@ def insert_shift_data(
     Returns the number of shifts inserted.
     """
     n_shifts = 0
-    logger.info("Inserting shifts for %s %s", user.first_name, user.last_name)
+    logger.info("Inserting shifts for %s %s", user.nombre, user.apellidos)
     for day, shift_code in enumerate(shifts, start=1):
         if shift_code:  # Skip empty shift codes
             date_str = f"{day:02d} {month} {year}"
@@ -141,17 +143,17 @@ def insert_shift_data(
 
             # Check if shift already exists for the user on this date
             existing_shift = (
-                db_session.query(Shift)
-                .filter_by(user_id=user.id, date=shift_date)
+                db_session.query(Turno)
+                .filter_by(id_atc=user.id, fecha=shift_date)
                 .first()
             )
             if existing_shift:
                 continue
 
-            new_shift = Shift(
-                date=shift_date,
-                shift_type=shift_code,
-                user_id=user.id,
+            new_shift = Turno(
+                fecha=shift_date,
+                turno=shift_code,
+                id_atc=user.id,
             )
             db_session.add(new_shift)
             n_shifts += 1
@@ -169,7 +171,7 @@ def parse_and_insert_data(
 ) -> tuple[int, int]:
     """Parse extracted data and insert it into the database.
 
-    The data is a list of dictionaries, each containing the name, role, team,
+    The data is a list of dictionaries, each containing the name, role, equipo,
     and shifts for a user. The function parses the data, finds or creates the
     user in the database, and inserts the shift data for each user.
 
@@ -187,12 +189,17 @@ def parse_and_insert_data(
         )
 
         if user:
-            user = update_user(user, entry["role"], entry["team"])
+            user = update_user(user, entry["role"], entry["equipo"])
         elif not add_new:
             logger.warning("User not found for entry: %s", entry["name"])
             continue
         else:
-            user = create_user(entry["name"], entry["role"], entry["team"], db_session)
+            user = create_user(
+                entry["name"],
+                entry["role"],
+                entry["equipo"],
+                db_session,
+            )
 
         n_users += 1
         n_shifts += insert_shift_data(entry["shifts"], month, year, user, db_session)
@@ -202,7 +209,7 @@ def parse_and_insert_data(
     return n_users, n_shifts
 
 
-def process_file(
+def procesa_turnero(
     file: FileStorage,
     db_session: scoped_session,
     *,

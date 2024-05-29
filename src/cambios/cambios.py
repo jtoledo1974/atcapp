@@ -10,21 +10,25 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
-from .models import Shift as DBShift
-from .models import User
+from .models import ATC
+from .models import Turno as DBShift
 
 
-class ShiftPeriod(Enum):
-    """Shift types."""
+class TipoTurno(Enum):
+    """Enum que indica si el turno es de mañana, tarde o noche."""
 
     M = "Mañana"
     T = "Tarde"
     N = "Noche"
 
 
-BASIC_SHIFTS = ["M", "T", "N", "im", "it", "in"]
+TURNOS_BASICOS = ["M", "T", "N", "im", "it", "in"]
+"""Turnos básicos según definidos en la última página
+del turnero mensual de controladores aéreos.
+Estos turnos pueden aparecer solos o con un código adicional.
+"""
 
-SHIFT_TYPES = {
+CODIGOS_DE_TURNO = {
     "SUP": "SUPERVISIÓN",
     "A1": "TRABAJO EN FRECUENCIA",
     "A2": "INSTRUCTOR IMPARTIENDO OJT O SIENDO EVALUADO",
@@ -91,97 +95,101 @@ SHIFT_TYPES = {
     "TR": "TARDE REUNION",
     "FORM": "FORMACION NO REALIZADA",
 }
+"""Códigos de turno y descripciones según definidas en la última página
+del turnero mensual de controladores aéreos."""
 
-ATC_ROLES = {"TS", "IS", "TI", "INS", "PTD", "CON", "SUP", "N/A"}
+PUESTOS_CARRERA = {"TS", "IS", "TI", "INS", "PTD", "CON", "SUP", "N/A"}
 
-MONTHS_IN_A_YEAR = 12
-SUNDAY_DAY_NUMBER = 6
+MESES_EN_UN_AÑO = 12
+NUMERO_DIA_DOMINGO = 6
 
 
-def period_from_code(code: str) -> ShiftPeriod:
+def period_from_code(code: str) -> TipoTurno:
     """Get the period from a shift code."""
-    if code in BASIC_SHIFTS and len(code) > 1 and code[1].upper() in BASIC_SHIFTS:
-        return ShiftPeriod[code[1].upper()]
+    if code in TURNOS_BASICOS and len(code) > 1 and code[1].upper() in TURNOS_BASICOS:
+        return TipoTurno[code[1].upper()]
 
     if code in ("MSM", "TSM", "ME", "TE", "MR", "TR"):
-        return ShiftPeriod[code[0]]
+        return TipoTurno[code[0]]
 
-    if code[0] in BASIC_SHIFTS:
-        return ShiftPeriod[code[0].upper()]
+    if code[0] in TURNOS_BASICOS:
+        return TipoTurno[code[0].upper()]
 
-    return ShiftPeriod["M"]
+    return TipoTurno["M"]
 
 
 def description_from_code(code: str) -> str:
     """Get the description from a shift code."""
-    if code in SHIFT_TYPES:
-        return SHIFT_TYPES[code]
-    if code[1:] in SHIFT_TYPES:
-        return SHIFT_TYPES[code[1:]]
+    if code in CODIGOS_DE_TURNO:
+        return CODIGOS_DE_TURNO[code]
+    if code[1:] in CODIGOS_DE_TURNO:
+        return CODIGOS_DE_TURNO[code[1:]]
     return code
 
 
-def is_admin(email: str) -> bool:
+def es_admin(email: str) -> bool:
     """Check if the user is an admin.
 
-    Checks the is_admin column in Users.
-    If no users have the is_admin flag set, the first user to log in becomes the admin.
+    Checks the es_admin column in Users.
+    If no users have the es_admin flag set, the first user to log in becomes the admin.
 
     """
-    user = User.query.filter_by(email=email).first()
+    user = ATC.query.filter_by(email=email).first()
     if user:
         # The user was found
-        return user.is_admin
+        return user.es_admin
 
     # User is not an admin. Check whether anyone is an admin.
-    return not User.query.filter_by(is_admin=True).first()
+    return not ATC.query.filter_by(es_admin=True).first()
 
 
 @dataclass
-class Shift:
+class Turno:
     """Shift information."""
 
-    period: ShiftPeriod
-    code: str
-    description: str | None = None
+    period: TipoTurno
+    codigo: str
+    descripcion: str | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
 
 
 @dataclass
-class Day:
+class Dia:
     """Day information."""
 
-    date: date
-    day_of_week: str
-    is_national_holiday: bool
-    shift: Shift | None = None
+    fecha: date
+    dia_de_la_semana: str
+    es_festivo_nacional: bool
+    turno: Turno | None = None
 
 
 @dataclass
-class MonthCalendar:
+class CalendarioMensual:
     """Calendar for a month."""
 
-    year: int
-    month: int
-    _days: list[Day] = field(default_factory=list)
+    año: int
+    mes: int
+    _dias: list[Dia] = field(default_factory=list)
 
     @property
-    def days(self) -> list[Day]:
+    def dias(self) -> list[Dia]:
         """Return the days in the month.
 
         But only those in the actual month.
         """
-        return [day for day in self._days if day.date.month == self.month]
+        return [day for day in self._dias if day.fecha.month == self.mes]
 
     @property
-    def weeks(self) -> list[list[Day]]:
+    def semanas(self) -> list[list[Dia]]:
         """Return the days in the month grouped by weeks."""
         weeks = []
         week = []
-        for day in self._days:
+        for day in self._dias:
             week.append(day)
-            if day.date.weekday() == SUNDAY_DAY_NUMBER:  # Sunday is the end of the week
+            if (
+                day.fecha.weekday() == NUMERO_DIA_DOMINGO
+            ):  # Sunday is the end of the week
                 weeks.append(week)
                 week = []
         if week:
@@ -189,25 +197,25 @@ class MonthCalendar:
         return weeks
 
     @property
-    def month_name(self) -> str:
+    def nombre_mes(self) -> str:
         """Return the name of the month."""
-        return self.days[0].date.strftime("%B").capitalize()
+        return self.dias[0].fecha.strftime("%B").capitalize()
 
 
-class MonthCalGen:
+class GenCalMensual:
     """Generate a calendar for a month and year and user."""
 
     @staticmethod
     def generate(
-        year: int,
-        month: int,
-        user: User | None = None,
+        año: int,
+        mes: int,
+        atc: ATC | None = None,
         session: Session | None = None,
-    ) -> MonthCalendar:
+    ) -> CalendarioMensual:
         """Generate a calendar for a month and year."""
-        days = []
-        first_day = date(year, month, 1)
-        last_day = MonthCalGen._last_day_of_month(year, month)
+        dias = []
+        first_day = date(año, mes, 1)
+        last_day = GenCalMensual._ultimo_dia_del_mes(año, mes)
 
         # Determine the start of the calendar
         # (possibly including days from the previous month)
@@ -220,52 +228,52 @@ class MonthCalGen:
         current_date = start_date
         while current_date <= end_date:
             day_of_week = current_date.strftime("%A")
-            is_national_holiday = MonthCalGen._check_national_holiday(current_date)
-            days.append(
-                Day(
-                    date=current_date,
-                    day_of_week=day_of_week,
-                    is_national_holiday=is_national_holiday,
+            is_national_holiday = GenCalMensual._verifica_fiesta_nacional(current_date)
+            dias.append(
+                Dia(
+                    fecha=current_date,
+                    dia_de_la_semana=day_of_week,
+                    es_festivo_nacional=is_national_holiday,
                 ),
             )
             current_date += timedelta(days=1)
 
-        if not user or not session:
-            return MonthCalendar(year=year, month=month, _days=days)
+        if not atc or not session:
+            return CalendarioMensual(año=año, mes=mes, _dias=dias)
 
         # Go through every shift in the database matching the user id
         # and the date within the dates of the calendar
-        min_date, max_date = days[0].date, days[-1].date
+        min_date, max_date = dias[0].fecha, dias[-1].fecha
         user_shifts = (
             session.query(DBShift)
             .filter(
-                DBShift.user_id == user.id,
-                DBShift.date.between(min_date, max_date),
+                DBShift.id_atc == atc.id,
+                DBShift.fecha.between(min_date, max_date),
             )
             .all()
         )
 
         # Add a Shift dataclass for each day that has a shift
-        shifts_by_date = {dbshift.date.date(): dbshift for dbshift in user_shifts}
+        turnos_por_fecha = {dbshift.fecha.date(): dbshift for dbshift in user_shifts}
 
-        for day in (day for day in days if day.date in shifts_by_date):
-            dbshift = shifts_by_date[day.date]
-            day.shift = Shift(
-                period=period_from_code(dbshift.shift_type),
-                code=dbshift.shift_type,
-                description=description_from_code(dbshift.shift_type),
+        for dia in (dia for dia in dias if dia.fecha in turnos_por_fecha):
+            dbshift = turnos_por_fecha[dia.fecha]
+            dia.turno = Turno(
+                period=period_from_code(dbshift.turno),
+                codigo=dbshift.turno,
+                descripcion=description_from_code(dbshift.turno),
             )
 
-        return MonthCalendar(year=year, month=month, _days=days)
+        return CalendarioMensual(año=año, mes=mes, _dias=dias)
 
     @staticmethod
-    def _last_day_of_month(year: int, month: int) -> date:
-        if month == MONTHS_IN_A_YEAR:
-            return date(year, 12, 31)
-        return date(year, month + 1, 1) - timedelta(days=1)
+    def _ultimo_dia_del_mes(año: int, mes: int) -> date:
+        if mes == MESES_EN_UN_AÑO:
+            return date(año, 12, 31)
+        return date(año, mes + 1, 1) - timedelta(days=1)
 
     @staticmethod
-    def _check_national_holiday(date_to_check: date) -> bool:
+    def _verifica_fiesta_nacional(date_to_check: date) -> bool:
         # Placeholder for actual holiday checking logic
         # TODO #2 Implement a real holiday checking mechanism
         national_holidays = [

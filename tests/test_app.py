@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 import pytest
 
 if TYPE_CHECKING:
-    from cambios.models import User
+    from cambios.models import ATC
     from flask.testing import FlaskClient
 
 
 # Ensure the fixtures are defined in conftest.py
 @pytest.mark.usefixtures("_verify_id_token_mock")
-def test_admin_access(client: FlaskClient, admin_user: User) -> None:
+def test_admin_access(client: FlaskClient, admin_user: ATC) -> None:
     """Test that an admin user can access the admin panel."""
     # Log in as admin user
     client.post("/login", data={"idToken": "test_token"})
@@ -26,7 +26,7 @@ def test_admin_access(client: FlaskClient, admin_user: User) -> None:
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")
-def test_non_admin_access(client: FlaskClient, regular_user: User) -> None:
+def test_non_admin_access(client: FlaskClient, regular_user: ATC) -> None:
     """Test that a non-admin user cannot access the admin panel."""
     # Log in as regular user
     client.post("/login", data={"idToken": "test_token"})
@@ -46,6 +46,7 @@ def test_logging_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
 
     app = create_app(Config)
 
+    assert app.logger.parent
     assert app.logger.parent.level == logging.INFO
 
     monkeypatch.delenv("ENABLE_LOGGING", raising=False)
@@ -65,7 +66,7 @@ def test_logging_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.usefixtures("_verify_admin_id_token_mock")
-def test_admin_sees_users_link(client: FlaskClient, admin_user: User) -> None:
+def test_admin_sees_users_link(client: FlaskClient, admin_user: ATC) -> None:
     """Test that an admin user sees the Users link in the admin panel."""
     # Log in as admin user
     client.post("/login", data={"idToken": "test_token"})
