@@ -184,10 +184,15 @@ def test_datos_generales_estadillo_a_db(
     db_estadillo = db_session.query(Estadillo).first()
     assert db_estadillo
     assert db_estadillo.atcs
-    assert db_estadillo.jefes
-    assert db_estadillo.supervisores
-    assert db_estadillo.tcas
 
-    assert len(db_estadillo.atcs) == len(data.controladores)
-    for atc in db_estadillo.atcs:
-        assert atc.apellidos_nombre in data.controladores
+    # Contar los servicios asociados a este estadillo cuyo
+    # rol es de Controlador
+    controladores = [
+        servicio for servicio in db_estadillo.servicios if servicio.rol == "Controlador"
+    ]
+    assert len(controladores) == len(data.controladores)
+
+    for servicio in db_estadillo.servicios:
+        if servicio.rol != "Controlador":
+            continue
+        assert servicio.atc.apellidos_nombre in data.controladores

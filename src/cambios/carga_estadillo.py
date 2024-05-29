@@ -15,13 +15,17 @@ from datetime import datetime
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from .models import Estadillo, Sector
+from sqlalchemy.orm import scoped_session
+
+from .models import Estadillo, Sector, Servicio
 from .utils import create_user, find_user, update_user
+
+logger = getLogger(__name__)
+
 
 if TYPE_CHECKING:  # pragma: no cover
     import pdfplumber
     from sqlalchemy.orm import scoped_session
-    from sqlalchemy.orm.collections import InstrumentedList
 
     from .models import ATC
 
@@ -188,12 +192,13 @@ def extraer_periodos(page: pdfplumber.page.Page) -> dict[str, list[PeriodosTexto
 def guardar_atc_en_estadillo(
     name: str,
     role: str,
-    relationship_list: InstrumentedList,
+    estadillo: Estadillo,
+    categoria: str,
     db_session: scoped_session,
 ) -> ATC:
     """Incluye a un atc en un estadillo.
 
-    El atc se almacena como controlador, jefe, supervisor o atc
+    El atc se almacena con su categoría profesional y rol
     en función de la relación que se pase como argumento.
 
     Si el atc no existe en la base de datos, se crea.
@@ -201,8 +206,20 @@ def guardar_atc_en_estadillo(
     user = find_user(name, db_session)
     if not user:
         user = create_user(name, role, None, db_session)
-    if user not in relationship_list:
-        relationship_list.append(user)
+
+    servicio = (
+        db_session.query(Servicio)
+        .filter_by(id_atc=user.id, id_estadillo=estadillo.id)
+        .first()
+    )
+    if not servicio:
+        servicio = Servicio(
+            id_atc=user.id,
+            id_estadillo=estadillo.id,
+            categoria=categoria,
+            rol=role,
+        )
+        db_session.add(servicio)
     return user
 
 
@@ -218,8 +235,9 @@ def procesar_controladores_y_sectores(
     for nombre_controlador, controller in controladores.items():
         user = guardar_atc_en_estadillo(
             nombre_controlador,
+            "Controlador",
+            estadillo,
             controller.puesto,
-            estadillo.atcs,
             db_session,
         )
         update_user(user, controller.puesto, None)
@@ -249,13 +267,15 @@ def guardar_datos_estadillo(
         turno=data.turno,
     )
     db_session.add(estadillo)
+    db_session.commit()  # Para asegurarnos de que estadillo.id esté disponible
 
     # Procesar jefes de sala
     for nombre_jefe_de_sala in data.jefes_de_sala:
         guardar_atc_en_estadillo(
             nombre_jefe_de_sala,
+            "Jefe de Sala",
+            estadillo,
             "JDS",
-            estadillo.jefes,
             db_session,
         )
 
@@ -263,14 +283,21 @@ def guardar_datos_estadillo(
     for nombre_supervisor in data.supervisores:
         guardar_atc_en_estadillo(
             nombre_supervisor,
+            "Supervisor",
+            estadillo,
             "SUP",
-            estadillo.supervisores,
             db_session,
         )
 
     # Procesar TCAs
     for nombre_tca in data.tcas:
-        guardar_atc_en_estadillo(nombre_tca, "TCA", estadillo.tcas, db_session)
+        guardar_atc_en_estadillo(
+            nombre_tca,
+            "TCA",
+            estadillo,
+            "TCA",
+            db_session,
+        )
 
     # Procesar controladores y sus sectores
     procesar_controladores_y_sectores(data.controladores, estadillo, db_session)
