@@ -35,9 +35,13 @@ def configure_logging(
     # ENABLE_LOGGING forces logs to be written to a file
 
     debug_level = logging.getLevelName(log_level)
+    logger = logging.getLogger()
+    logger.debug("Setting log level to %s", debug_level)
 
     if not enable_logging:
         return
+
+    logger.debug("Logging to %s", LOGFILE)
 
     logs_dir = Path(LOGFILE).parent
     if not logs_dir.exists():
@@ -59,6 +63,10 @@ def configure_logging(
     logger.addHandler(console_handler)
     logger.setLevel(debug_level)
     logger.info("Cambios startup")
+
+    sqllogger = logging.getLogger("sqlalchemy.engine")
+    sqllogger.setLevel(logging.INFO)
+    sqllogger.addHandler(file_handler)
 
 
 class Config:
