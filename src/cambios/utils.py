@@ -94,7 +94,7 @@ def create_user(
     Args:
     ----
         name: The full name as a single string or a tuple of (nombre, apellidos).
-              If a full name is provided it's expected to be in the format "apellidos nombre".
+              If a full name is provided it should be in the format "apellidos nombre".
         role: The role of the user. (CON, PDT, etc.)
         equipo: The equipo of the user (A, B, C, ...).
         db_session (scoped_session): The database session.

@@ -26,14 +26,35 @@ SQLLOGFILE = "logs/cambios-sql.log"
 LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
 
 
+class Config:
+    """Configuración por defecto."""
+
+    ENABLE_LOGGING = False
+    LOG_LEVEL = logging.WARNING
+
+    SQLALCHEMY_DATABASE_URI = "sqlite:///shifts.db"
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SECRET_KEY = secrets.token_urlsafe(32)
+    DEBUG = False
+    HOST = "localhost"
+    PORT = 80
+
+
 def configure_logging(
-    log_level: int = logging.INFO,
+    log_level: int = Config.LOG_LEVEL,
     *,
-    enable_logging: bool = False,
+    enable_logging: bool = Config.ENABLE_LOGGING,
 ) -> None:
     """Configure logging based on the environment variable."""
     # Configure logging
     # ENABLE_LOGGING forces logs to be written to a file
+    env_enable_logging = os.getenv("ENABLE_LOGGING")
+    if env_enable_logging:
+        enable_logging = env_enable_logging.lower() in ["true", "1", "t"]
+
+    env_log_level = os.getenv("LOG_LEVEL")
+    if env_log_level:
+        log_level = logging.getLevelName(env_log_level)
 
     debug_level = logging.getLevelName(log_level)
     logger = logging.getLogger()
@@ -74,27 +95,6 @@ def configure_logging(
     sqllogger.addHandler(file_handler)
 
 
-class Config:
-    """Base configuration."""
-
-    ENABLE_LOGGING = os.getenv("ENABLE_LOGGING", "False").lower() in ["true", "1", "t"]
-    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "SQLALCHEMY_DATABASE_URI",
-        "sqlite:///shifts.db",
-    )
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
-    DEBUG = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1", "t"]
-    HOST = os.getenv("HOST", "localhost")
-    PORT = int(os.getenv("PORT", "80"))
-    # Can't set this here, because we need to wait until the fixtures are loaded
-    # Check below for ENABLE_LOGGING
-
-    configure_logging(logging.getLevelName(LOG_LEVEL), enable_logging=ENABLE_LOGGING)
-
-
 class AdminModelView(ModelView):
     """Custom ModelView for the admin panel."""
 
@@ -107,13 +107,13 @@ class AdminModelView(ModelView):
         return redirect(url_for("main.login"))
 
 
-def create_app(config_class: type[Config] = Config) -> Flask:
+def create_app() -> Flask:
     """Create the Flask app."""
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
 
     app = Flask("cambios.app")
-    app.config.from_object(config_class)
-    app.config.from_envvar("APP_SETTINGS", silent=True)
+    app.config.from_object(Config)
+    app.config.from_prefixed_env()
 
     configure_logging()
 

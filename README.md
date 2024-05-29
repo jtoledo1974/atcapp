@@ -33,12 +33,12 @@ Este proyecto utiliza el SDK de administración de Firebase para la autenticaci�
 
 Estas variables de entorno se utilizan para configurar la aplicación.
 
-- `SQLALCHEMY_DATABASE_URI`: URI de la base de datos utilizada por SQLAlchemy. Si no se proporciona, se utilizará una base de datos SQLite por defecto.
-- `SQLALCHEMY_TRACK_MODIFICATIONS`: Indica si se deben realizar seguimientos de modificaciones en la base de datos. Se recomienda desactivarlo en entornos de producción.
-- `SECRET_KEY`: Clave secreta utilizada para la generación de tokens de seguridad. Si no se proporciona, se generará una clave aleatoria.
-- `DEBUG`: Indica si el modo de depuración está habilitado. Se interpreta como verdadero si el valor es "true", "1" o "t" (ignorando mayúsculas y minúsculas).
-- `HOST`: Dirección IP en la que se ejecutará la aplicación. Si no se proporciona, se utilizará localhost y no servirá clientes externos.
-- `PORT`: Puerto en el que se ejecutará la aplicación. Si no se proporciona, se utilizará el puerto 80.
+- `FLASK_SQLALCHEMY_DATABASE_URI`: URI de la base de datos utilizada por SQLAlchemy. Si no se proporciona, se utilizará una base de datos SQLite por defecto.
+- `FLASK_SQLALCHEMY_TRACK_MODIFICATIONS`: Indica si se deben realizar seguimientos de modificaciones en la base de datos. Se recomienda desactivarlo en entornos de producción.
+- `FLASK_SECRET_KEY`: Clave secreta utilizada para la generación de tokens de seguridad. Si no se proporciona, se generará una clave aleatoria.
+- `FLASK_DEBUG`: Indica si el modo de depuración está habilitado. Se interpreta como verdadero si el valor es "true", "1" o "t" (ignorando mayúsculas y minúsculas).
+- `FLASK_HOST`: Dirección IP en la que se ejecutará la aplicación. Si no se proporciona, se utilizará localhost y no servirá clientes externos.
+- `FLASK_PORT`: Puerto en el que se ejecutará la aplicación. Si no se proporciona, se utilizará el puerto 80.
 - `ENABLE_LOGGING`: Indica si se deben habilitar los registros de la aplicación en logs/
 
 ### Instalar imágenes precompiladas

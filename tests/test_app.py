@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import pytest
+from cambios.app import create_app
 
 if TYPE_CHECKING:
     from cambios.models import ATC
@@ -42,15 +43,13 @@ def test_logging_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     # Set the environment variable to enable logging
     monkeypatch.setenv("ENABLE_LOGGING", "true")
 
-    from cambios.app import Config, create_app
-
-    app = create_app(Config)
+    app = create_app()
 
     assert app.logger.parent
     assert app.logger.parent.level == logging.INFO
 
     monkeypatch.delenv("ENABLE_LOGGING", raising=False)
-    app.logger.setLevel(logging.WARNING)  # manually set to warning again
+    app.logger.parent.setLevel(logging.WARNING)  # manually set to warning again
     app.logger.handlers.clear()  # remove all handlers
 
 
@@ -58,11 +57,11 @@ def test_logging_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that logging is disabled if the environment variable is not set."""
     # Unset the environment variable to disable logging
     monkeypatch.delenv("ENABLE_LOGGING", raising=False)
+    monkeypatch.delenv("LOG_LEVEL", raising=False)
 
-    from cambios.app import Config, create_app
-
-    app = create_app(Config)
-    assert app.logger.level != logging.INFO
+    app = create_app()
+    assert app.logger.parent
+    assert app.logger.parent.level != logging.INFO
 
 
 @pytest.mark.usefixtures("_verify_admin_id_token_mock")

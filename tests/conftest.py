@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import locale
-import logging
 import os
 import pickle
-import secrets
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 
 import pytest
-from cambios.app import Config, configure_logging, create_app
+from cambios.app import create_app
 from cambios.database import db as _db
 from cambios.models import ATC, TipoTurno, Turno
 from sqlalchemy import create_engine
@@ -30,16 +28,18 @@ PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 @pytest.fixture(scope="session", autouse=True)
 def _set_env() -> None:
     """Set up logging using the environment variable."""
-    configure_logging(log_level=logging.INFO, enable_logging=True)
+    # configure_logging(log_level=logging.INFO, enable_logging=True)
+    os.environ["ENABLE_LOGGING"] = "true"
+    os.environ["LOG_LEVEL"] = "INFO"
+
     locale.setlocale(locale.LC_ALL, "es_ES.UTF-8")
+    os.environ["FLASK_SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
 
 
 @pytest.fixture()
 def app() -> Flask:
     """Create and configure a new app instance for each test."""
-    config = Config()
-    config.SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
-    app = create_app(config_class=Config)
+    app = create_app()
     app.config.update({"TESTING": True})
     return app
 
