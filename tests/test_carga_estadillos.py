@@ -13,7 +13,7 @@ from cambios.carga_estadillo import (
     guardar_datos_estadillo,
 )
 from cambios.models import (
-    EstadilloDiario,
+    Estadillo,
 )
 from cambios.utils import find_user
 from sqlalchemy import create_engine
@@ -99,7 +99,7 @@ def test_datos_generales_estadillo_a_db(
     guardar_datos_estadillo(data, db_session)
 
     # Check the control room shift
-    shift = db_session.query(EstadilloDiario).first()
+    shift = db_session.query(Estadillo).first()
     assert shift
     assert shift.dependencia == data.dependencia
     assert shift.fecha.strftime("%d.%m.%Y") == data.fecha
@@ -123,8 +123,8 @@ def test_datos_generales_estadillo_a_db(
     # Verificar sectores
     for sector in data.sectores:
         assert (
-            db_session.query(EstadilloDiario)
-            .filter(EstadilloDiario.sectores.any(nombre=sector))
+            db_session.query(Estadillo)
+            .filter(Estadillo.sectores.any(nombre=sector))
             .first()
         )
 
@@ -135,7 +135,7 @@ def test_datos_generales_estadillo_a_db(
         assert user
         for sector_name in controlador.sectores:
             assert (
-                db_session.query(EstadilloDiario)
-                .filter(EstadilloDiario.sectores.any(nombre=sector_name))
+                db_session.query(Estadillo)
+                .filter(Estadillo.sectores.any(nombre=sector_name))
                 .first()
             )

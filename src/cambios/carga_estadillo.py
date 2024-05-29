@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 import pdfplumber
 
-from .models import EstadilloDiario, Sector
+from .models import Estadillo, Sector
 from .utils import create_user, find_user, update_user
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -124,7 +124,7 @@ def guardar_datos_estadillo(  # noqa: C901
     # 27.05.2024 to python date
     date = datetime.strptime(data.fecha, "%d.%m.%Y")  # noqa: DTZ007
 
-    estadillo = EstadilloDiario(
+    estadillo = Estadillo(
         fecha=date,
         dependencia=data.dependencia,
         turno=data.turno,

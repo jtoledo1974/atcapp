@@ -67,14 +67,14 @@ class TipoTurno(db.Model):  # type: ignore[name-defined]
     descripcion: str = Column(String(50), nullable=False)  # type: ignore[assignment]
 
 
-class EstadilloDiario(db.Model):  # type: ignore[name-defined]
-    """Modelo de la tabla estadillos_diarios.
+class Estadillo(db.Model):  # type: ignore[name-defined]
+    """Modelo de la tabla estadillos.
 
     Datos generales del estadillo diario:
     Fecha, Unidad, Tipo de turno (M, T, N).
     """
 
-    __tablename__ = "estadillos_diarios"
+    __tablename__ = "estadillos"
     id = Column(Integer, primary_key=True)
     fecha: date = Column(DateTime, nullable=False)  # type: ignore[assignment]
     dependencia: str = Column(String(4), nullable=False)  # type: ignore[assignment]
@@ -98,48 +98,48 @@ class Sector(db.Model):  # type: ignore[name-defined]
 jefes_estadillos = Table(
     "jefes_estadillos",
     db.Model.metadata,
-    Column("id_estadillo", Integer, ForeignKey("estadillos_diarios.id")),
+    Column("id_estadillo", Integer, ForeignKey("estadillos.id")),
     Column("id_atc", Integer, ForeignKey("atcs.id")),
 )
 
 supervisores_estadillos = Table(
     "supervisores_estadillos",
     db.Model.metadata,
-    Column("id_estadillo", Integer, ForeignKey("estadillos_diarios.id")),
+    Column("id_estadillo", Integer, ForeignKey("estadillos.id")),
     Column("id_atc", Integer, ForeignKey("atcs.id")),
 )
 
 tcas_estadillos = Table(
     "tcas_estadillos",
     db.Model.metadata,
-    Column("id_estadillo", Integer, ForeignKey("estadillos_diarios.id")),
+    Column("id_estadillo", Integer, ForeignKey("estadillos.id")),
     Column("id_atc", Integer, ForeignKey("atcs.id")),
 )
 
 sectores_estadillos = Table(
     "sectores_estadillos",
     db.Model.metadata,
-    Column("id_estadillo", Integer, ForeignKey("estadillos_diarios.id")),
+    Column("id_estadillo", Integer, ForeignKey("estadillos.id")),
     Column("id_sector", Integer, ForeignKey("sectores.id")),
 )
 
 # Updating ControlRoomShift model to include relationships
-EstadilloDiario.jefes = relationship(
+Estadillo.jefes = relationship(
     "ATC",
     secondary=jefes_estadillos,
     backref="turnos_de_jefe",
 )
-EstadilloDiario.supervisores = relationship(
+Estadillo.supervisores = relationship(
     "ATC",
     secondary=supervisores_estadillos,
     backref="turnos_de_supervisor",
 )
-EstadilloDiario.tcas = relationship(
+Estadillo.tcas = relationship(
     "ATC",
     secondary=tcas_estadillos,
     backref="turnos_de_tca",
 )
-EstadilloDiario.sectores = relationship(
+Estadillo.sectores = relationship(
     "Sector",
     secondary=sectores_estadillos,
     backref="estadillos",
