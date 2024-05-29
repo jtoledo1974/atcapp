@@ -30,6 +30,7 @@ PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 def _set_env() -> None:
     """Set up logging using the environment variable."""
     os.environ["ENABLE_LOGGING"] = "true"
+    os.environ["LOG_LEVEL"] = "INFO"
     locale.setlocale(locale.LC_ALL, "es_ES.UTF-8")
 
 

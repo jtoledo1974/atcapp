@@ -53,7 +53,7 @@ class AdminModelView(ModelView):
         return redirect(url_for("main.login"))
 
 
-def configure_logging(app: Flask) -> None:
+def configure_logging() -> None:
     """Configure logging based on the environment variable."""
     # Configure logging
     # ENABLE_LOGGING forces logs to be written to a file
@@ -94,7 +94,7 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     app.config.from_object(config_class)
     app.config.from_envvar("APP_SETTINGS", silent=True)
 
-    configure_logging(app)
+    configure_logging()
 
     db.init_app(app)
     with app.app_context():
