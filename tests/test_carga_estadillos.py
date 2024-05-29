@@ -97,9 +97,23 @@ def test_extraer_periodos(pdf: PDF) -> None:
     periodos = extraer_periodos(pdf.pages[1])
 
     assert isinstance(data, EstadilloTexto)
+
     # Comprobar que los los controladores en los datos
     # son los mismos que en los periodos
-    assert len(data.controladores.keys()) == len(periodos.keys())
+    c = set(data.controladores.keys())
+    p = set(periodos.keys())
+
+    # ESCUDERO MOUTIHNO DE FREITAS es caso particular,
+    # porque no cabe en los detalles y se le quitó el nombre
+    # los quitamos de los sets
+    nombre_completo = "ESCUDERO MOUTINHO DE FREITAS CATARINA"
+    assert (nombre_completo) in c
+    c.remove(nombre_completo)
+    apellidos = "ESCUDERO MOUTINHO DE FREITAS"
+    assert (apellidos) in p
+    p.remove(apellidos)
+
+    assert set(c) == set(p)
 
     # comprobar que todo el mundo tiene o bien uno, o bien seis o más periodos
     for nombre_controlador in periodos:
