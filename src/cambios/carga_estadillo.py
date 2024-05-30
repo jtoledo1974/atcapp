@@ -28,6 +28,8 @@ logger = getLogger(__name__)
 
 
 if TYPE_CHECKING:  # pragma: no cover
+    from io import BufferedReader
+
     from sqlalchemy.orm import scoped_session
     from werkzeug.datastructures import FileStorage
 
@@ -234,7 +236,7 @@ def extrae_actividad_y_sector(funcion: str) -> tuple[str, str]:
     "P" es el rol y "ASN" es el sector.
     """
     res = funcion.split("-")
-    if len(res) != 2:
+    if len(res) != 2:  # noqa: PLR2004
         _msg = f"Fallo al extraer actividad y sector de {funcion}"
         logger.error(_msg)
         raise ValueError(_msg)
@@ -247,9 +249,7 @@ def str_to_dt(time: str) -> datetime:
     Usa la zona horaria preconfigurada.
     """
     tz = get_timezone()
-    dt = datetime.strptime(time, "%H:%M")
-    ldt = tz.localize(dt)
-    return ldt
+    return datetime.strptime(time, "%H:%M").replace(tzinfo=tz)
 
 
 def calcula_horas_inicio_y_fin(
@@ -289,6 +289,7 @@ def guardar_periodos(
     horas = calcula_horas_inicio_y_fin(periodos, estadillo.fecha)
 
     for i, periodo_texto in enumerate(periodos):
+        sector = None
         if periodo_texto.funcion == "DESCANSO":
             actividad, sector_name = "D", None
         else:
@@ -312,7 +313,7 @@ def guardar_periodos(
             hora_fin=hora_fin,
             actividad=actividad,
         )
-        if sector_name:
+        if sector:
             periodo.id_sector = sector.id
 
         db_session.add(periodo)

@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 TEST_ESTADILLO_PATH = Path(__file__).parent / "resources" / "test_estadillo.pdf"
 
+
 # Database setup for testing
 @pytest.fixture(scope="module")
 def db_session() -> Generator[scoped_session[Session], Any, Any]:
@@ -211,4 +212,3 @@ def test_periodos_a_db(pdf: PDF, db_session: scoped_session) -> None:
         user = find_user(nombre_controlador, db_session)
         assert user
         assert len(periodos_controlador) == len(user.periodos)
-            
