@@ -40,6 +40,8 @@ Estas variables de entorno se utilizan para configurar la aplicación.
 - `FLASK_HOST`: Dirección IP en la que se ejecutará la aplicación. Si no se proporciona, se utilizará localhost y no servirá clientes externos.
 - `FLASK_PORT`: Puerto en el que se ejecutará la aplicación. Si no se proporciona, se utilizará el puerto 80.
 - `ENABLE_LOGGING`: Indica si se deben habilitar los registros de la aplicación en logs/
+- `LOG_LEVEL`: Nivel de registro de la aplicación. Los valores válidos son DEBUG, INFO, WARNING, ERROR y CRITICAL.
+- `TZ`: Zona horaria utilizada por la aplicación. Si no se proporciona, se utilizará "Europe/Madrid".
 
 ### Instalar imágenes precompiladas
 ```sh

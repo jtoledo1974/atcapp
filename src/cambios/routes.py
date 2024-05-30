@@ -17,8 +17,8 @@ from flask import (
     session,
     url_for,
 )
-from pytz import timezone as tzinfo
 
+from . import get_timezone
 from .cambios import GenCalMensual, es_admin
 from .carga_turnero import procesa_turnero
 from .database import db
@@ -69,7 +69,8 @@ def index() -> Response | str:
 
     # TODO #3 It would be better to use the user's timezone here
     # Currently forcing continental Spain using pytz
-    today = datetime.now(tz=tzinfo("Europe/Madrid"))
+    tz = get_timezone()
+    today = datetime.now(tz=tz)
 
     # Get month and year from query parameters or use current month and year
     month = request.args.get("month", type=int, default=today.month)

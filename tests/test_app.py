@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import pytest
+from cambios import configure_timezone, get_timezone
 from cambios.app import create_app
 
 if TYPE_CHECKING:
@@ -76,3 +77,25 @@ def test_admin_sees_users_link(client: FlaskClient, admin_user: ATC) -> None:
     # Check that the response contains the "Users" link
     assert response.status_code == 200
     assert b"User" in response.data
+
+
+def test_default_timezone() -> None:
+    """Verifica que la zona horaria por defecto es 'Europe/Madrid'."""
+    tz = get_timezone()
+    assert tz.zone == "Europe/Madrid"
+
+
+def test_env_timezone() -> None:
+    """Verifica que la zona horaria se puede configurar mediante una variable de entorno."""
+    # Set the environment variable to change the timezone
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("TZ", "America/New_York")
+        configure_timezone()
+
+        tz = get_timezone()
+        assert tz.zone == "America/New_York"
+
+    # Unset the environment variable
+    configure_timezone()
+    tz = get_timezone()
+    assert tz.zone == "Europe/Madrid"

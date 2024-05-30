@@ -13,6 +13,7 @@ from flask import Flask, redirect, session, url_for
 from flask_admin import Admin  # type: ignore[import-untyped]
 from flask_admin.contrib.sqla import ModelView  # type: ignore[import-untyped]
 
+from . import configure_timezone
 from .database import db, init_db
 from .firebase import init_firebase
 from .models import ATC
@@ -123,6 +124,8 @@ def create_app() -> Flask:
     app.config.from_prefixed_env()
 
     configure_logging()
+    configure_timezone()
+
     app.logger.info("DB_URI: %s", app.config["SQLALCHEMY_DATABASE_URI"])
 
     db.init_app(app)

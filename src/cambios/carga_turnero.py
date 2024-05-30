@@ -11,7 +11,7 @@ the data into the database.
 from __future__ import annotations
 
 import re
-from datetime import datetime, date
+from datetime import datetime
 from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
 
+from . import get_timezone
 from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
 from .models import ATC, Turno
 from .utils import create_user, find_user, update_user
@@ -137,7 +138,10 @@ def insert_shift_data(
         if shift_code:  # Skip empty shift codes
             date_str = f"{day:02d} {month} {year}"
             try:
-                shift_date = datetime.strptime(date_str, "%d %B %Y").date()  # noqa: DTZ007
+                tz = get_timezone()
+                shift_date = (
+                    datetime.strptime(date_str, "%d %B %Y").astimezone(tz).date()
+                )
             except ValueError:
                 continue
 
