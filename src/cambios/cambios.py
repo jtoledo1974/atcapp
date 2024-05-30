@@ -213,7 +213,7 @@ class GenCalMensual:
         session: Session | None = None,
     ) -> CalendarioMensual:
         """Generate a calendar for a month and year."""
-        dias = []
+        dias: list[Dia] = []
         first_day = date(año, mes, 1)
         last_day = GenCalMensual._ultimo_dia_del_mes(año, mes)
 
@@ -254,7 +254,7 @@ class GenCalMensual:
         )
 
         # Add a Shift dataclass for each day that has a shift
-        turnos_por_fecha = {dbshift.fecha.date(): dbshift for dbshift in user_shifts}
+        turnos_por_fecha = {dbshift.fecha: dbshift for dbshift in user_shifts}
 
         for dia in (dia for dia in dias if dia.fecha in turnos_por_fecha):
             dbshift = turnos_por_fecha[dia.fecha]

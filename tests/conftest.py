@@ -28,7 +28,6 @@ PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 @pytest.fixture(scope="session", autouse=True)
 def _set_env() -> None:
     """Set up logging using the environment variable."""
-    # configure_logging(log_level=logging.INFO, enable_logging=True)
     os.environ["ENABLE_LOGGING"] = "true"
     os.environ["LOG_LEVEL"] = "INFO"
 

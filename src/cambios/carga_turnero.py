@@ -11,7 +11,7 @@ the data into the database.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, date
 from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -137,7 +137,7 @@ def insert_shift_data(
         if shift_code:  # Skip empty shift codes
             date_str = f"{day:02d} {month} {year}"
             try:
-                shift_date = datetime.strptime(date_str, "%d %B %Y")  # noqa: DTZ007
+                shift_date = datetime.strptime(date_str, "%d %B %Y").date()  # noqa: DTZ007
             except ValueError:
                 continue
 

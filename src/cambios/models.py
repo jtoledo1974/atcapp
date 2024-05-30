@@ -7,7 +7,7 @@ from datetime import date, time  # noqa: TCH003  # Necesario para el mapping
 from sqlalchemy import (
     Boolean,
     Column,
-    DateTime,
+    Date,
     ForeignKey,
     Integer,
     String,
@@ -70,7 +70,7 @@ class Turno(db.Model):  # type: ignore[name-defined]
     __tablename__ = "turnos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    fecha: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
+    fecha: Mapped[date] = mapped_column(Date, nullable=False)
     turno: Mapped[str] = mapped_column(String(10), nullable=False)
     id_atc: Mapped[int] = mapped_column(Integer, ForeignKey("atcs.id"), nullable=False)
 
@@ -96,7 +96,7 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
     __tablename__ = "estadillos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    fecha: Mapped[date] = mapped_column(DateTime, nullable=False)
+    fecha: Mapped[date] = mapped_column(Date, nullable=False)
     dependencia: Mapped[str] = mapped_column(String(4), nullable=False)
     turno: Mapped[str] = mapped_column(String(1), nullable=False)
 
