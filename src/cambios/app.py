@@ -45,20 +45,27 @@ def configure_logging(
     *,
     enable_logging: bool = Config.ENABLE_LOGGING,
 ) -> None:
-    """Configure logging based on the environment variable."""
+    """Configure logging based on the environment variable.
+
+    enable_logging forces logs to be written to a file,
+    and a log_level of at least INFO.
+
+    """
     # Configure logging
     # ENABLE_LOGGING forces logs to be written to a file
-    env_enable_logging = os.getenv("ENABLE_LOGGING")
-    if env_enable_logging:
-        enable_logging = env_enable_logging.lower() in ["true", "1", "t"]
 
     env_log_level = os.getenv("LOG_LEVEL")
     if env_log_level:
         log_level = logging.getLevelName(env_log_level)
 
-    debug_level = logging.getLevelName(log_level)
+    env_enable_logging = os.getenv("ENABLE_LOGGING")
+    if env_enable_logging:
+        enable_logging = env_enable_logging.lower() in ["true", "1", "t"]
+        if log_level < logging.INFO:
+            log_level = logging.INFO
+
     logger = logging.getLogger()
-    logger.debug("Setting log level to %s", debug_level)
+    logger.debug("Setting log level to %s", log_level)
 
     if not enable_logging:
         return
@@ -72,22 +79,22 @@ def configure_logging(
     formatter = logging.Formatter(LOGFORMAT)
     file_handler = logging.FileHandler(LOGFILE)
     file_handler.setFormatter(formatter)
-    file_handler.setLevel(debug_level)
+    file_handler.setLevel(log_level)
     sql_file_handler = logging.FileHandler(SQLLOGFILE)
     sql_file_handler.setFormatter(formatter)
-    sql_file_handler.setLevel(debug_level)
+    sql_file_handler.setLevel(log_level)
 
     # Crear un handler para sacar por pantalla
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(debug_level)
+    console_handler.setLevel(log_level)
 
     logger = logging.getLogger("cambios")
 
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
     logger.addHandler(sql_file_handler)
-    logger.setLevel(debug_level)
+    logger.setLevel(log_level)
     logger.info("Cambios startup")
 
     sqllogger = logging.getLogger("sqlalchemy.engine")
@@ -116,6 +123,7 @@ def create_app() -> Flask:
     app.config.from_prefixed_env()
 
     configure_logging()
+    app.logger.info("DB_URI: %s", app.config["SQLALCHEMY_DATABASE_URI"])
 
     db.init_app(app)
     with app.app_context():
