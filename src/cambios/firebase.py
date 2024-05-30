@@ -57,7 +57,7 @@ def verify_id_token(id_token: str) -> dict[str, str]:
 
     """
     try:
-        decoded_token = auth.verify_id_token(id_token)
+        decoded_token = auth.verify_id_token(id_token, clock_skew_seconds=2)
     except Exception:
         _msg = "Token verification failed"
         logger.exception(_msg)
