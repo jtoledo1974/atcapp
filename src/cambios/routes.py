@@ -20,6 +20,7 @@ from flask import (
 
 from . import get_timezone
 from .cambios import GenCalMensual, es_admin
+from .carga_estadillo import procesa_estadillo
 from .carga_turnero import procesa_turnero
 from .database import db
 from .firebase import invalidate_token, verify_id_token
@@ -239,6 +240,40 @@ def upload() -> Response | str:
     flash(
         "Archivo cargado con éxito. "
         f"Usuarios reconocidos: {n_users}, turnos agregados: {n_shifts}",
+        "success",
+    )
+    return redirect(url_for("main.index"))
+
+
+@main.route("/upload_estadillo", methods=["GET", "POST"])
+@privacy_policy_accepted
+def upload_estadillo() -> Response | str:
+    """Upload estadillo data to the server.
+
+    For GET requests, render the upload page.
+    For POST requests, upload the estadillo data to the server.
+    """
+    if session.get("es_admin") is not True:
+        return redirect(url_for("main.index"))
+    if request.method != "POST":
+        return render_template("upload_estadillo.html")
+    file = request.files["file"]
+    if not file.filename:
+        flash("No se ha seleccionado un archivo", "danger")
+        return redirect(url_for("main.upload_estadillo"))
+
+    try:
+        estadillo_db = procesa_estadillo(file, db.session)
+        n_controladores = len(estadillo_db.servicios)
+        n_periodos = sum(len(atc.periodos) for atc in estadillo_db.atcs)
+    except ValueError:
+        flash("Formato de archivo no válido", "danger")
+        return redirect(url_for("main.upload_estadillo"))
+
+    flash(
+        "Archivo cargado con éxito. "
+        f"Controladores reconocidos: {n_controladores},"
+        f" periodos agregados: {n_periodos}",
         "success",
     )
     return redirect(url_for("main.index"))

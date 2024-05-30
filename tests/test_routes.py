@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from flask.testing import FlaskClient
     from pytest_mock import MockerFixture
 
+from .test_carga_estadillos import TEST_ESTADILLO_PATH
+
 
 def test_index_redirect(client: FlaskClient) -> None:
     """Test that the index page redirects to the login page."""
@@ -124,3 +126,42 @@ def test_login_redirect_to_privacy_policy(
     response = client.get("/")
     assert response.status_code == 302
     assert response.location == "/privacy_policy"
+
+
+@pytest.mark.usefixtures("_verify_admin_id_token_mock")
+def test_upload_estadillo_get(client: FlaskClient, admin_user: ATC) -> None:
+    """Test that the upload_estadillo route renders the upload page."""
+    client.post("/login", data={"idToken": "test_token"})
+    response = client.get("/upload_estadillo")
+    assert response.status_code == 200
+    assert b"Carga de Estadillo" in response.data
+
+
+@pytest.mark.usefixtures("_verify_admin_id_token_mock")
+def test_upload_estadillo_post_no_file(client: FlaskClient, admin_user: ATC) -> None:
+    """Test that the upload_estadillo route fails if no file is selected."""
+    client.post("/login", data={"idToken": "test_token"})
+    response = client.post(
+        "/upload_estadillo",
+        data={"file": (None, "")},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert b"No se ha seleccionado un archivo" in response.data
+
+
+@pytest.mark.usefixtures("_verify_admin_id_token_mock")
+def test_upload_estadillo_post(client: FlaskClient, admin_user: ATC) -> None:
+    """Test that the upload_estadillo route processes a valid PDF file."""
+    client.post("/login", data={"idToken": "test_token"})
+
+    with TEST_ESTADILLO_PATH.open("rb") as file:
+        response = client.post(
+            "/upload_estadillo",
+            data={"file": file},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+
+    assert response.status_code == 200
+    assert "Archivo cargado con éxito".encode() in response.data

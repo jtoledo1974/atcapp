@@ -36,6 +36,11 @@
                         <a class="nav-link" href="/upload">Subir Turnero</a>
                     </li>
                     {% endif %}
+                    {% if request.endpoint != 'main.upload_estadillo' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.upload_estadillo') }}">Subir Estadillo</a>
+                    </li>
+                    {% endif %}
                     {% endif %}
                 </ul>
 

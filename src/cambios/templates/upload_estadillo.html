@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Carga de Estadillo{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Carga de Estadillo</h2>
+    <form method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="file" class="form-label">Escoja un archivo PDF</label>
+            <input type="file" class="form-control" id="file" name="file">
+        </div>
+        <button type="submit" class="btn btn-primary">Subir</button>
+    </form>
+</div>
+{% endblock %}
