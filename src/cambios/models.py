@@ -69,7 +69,11 @@ class ATC(db.Model):  # type: ignore[name-defined]
 
 
 class Turno(db.Model):  # type: ignore[name-defined]
-    """Modelo de la tabla Turno."""
+    """Turnos son los publicados en el turnero mensual y actualizados con cambios.
+
+    Se distinguen de los servicios porque esos son los que se utilizan para
+    asociar a los controladores con el estadillo diario.
+    """
 
     __tablename__ = "turnos"
 
@@ -177,7 +181,13 @@ class Periodo(db.Model):  # type: ignore[name-defined]
 
 
 class Servicio(db.Model):  # type: ignore[name-defined]
-    """Modelo intermedio para gestionar la relación entre ATC y Estadillo."""
+    """Modelo intermedio para gestionar la relación entre ATC y Estadillo.
+
+    Un concepto similar es el de Turno, pero usaremos servicios para
+    referirnos a aquellos para los que hay estadillo, y turnos como
+    cualquier otro trabajo que pueda realizar un controlador,
+    incluyendo los servicios de sala.
+    """
 
     __tablename__ = "servicios"
 
