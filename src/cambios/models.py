@@ -120,11 +120,17 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
     servicios: Mapped[list[Servicio]] = relationship(
         "Servicio",
         back_populates="estadillo",
+        cascade="all, delete-orphan",
     )
     sectores: Mapped[list[Sector]] = relationship(
         "Sector",
         secondary=sectores_estadillo,
         back_populates="estadillos",
+    )
+    periodos: Mapped[list[Periodo]] = relationship(
+        "Periodo",
+        back_populates="turno_sala_control",
+        cascade="all, delete-orphan",
     )
 
 
@@ -179,7 +185,7 @@ class Periodo(db.Model):  # type: ignore[name-defined]
     controlador: Mapped[ATC] = relationship("ATC", back_populates="periodos")
     turno_sala_control: Mapped[Estadillo] = relationship(
         "Estadillo",
-        backref="periodos",
+        back_populates="periodos",
     )
     sector: Mapped[Sector] = relationship("Sector", backref="periodos")
 

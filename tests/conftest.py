@@ -33,6 +33,7 @@ def _set_env() -> None:
 
     locale.setlocale(locale.LC_ALL, "es_ES.UTF-8")
     os.environ["FLASK_SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    # Usar  "sqlite:///testing.db" para ver la base de datos de prueba
 
 
 @pytest.fixture()

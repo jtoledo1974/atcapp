@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import scoped_session
 
 from . import get_timezone
@@ -358,16 +359,38 @@ def guardar_datos_estadillo(
     logger.info("Guardando datos del estadillo en la base de datos")
     # Convertir la fecha "27.05.2024" a un objeto date de Python
     tz = get_timezone()
-    date = datetime.strptime(data.fecha, "%d.%m.%Y").astimezone(tz).date()
+    fecha = datetime.strptime(data.fecha, "%d.%m.%Y").astimezone(tz).date()
 
-    # Crear el objeto Estadillo y añadirlo a la sesión
+    # Crear el objeto Estadillo
     estadillo = Estadillo(
-        fecha=date,
+        fecha=fecha,
         dependencia=data.dependencia,
         turno=data.turno,
     )
-    db_session.add(estadillo)
-    db_session.commit()  # Para asegurarnos de que estadillo.id esté disponible
+
+    try:
+        # Añadir y confirmar la sesión para asegurar que estadillo.id esté disponible
+        db_session.add(estadillo)
+        db_session.commit()
+    except IntegrityError:
+        db_session.rollback()  # Deshacer la transacción en caso de error
+        # Manejar la excepción específicamente
+        # Ya existía un estadillo así. Hay que borrar los datos anteriores
+        logger.warning("Estadillo para la fecha %s ya existe. Se sustituye.", fecha)
+
+        # Obtener y eliminar el estadillo existente y sus dependencias en cascada
+        estadillo_existente = (
+            db_session.query(Estadillo)
+            .filter_by(fecha=fecha, dependencia=data.dependencia, turno=data.turno)
+            .one()
+        )
+
+        db_session.delete(estadillo_existente)
+        db_session.commit()  # Asegurarse de que se elimine antes de añadir el nuevo
+
+        # Reintentar la inserción del nuevo estadillo
+        db_session.add(estadillo)
+        db_session.commit()
 
     # Procesar jefes de sala
     for nombre_jefe_de_sala in data.jefes_de_sala:

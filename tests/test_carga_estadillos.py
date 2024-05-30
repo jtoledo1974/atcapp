@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generator
 
@@ -15,7 +16,11 @@ from cambios.carga_estadillo import (
     procesa_estadillo,
 )
 from cambios.models import (
+    ATC,
     Estadillo,
+    Periodo,
+    Sector,
+    Servicio,
 )
 from cambios.utils import find_user
 from sqlalchemy import create_engine
@@ -34,7 +39,8 @@ TEST_ESTADILLO_PATH = Path(__file__).parent / "resources" / "test_estadillo.pdf"
 @pytest.fixture(scope="module")
 def db_session() -> Generator[scoped_session[Session], Any, Any]:
     """Create a new database session for testing."""
-    engine = create_engine("sqlite:///:memory:")
+    engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
+    engine = create_engine(engine_str)
     session_factory = sessionmaker(bind=engine)
     session = scoped_session(session_factory)
 
@@ -234,3 +240,28 @@ def test_periodos_a_db(pdf: PDF, db_session: scoped_session) -> None:
     for atc in atcs:
         assert atc.periodos[0].hora_inicio == hora_inicio
         assert atc.periodos[-1].hora_fin == hora_fin
+
+
+def test_subir_dos_veces_lo_deja_igual(pdf: PDF, db_session: scoped_session) -> None:
+    """Comprobar que subir un estadillo dos veces no cambia nada."""
+    with TEST_ESTADILLO_PATH.open("rb") as file:
+        _estadillo_db = procesa_estadillo(file, db_session)
+    n_estadillos = db_session.query(Estadillo).count()
+    n_servicios = db_session.query(Servicio).count()
+    n_periodos = db_session.query(Periodo).count()
+    n_sectores = db_session.query(Sector).count()
+    n_atcs = db_session.query(ATC).count()
+
+    with TEST_ESTADILLO_PATH.open("rb") as file:
+        _estadillo_db2 = procesa_estadillo(file, db_session)
+    n_estadillos2 = db_session.query(Estadillo).count()
+    n_servicios2 = db_session.query(Servicio).count()
+    n_periodos2 = db_session.query(Periodo).count()
+    n_sectores2 = db_session.query(Sector).count()
+    n_atcs2 = db_session.query(ATC).count()
+
+    assert n_estadillos == n_estadillos2
+    assert n_servicios == n_servicios2
+    assert n_periodos == n_periodos2
+    assert n_sectores == n_sectores2
+    assert n_atcs == n_atcs2
