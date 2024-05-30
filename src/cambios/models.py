@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -76,6 +77,7 @@ class Turno(db.Model):  # type: ignore[name-defined]
     """
 
     __tablename__ = "turnos"
+    __table_args__ = (UniqueConstraint("fecha", "id_atc"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     fecha: Mapped[date] = mapped_column(Date, nullable=False)
@@ -102,6 +104,7 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
     """
 
     __tablename__ = "estadillos"
+    __table_args__ = (UniqueConstraint("fecha", "dependencia", "turno"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     fecha: Mapped[date] = mapped_column(Date, nullable=False)
@@ -149,6 +152,7 @@ class Periodo(db.Model):  # type: ignore[name-defined]
     """
 
     __tablename__ = "periodos"
+    __table_args__ = (UniqueConstraint("id_controlador", "hora_inicio"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     id_controlador: Mapped[int] = mapped_column(
@@ -190,6 +194,7 @@ class Servicio(db.Model):  # type: ignore[name-defined]
     """
 
     __tablename__ = "servicios"
+    __table_args__ = (UniqueConstraint("id_atc", "id_estadillo"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     id_atc: Mapped[int] = mapped_column(Integer, ForeignKey("atcs.id"), nullable=False)
