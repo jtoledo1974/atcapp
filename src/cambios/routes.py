@@ -23,11 +23,11 @@ from .cambios import GenCalMensual, es_admin
 from .carga_estadillo import procesa_estadillo
 from .carga_turnero import procesa_turnero
 from .database import db
+from .estadillos import get_general_estadillo, get_user_estadillo
 from .firebase import invalidate_token, verify_id_token
-from .models import ATC
+from .models import ATC, Estadillo
 
 if TYPE_CHECKING:  # pragma: no cover
-    from flask import Flask
     from werkzeug import Response
 
 logger = getLogger(__name__)
@@ -67,6 +67,18 @@ def index() -> Response | str:
     user = db.session.get(ATC, session["id_atc"])
     if not user:
         return redirect(url_for("main.logout"))
+
+    # Check if the user has a latest estadillo and redirect to it
+    latest_estadillo = (
+        db.session.query(Estadillo)
+        .join(Estadillo.atcs)
+        .filter(ATC.id == user.id)
+        .order_by(Estadillo.fecha.desc())
+        .first()
+    )
+
+    if latest_estadillo:
+        return redirect(url_for("main.estadillo"))
 
     # TODO #3 It would be better to use the user's timezone here
     # Currently forcing continental Spain using pytz
@@ -277,6 +289,40 @@ def upload_estadillo() -> Response | str:
         "success",
     )
     return redirect(url_for("main.index"))
+
+
+@main.route("/estadillo")
+@privacy_policy_accepted
+def estadillo() -> Response | str:
+    """Show the latest estadillo for the logged-in user."""
+    if "id_atc" not in session:
+        return redirect(url_for("main.login"))
+
+    user = db.session.get(ATC, session["id_atc"])
+    if not user:
+        return redirect(url_for("main.logout"))
+
+    # Get the latest estadillo for the user
+    latest_estadillo = (
+        db.session.query(Estadillo)
+        .join(Estadillo.atcs)
+        .filter(ATC.id == user.id)
+        .order_by(Estadillo.fecha.desc())
+        .first()
+    )
+
+    if not latest_estadillo:
+        flash("No hay estadillos disponibles para ti.", "info")
+        return redirect(url_for("main.index"))
+
+    user_estadillo = get_user_estadillo(user, db.session)
+    general_estadillo = get_general_estadillo(latest_estadillo, db.session)
+
+    return render_template(
+        "estadillo.html",
+        user_estadillo=user_estadillo,
+        general_estadillo=general_estadillo,
+    )
 
 
 def register_routes(app: Flask) -> Blueprint:

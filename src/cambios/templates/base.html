@@ -27,6 +27,9 @@
                         <a class="nav-link" href="{{ url_for('main.index') }}">Inicio</a>
                     </li>
                     {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.estadillo') }}">Mi Estadillo</a>
+                    </li>
                     {% if current_user.es_admin %}
                     <li class="nav-item">
                         <a class="nav-link" href="/admin/atc/">Administrar Usuarios</a>
