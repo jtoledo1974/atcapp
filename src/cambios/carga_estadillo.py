@@ -11,21 +11,25 @@ los datos en la base de datos.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
+from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+import pdfplumber
+from pdfminer.pdfparser import PDFSyntaxError
 from sqlalchemy.orm import scoped_session
 
-from .models import Estadillo, Sector, Servicio
+from . import get_timezone
+from .models import Estadillo, Periodo, Sector, Servicio
 from .utils import create_user, find_user, update_user
 
 logger = getLogger(__name__)
 
 
 if TYPE_CHECKING:  # pragma: no cover
-    import pdfplumber
     from sqlalchemy.orm import scoped_session
+    from werkzeug.datastructures import FileStorage
 
     from .models import ATC
 
@@ -223,6 +227,98 @@ def guardar_atc_en_estadillo(
     return user
 
 
+def extrae_actividad_y_sector(funcion: str) -> tuple[str, str]:
+    """Extrae el rol y el sector de una cadena de texto.
+
+    La cadena de texto tiene el formato "P-ASN" o "E-ASN" donde
+    "P" es el rol y "ASN" es el sector.
+    """
+    res = funcion.split("-")
+    if len(res) != 2:
+        _msg = f"Fallo al extraer actividad y sector de {funcion}"
+        logger.error(_msg)
+        raise ValueError(_msg)
+    return res[0], res[1]
+
+
+def str_to_dt(time: str) -> datetime:
+    """Convierte una cadena HH:MM en un objeto datetime.
+
+    Usa la zona horaria preconfigurada.
+    """
+    tz = get_timezone()
+    dt = datetime.strptime(time, "%H:%M")
+    ldt = tz.localize(dt)
+    return ldt
+
+
+def calcula_horas_inicio_y_fin(
+    periodos: list[PeriodosTexto],
+    fecha: date,
+) -> list[tuple[datetime, datetime]]:
+    """Recoge la lista de horas de inicio en texto y calcula las horas de fin.
+
+    Devuelve una lista de tuplas con las horas de inicio y fin.
+    """
+    # Si hay un periodo posterior, la hora de fin es la hora de inicio del siguiente
+    # periodo.
+    # De no haberlo la heurística es que si el periodo comienza antes de las 15:00
+    # entonces acaba a las 15:00, y si es posterior entonces acaba a las 22:30
+    horas = []
+    for i, periodo in enumerate(periodos):
+        hora_inicio = str_to_dt(periodo.hora_inicio)
+        if i + 1 < len(periodos):
+            hora_fin = str_to_dt(periodos[i + 1].hora_inicio)
+        elif hora_inicio.time() < (fin_mañana := str_to_dt("15:00")).time():
+            hora_fin = fin_mañana
+        else:
+            hora_fin = str_to_dt("22:30")
+        hora_inicio = datetime.combine(fecha, hora_inicio.time())
+        hora_fin = datetime.combine(fecha, hora_fin.time())
+        horas.append((hora_inicio, hora_fin))
+    return horas
+
+
+def guardar_periodos(
+    user: ATC,
+    periodos: list[PeriodosTexto],
+    estadillo: Estadillo,
+    db_session: scoped_session,
+) -> None:
+    """Guardar los periodos de los controladores en la base de datos."""
+    horas = calcula_horas_inicio_y_fin(periodos, estadillo.fecha)
+
+    for i, periodo_texto in enumerate(periodos):
+        if periodo_texto.funcion == "DESCANSO":
+            actividad, sector_name = "D", None
+        else:
+            actividad, sector_name = extrae_actividad_y_sector(periodo_texto.funcion)
+
+            sector = db_session.query(Sector).filter_by(nombre=sector_name).first()
+            if not sector:
+                logger.warning(
+                    "Sector %s no encontrado en la base de datos",
+                    sector_name,
+                )
+                continue
+
+        hora_inicio = horas[i][0]
+        hora_fin = horas[i][1]
+
+        periodo = Periodo(
+            id_controlador=user.id,
+            id_estadillo=estadillo.id,
+            hora_inicio=hora_inicio,
+            hora_fin=hora_fin,
+            actividad=actividad,
+        )
+        if sector_name:
+            periodo.id_sector = sector.id
+
+        db_session.add(periodo)
+    db_session.commit()
+
+
 def procesar_controladores_y_sectores(
     controladores: dict[str, Controller],
     estadillo: Estadillo,
@@ -250,15 +346,18 @@ def procesar_controladores_y_sectores(
             if sector not in estadillo.sectores:
                 estadillo.sectores.append(sector)
 
+        guardar_periodos(user, controller.periodos, estadillo, db_session)
+
 
 def guardar_datos_estadillo(
     data: EstadilloTexto,
     db_session: scoped_session,
-) -> None:
+) -> Estadillo:
     """Guardar los datos generales del estadillo en la base de datos."""
     logger.info("Guardando datos del estadillo en la base de datos")
     # Convertir la fecha "27.05.2024" a un objeto date de Python
-    date = datetime.strptime(data.fecha, "%d.%m.%Y")  # noqa: DTZ007
+    tz = get_timezone()
+    date = datetime.strptime(data.fecha, "%d.%m.%Y").astimezone(tz).date()
 
     # Crear el objeto Estadillo y añadirlo a la sesión
     estadillo = Estadillo(
@@ -303,4 +402,39 @@ def guardar_datos_estadillo(
     procesar_controladores_y_sectores(data.controladores, estadillo, db_session)
 
     logger.info("Datos del estadillo guardados en la base de datos")
+    db_session.commit()
+    return estadillo
+
+
+def procesa_estadillo(file: FileStorage, db_session: scoped_session) -> None:
+    """Procesa el archivo de estadillo diario.
+
+    Extrae los datos del estadillo del archivo, analiza los datos e inserta los datos
+    en la base de datos.
+    """
+    logger.info("Procesando archivo de estadillo diario")
+    try:
+        with pdfplumber.open(BytesIO(file.read())) as pdf:
+            page1 = pdf.pages[0]
+            page2 = pdf.pages[1]
+    except PDFSyntaxError:
+        logger.exception("Error al procesar el archivo PDF de estadillo")
+        _msg = "Error al procesar el archivo PDF de estadillo"
+        raise ValueError(_msg) from None
+
+    estadillo_texto = extraer_datos_estadillo(page1)
+    periodos_por_atc = extraer_periodos(page2)
+
+    for nombre_controlador, periodos in periodos_por_atc.items():
+        if nombre_controlador not in estadillo_texto.controladores:
+            logger.warning(
+                "Controlador %s en la página 2 no encontrado en la página 1",
+                nombre_controlador,
+            )
+            continue
+        estadillo_texto.controladores[nombre_controlador].periodos = periodos
+
+    guardar_datos_estadillo(estadillo_texto, db_session)
+
+    logger.info("Archivo de estadillo diario procesado")
     db_session.commit()

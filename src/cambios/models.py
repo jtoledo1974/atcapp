@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import date, time  # noqa: TCH003  # Necesario para el mapping
+from datetime import date, datetime  # noqa: TCH003  # Necesario para el mapping
 
 from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     String,
     Table,
-    Time,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -57,7 +57,10 @@ class ATC(db.Model):  # type: ignore[name-defined]
         back_populates="atcs",
         overlaps="servicios",
     )
-    periodos: Mapped[list[Periodo]] = relationship("Periodo", back_populates="controlador")
+    periodos: Mapped[list[Periodo]] = relationship(
+        "Periodo",
+        back_populates="controlador",
+    )
 
     @property
     def apellidos_nombre(self) -> str:
@@ -107,7 +110,10 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
         back_populates="estadillos",
         overlaps="servicios",
     )
-    servicios: Mapped[list[Servicio]] = relationship("Servicio", back_populates="estadillo")
+    servicios: Mapped[list[Servicio]] = relationship(
+        "Servicio",
+        back_populates="estadillo",
+    )
     sectores: Mapped[list[Sector]] = relationship(
         "Sector",
         secondary=sectores_estadillo,
@@ -154,14 +160,19 @@ class Periodo(db.Model):  # type: ignore[name-defined]
     id_sector: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("sectores.id"),
-        nullable=False,
+        nullable=True,
     )
-    hora_inicio: Mapped[time] = mapped_column(Time, nullable=False)
-    hora_fin: Mapped[time] = mapped_column(Time, nullable=False)
+    """Sector en el que se realiza la actividad. Puede ser nulo en caso de descanso."""
+    hora_inicio: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    hora_fin: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     actividad: Mapped[str] = mapped_column(String(20), nullable=False)
+    """E, P o D: ejecutivo, planificador o descanso."""
 
     controlador: Mapped[ATC] = relationship("ATC", back_populates="periodos")
-    turno_sala_control: Mapped[Estadillo] = relationship("Estadillo", backref="periodos")
+    turno_sala_control: Mapped[Estadillo] = relationship(
+        "Estadillo",
+        backref="periodos",
+    )
     sector: Mapped[Sector] = relationship("Sector", backref="periodos")
 
 

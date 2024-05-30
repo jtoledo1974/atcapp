@@ -12,6 +12,7 @@ from cambios.carga_estadillo import (
     extraer_datos_estadillo,
     extraer_periodos,
     guardar_datos_estadillo,
+    procesa_estadillo,
 )
 from cambios.models import (
     Estadillo,
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     from pdfplumber import PDF
     from sqlalchemy.orm import Session
 
+TEST_ESTADILLO_PATH = Path(__file__).parent / "resources" / "test_estadillo.pdf"
 
 # Database setup for testing
 @pytest.fixture(scope="module")
@@ -47,7 +49,7 @@ def db_session() -> Generator[scoped_session[Session], Any, Any]:
 @pytest.fixture(scope="session")
 def pdf() -> Generator[PDF, Any, Any]:
     """Open the test PDF file."""
-    test_file_path = Path(__file__).parent / "resources" / "test_estadillo.pdf"
+    test_file_path = TEST_ESTADILLO_PATH
     with pdfplumber.open(test_file_path):
         yield pdfplumber.open(test_file_path)
 
@@ -196,3 +198,17 @@ def test_datos_generales_estadillo_a_db(
         if servicio.rol != "Controlador":
             continue
         assert servicio.atc.apellidos_nombre in data.controladores
+
+
+def test_periodos_a_db(pdf: PDF, db_session: scoped_session) -> None:
+    """Comprobar que los periodos de los controladores van a la base de datos."""
+    with TEST_ESTADILLO_PATH.open("rb") as file:
+        procesa_estadillo(file, db_session)
+
+    periodos = extraer_periodos(pdf.pages[1])
+
+    for nombre_controlador, periodos_controlador in periodos.items():
+        user = find_user(nombre_controlador, db_session)
+        assert user
+        assert len(periodos_controlador) == len(user.periodos)
+            
