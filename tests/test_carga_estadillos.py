@@ -204,11 +204,33 @@ def test_datos_generales_estadillo_a_db(
 def test_periodos_a_db(pdf: PDF, db_session: scoped_session) -> None:
     """Comprobar que los periodos de los controladores van a la base de datos."""
     with TEST_ESTADILLO_PATH.open("rb") as file:
-        procesa_estadillo(file, db_session)
+        estadillo_db = procesa_estadillo(file, db_session)
 
     periodos = extraer_periodos(pdf.pages[1])
 
-    for nombre_controlador, periodos_controlador in periodos.items():
-        user = find_user(nombre_controlador, db_session)
-        assert user
-        assert len(periodos_controlador) == len(user.periodos)
+    atcs = [
+        servicio.atc
+        for servicio in estadillo_db.servicios
+        if servicio.rol == "Controlador"
+    ]
+
+    assert len(atcs) == len(periodos)
+
+    for atc in atcs:
+        if atc.apellidos_nombre not in periodos:
+            for nombre_controlador in periodos:
+                if atc.apellidos_nombre.startswith(nombre_controlador):
+                    break
+            else:
+                pytest.fail(f"Controlador {atc.apellidos_nombre} no encontrado")
+
+    hora_inicio = atcs[0].periodos[0].hora_inicio
+    hora_fin = atcs[-1].periodos[-1].hora_fin
+
+    assert hora_inicio.strftime("%H:%M") == "07:30"
+    assert hora_fin.strftime("%H:%M") == "15:00"
+
+    # Check that everybody has the same start and end time
+    for atc in atcs:
+        assert atc.periodos[0].hora_inicio == hora_inicio
+        assert atc.periodos[-1].hora_fin == hora_fin

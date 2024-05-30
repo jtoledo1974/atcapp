@@ -407,7 +407,47 @@ def guardar_datos_estadillo(
     return estadillo
 
 
-def procesa_estadillo(file: FileStorage, db_session: scoped_session) -> None:
+def incorporar_periodos(
+    estadillo_texto: EstadilloTexto,
+    periodos_por_controlador: dict[str, list[PeriodosTexto]],
+) -> None:
+    """Incorpora los periodos de los controladores en el estadillo.
+
+    Los periodos se añaden a los controladores en el estadillo.
+    Si los nombres de los controladores están truncados, se verifican
+    y se asocian correctamente.
+    """
+    # Inicializar un conjunto con los nombres de controladores del estadillo
+    controladores_sin_periodos = set(estadillo_texto.controladores.keys())
+
+    for nombre, periodos in periodos_por_controlador.items():
+        # Intentar encontrar el nombre del controlador en el estadillo
+        controlador_encontrado = nombre
+
+        if nombre not in estadillo_texto.controladores:
+            # Si el nombre no se encuentra, verificar si está truncado
+            for nombre_estadillo in controladores_sin_periodos:
+                if nombre_estadillo.startswith(nombre):
+                    controlador_encontrado = nombre_estadillo
+                    break
+            else:
+                continue
+
+        estadillo_texto.controladores[controlador_encontrado].periodos = periodos
+        controladores_sin_periodos.discard(controlador_encontrado)
+
+    # Reportar cualquier controlador de la página 2 que no se pudo encontrar
+    for nombre in controladores_sin_periodos:
+        logger.warning(
+            "Controlador %s en la página 2 no encontrado en la página 1",
+            nombre,
+        )
+
+
+def procesa_estadillo(
+    file: FileStorage | BufferedReader,
+    db_session: scoped_session,
+) -> Estadillo:
     """Procesa el archivo de estadillo diario.
 
     Extrae los datos del estadillo del archivo, analiza los datos e inserta los datos
@@ -425,17 +465,10 @@ def procesa_estadillo(file: FileStorage, db_session: scoped_session) -> None:
 
     estadillo_texto = extraer_datos_estadillo(page1)
     periodos_por_atc = extraer_periodos(page2)
+    incorporar_periodos(estadillo_texto, periodos_por_atc)
 
-    for nombre_controlador, periodos in periodos_por_atc.items():
-        if nombre_controlador not in estadillo_texto.controladores:
-            logger.warning(
-                "Controlador %s en la página 2 no encontrado en la página 1",
-                nombre_controlador,
-            )
-            continue
-        estadillo_texto.controladores[nombre_controlador].periodos = periodos
-
-    guardar_datos_estadillo(estadillo_texto, db_session)
+    estadillo_db = guardar_datos_estadillo(estadillo_texto, db_session)
 
     logger.info("Archivo de estadillo diario procesado")
     db_session.commit()
+    return estadillo_db
