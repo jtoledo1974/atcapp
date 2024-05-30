@@ -55,6 +55,7 @@ class ATC(db.Model):  # type: ignore[name-defined]
         "Estadillo",
         secondary="servicios",
         back_populates="atcs",
+        overlaps="servicios",
     )
 
     @property
@@ -103,6 +104,7 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
         "ATC",
         secondary="servicios",
         back_populates="estadillos",
+        overlaps="servicios",
     )
     servicios: Mapped[list[Servicio]] = relationship(
         "Servicio",
@@ -183,5 +185,13 @@ class Servicio(db.Model):  # type: ignore[name-defined]
     categoria: Mapped[str] = mapped_column(String(50), nullable=False)
     rol: Mapped[str] = mapped_column(String(50), nullable=False)
 
-    atc: Mapped[ATC] = relationship("ATC", back_populates="servicios")
-    estadillo: Mapped[Estadillo] = relationship("Estadillo", back_populates="servicios")
+    atc: Mapped[ATC] = relationship(
+        "ATC",
+        back_populates="servicios",
+        overlaps="atcs,estadillos",
+    )
+    estadillo: Mapped[Estadillo] = relationship(
+        "Estadillo",
+        back_populates="servicios",
+        overlaps="atcs,estadillos",
+    )
