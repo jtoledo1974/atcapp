@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from io import BytesIO
+from io import BufferedReader, BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
 
@@ -214,7 +214,7 @@ def parse_and_insert_data(
 
 
 def procesa_turnero(
-    file: FileStorage,
+    file: FileStorage | BufferedReader,
     db_session: scoped_session,
     *,
     add_new: bool = False,
