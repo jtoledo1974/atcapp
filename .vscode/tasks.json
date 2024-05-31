@@ -4,7 +4,7 @@
         {
             "label": "List Project Files",
             "type": "shell",
-            "command": "python utils/list_files.py ${input:listingOption}",
+            "command": "python utils/list_files.py ${input:listingOption} & code file_listings.md",
             "group": {
                 "kind": "build",
                 "isDefault": true
