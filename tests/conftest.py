@@ -7,6 +7,7 @@ import os
 import pickle
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
+from unittest.mock import MagicMock, patch
 
 import pdfplumber
 import pytest
@@ -28,7 +29,9 @@ if TYPE_CHECKING:
 
 PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 
-TEST_ESTADILLO_PATH = Path(__file__).parent / "resources" / "test_estadillo.pdf"
+# No usar estos paths. Usar los fixtures estadillo_path y turnero_path
+__TEST_ESTADILLO_PATH = Path(__file__).parent / "resources" / "test_estadillo.pdf"
+__TEST_TURNERO_PATH = Path(__file__).parent / "resources" / "test_turnero.pdf"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -84,10 +87,63 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
 
 @pytest.fixture(scope="session")
 def pdf_estadillo() -> Generator[PDF, Any, Any]:
-    """Open the test PDF file."""
-    test_file_path = TEST_ESTADILLO_PATH
-    with pdfplumber.open(test_file_path):
-        yield pdfplumber.open(test_file_path)
+    """Precarga el pdf de estadillo para pruebas.
+
+    Se precargan las tablas de las páginas para evitar volver a procesar el
+    pdf en cada test.
+    """
+    test_file_path = __TEST_ESTADILLO_PATH
+    with pdfplumber.open(test_file_path) as pdf:
+        # precarga las páginas del pdf
+        table = pdf.pages[0].extract_table()
+        pdf.pages[0].extract_table = MagicMock(return_value=table)  # type: ignore[method-assign]
+        tables = pdf.pages[1].extract_tables()
+        pdf.pages[1].extract_tables = MagicMock(return_value=tables)  # type: ignore[method-assign]
+        yield pdf
+
+
+@pytest.fixture()
+def estadillo_path(pdf_estadillo: pdfplumber.pdf.PDF) -> Generator[Path, Any, Any]:
+    """Return the path to the test PDF file.
+
+    Hacemos un mock de pdfplumber.open para que su uso con un context manager
+    devuelva el pdf precargado.
+    """
+    with patch("pdfplumber.open") as pdf_open_mock:
+        mock = MagicMock()
+        mock.__enter__.return_value = pdf_estadillo
+        pdf_open_mock.return_value = mock
+
+        yield __TEST_ESTADILLO_PATH
+
+
+@pytest.fixture(scope="session")
+def pdf_turnero() -> Generator[PDF, Any, Any]:
+    """Precarga el pdf de turnero para pruebas.
+
+    Se precargan las tablas de las páginas para evitar volver a procesar el
+    pdf en cada test.
+    """
+    test_file_path = __TEST_TURNERO_PATH
+    with pdfplumber.open(test_file_path) as pdf:
+        table = pdf.pages[0].extract_table()
+        pdf.pages[0].extract_table = MagicMock(return_value=table)  # type: ignore[method-assign]
+        yield pdf
+
+
+@pytest.fixture()
+def turnero_path(pdf_turnero: pdfplumber.pdf.PDF) -> Generator[Path, Any, Any]:
+    """Return the path to the test PDF file.
+
+    Hacemos un mock de pdfplumber.open para que su uso con un context manager
+    devuelva el pdf precargado.
+    """
+    with patch("pdfplumber.open") as pdf_open_mock:
+        mock = MagicMock()
+        mock.__enter__.return_value = pdf_turnero
+        pdf_open_mock.return_value = mock
+
+        yield __TEST_TURNERO_PATH
 
 
 @pytest.fixture()

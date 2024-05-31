@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 import pytest
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from cambios.models import ATC
     from flask.testing import FlaskClient
     from pytest_mock import MockerFixture
-
-from .test_carga_estadillos import TEST_ESTADILLO_PATH
 
 
 def test_index_redirect(client: FlaskClient) -> None:
@@ -151,11 +151,15 @@ def test_upload_estadillo_post_no_file(client: FlaskClient, admin_user: ATC) -> 
 
 
 @pytest.mark.usefixtures("_verify_admin_id_token_mock")
-def test_upload_estadillo_post(client: FlaskClient, admin_user: ATC) -> None:
+def test_upload_estadillo_post(
+    client: FlaskClient,
+    admin_user: ATC,
+    estadillo_path: Path,
+) -> None:
     """Test that the upload_estadillo route processes a valid PDF file."""
     client.post("/login", data={"idToken": "test_token"})
 
-    with TEST_ESTADILLO_PATH.open("rb") as file:
+    with estadillo_path.open("rb") as file:
         response = client.post(
             "/upload_estadillo",
             data={"file": file},

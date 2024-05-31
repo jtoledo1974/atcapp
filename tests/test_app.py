@@ -86,7 +86,7 @@ def test_default_timezone() -> None:
 
 
 def test_env_timezone() -> None:
-    """Verifica que la zona horaria se puede configurar mediante una variable de entorno."""
+    """Verifica que la zona horaria se puede configurar mediante una env var."""
     # Set the environment variable to change the timezone
     with pytest.MonkeyPatch.context() as mp:
         mp.setenv("TZ", "America/New_York")

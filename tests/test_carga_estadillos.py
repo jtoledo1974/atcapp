@@ -21,9 +21,9 @@ from cambios.models import (
 )
 from cambios.utils import find_user
 
-from .conftest import TEST_ESTADILLO_PATH
-
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pdfplumber import PDF
     from sqlalchemy.orm import scoped_session
 
@@ -174,9 +174,13 @@ def test_datos_generales_estadillo_a_db(
         assert servicio.atc.apellidos_nombre in data.controladores
 
 
-def test_periodos_a_db(pdf_estadillo: PDF, session: scoped_session) -> None:
+def test_periodos_a_db(
+    pdf_estadillo: PDF,
+    session: scoped_session,
+    estadillo_path: Path,
+) -> None:
     """Comprobar que los periodos de los controladores van a la base de datos."""
-    with TEST_ESTADILLO_PATH.open("rb") as file:
+    with estadillo_path.open("rb") as file:
         estadillo_db = procesa_estadillo(file, session)
 
     periodos = extraer_periodos(pdf_estadillo.pages[1])
@@ -210,11 +214,12 @@ def test_periodos_a_db(pdf_estadillo: PDF, session: scoped_session) -> None:
 
 
 def test_subir_dos_veces_lo_deja_igual(
-    pdf_estadillo: PDF, session: scoped_session
+    session: scoped_session,
+    estadillo_path: Path,
 ) -> None:
     """Comprobar que subir un estadillo dos veces no cambia nada."""
     session = session()
-    with TEST_ESTADILLO_PATH.open("rb") as file:
+    with estadillo_path.open("rb") as file:
         _estadillo_db = procesa_estadillo(file, session)
     n_estadillos = session.query(Estadillo).count()
     n_servicios = session.query(Servicio).count()
@@ -222,7 +227,7 @@ def test_subir_dos_veces_lo_deja_igual(
     n_sectores = session.query(Sector).count()
     n_atcs = session.query(ATC).count()
 
-    with TEST_ESTADILLO_PATH.open("rb") as file:
+    with estadillo_path.open("rb") as file:
         _estadillo_db2 = procesa_estadillo(file, session)
     n_estadillos2 = session.query(Estadillo).count()
     n_servicios2 = session.query(Servicio).count()
