@@ -83,7 +83,7 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
 
 
 @pytest.fixture(scope="session")
-def pdf() -> Generator[PDF, Any, Any]:
+def pdf_estadillo() -> Generator[PDF, Any, Any]:
     """Open the test PDF file."""
     test_file_path = TEST_ESTADILLO_PATH
     with pdfplumber.open(test_file_path):

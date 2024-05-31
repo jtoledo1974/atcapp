@@ -28,9 +28,9 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import scoped_session
 
 
-def test_extraer_datos_generales(pdf: PDF) -> None:
+def test_extraer_datos_generales(pdf_estadillo: PDF) -> None:
     """Comprueba que se extraen los datos generales del estadillo."""
-    data = extraer_datos_estadillo(pdf.pages[0])
+    data = extraer_datos_estadillo(pdf_estadillo.pages[0])
 
     assert data
     assert isinstance(data, EstadilloTexto)
@@ -67,10 +67,10 @@ def test_extraer_datos_generales(pdf: PDF) -> None:
     assert len(data.controladores) == 21
 
 
-def test_extraer_periodos(pdf: PDF) -> None:
+def test_extraer_periodos(pdf_estadillo: PDF) -> None:
     """Comprueba que se extraen los periodos de los controladores."""
-    data = extraer_datos_estadillo(pdf.pages[0])
-    periodos = extraer_periodos(pdf.pages[1])
+    data = extraer_datos_estadillo(pdf_estadillo.pages[0])
+    periodos = extraer_periodos(pdf_estadillo.pages[1])
 
     assert isinstance(data, EstadilloTexto)
 
@@ -106,11 +106,11 @@ def test_extraer_periodos(pdf: PDF) -> None:
 
 
 def test_datos_generales_estadillo_a_db(
-    pdf: PDF,
+    pdf_estadillo: PDF,
     session: scoped_session,
 ) -> None:
     """Comprobar que los datos del estadillo se guardan en la base de datos."""
-    data = extraer_datos_estadillo(pdf.pages[0])
+    data = extraer_datos_estadillo(pdf_estadillo.pages[0])
     guardar_datos_estadillo(data, session)
 
     # Check the control room shift
@@ -174,12 +174,12 @@ def test_datos_generales_estadillo_a_db(
         assert servicio.atc.apellidos_nombre in data.controladores
 
 
-def test_periodos_a_db(pdf: PDF, session: scoped_session) -> None:
+def test_periodos_a_db(pdf_estadillo: PDF, session: scoped_session) -> None:
     """Comprobar que los periodos de los controladores van a la base de datos."""
     with TEST_ESTADILLO_PATH.open("rb") as file:
         estadillo_db = procesa_estadillo(file, session)
 
-    periodos = extraer_periodos(pdf.pages[1])
+    periodos = extraer_periodos(pdf_estadillo.pages[1])
 
     atcs = [
         servicio.atc
@@ -209,7 +209,9 @@ def test_periodos_a_db(pdf: PDF, session: scoped_session) -> None:
         assert atc.periodos[-1].hora_fin == hora_fin
 
 
-def test_subir_dos_veces_lo_deja_igual(pdf: PDF, session: scoped_session) -> None:
+def test_subir_dos_veces_lo_deja_igual(
+    pdf_estadillo: PDF, session: scoped_session
+) -> None:
     """Comprobar que subir un estadillo dos veces no cambia nada."""
     session = session()
     with TEST_ESTADILLO_PATH.open("rb") as file:
