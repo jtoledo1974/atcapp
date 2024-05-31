@@ -8,6 +8,7 @@ import pickle
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 
+import pdfplumber
 import pytest
 from cambios.app import create_app
 from cambios.database import db as _db
@@ -16,13 +17,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 if TYPE_CHECKING:
+    from typing import Any, Generator
+
     from flask import Flask
     from flask.testing import FlaskClient
     from flask_sqlalchemy import SQLAlchemy
+    from pdfplumber import PDF
     from pytest_mock import MockerFixture
     from sqlalchemy.orm import Session
 
 PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
+
+TEST_ESTADILLO_PATH = Path(__file__).parent / "resources" / "test_estadillo.pdf"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -71,6 +77,32 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
     session.remove()
     transaction.rollback()
     connection.close()
+
+
+# Database setup for testing
+@pytest.fixture(scope="module")
+def db_session() -> Generator[scoped_session[Session], Any, Any]:
+    """Create a new database session for testing."""
+    engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
+    engine = create_engine(engine_str)
+    session_factory = sessionmaker(bind=engine)
+    session = scoped_session(session_factory)
+
+    # Create all tables
+    from cambios.models import db
+
+    db.metadata.create_all(engine)
+    yield session
+    session.close()
+    engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def pdf() -> Generator[PDF, Any, Any]:
+    """Open the test PDF file."""
+    test_file_path = TEST_ESTADILLO_PATH
+    with pdfplumber.open(test_file_path):
+        yield pdfplumber.open(test_file_path)
 
 
 @pytest.fixture()

@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING
 
-import pdfplumber
 import pytest
 from cambios.carga_estadillo import (
     EstadilloTexto,
@@ -23,42 +20,12 @@ from cambios.models import (
     Servicio,
 )
 from cambios.utils import find_user
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
+
+from .conftest import TEST_ESTADILLO_PATH
 
 if TYPE_CHECKING:
-    from typing import Any, Generator
-
     from pdfplumber import PDF
-    from sqlalchemy.orm import Session
-
-TEST_ESTADILLO_PATH = Path(__file__).parent / "resources" / "test_estadillo.pdf"
-
-
-# Database setup for testing
-@pytest.fixture(scope="module")
-def db_session() -> Generator[scoped_session[Session], Any, Any]:
-    """Create a new database session for testing."""
-    engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
-    engine = create_engine(engine_str)
-    session_factory = sessionmaker(bind=engine)
-    session = scoped_session(session_factory)
-
-    # Create all tables
-    from cambios.models import db
-
-    db.metadata.create_all(engine)
-    yield session
-    session.close()
-    engine.dispose()
-
-
-@pytest.fixture(scope="session")
-def pdf() -> Generator[PDF, Any, Any]:
-    """Open the test PDF file."""
-    test_file_path = TEST_ESTADILLO_PATH
-    with pdfplumber.open(test_file_path):
-        yield pdfplumber.open(test_file_path)
+    from sqlalchemy.orm import scoped_session
 
 
 def test_extraer_datos_generales(pdf: PDF) -> None:
