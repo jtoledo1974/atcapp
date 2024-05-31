@@ -42,7 +42,7 @@ def _set_env() -> None:
     # Usar  "sqlite:///testing.db" para ver la base de datos de prueba
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def app() -> Flask:
     """Create and configure a new app instance for each test."""
     app = create_app()
@@ -50,10 +50,13 @@ def app() -> Flask:
     return app
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def db(app: Flask) -> Generator[SQLAlchemy, None, None]:
     """Provide a database session for tests."""
     from cambios.database import db as _db
+
+    engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
+    app.config["SQLALCHEMY_DATABASE_URI"] = engine_str
 
     with app.app_context():
         _db.create_all()
@@ -77,24 +80,6 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
     session.remove()
     transaction.rollback()
     connection.close()
-
-
-# Database setup for testing
-@pytest.fixture(scope="module")
-def db_session() -> Generator[scoped_session[Session], Any, Any]:
-    """Create a new database session for testing."""
-    engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
-    engine = create_engine(engine_str)
-    session_factory = sessionmaker(bind=engine)
-    session = scoped_session(session_factory)
-
-    # Create all tables
-    from cambios.models import db
-
-    db.metadata.create_all(engine)
-    yield session
-    session.close()
-    engine.dispose()
 
 
 @pytest.fixture(scope="session")

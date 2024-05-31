@@ -107,38 +107,38 @@ def test_extraer_periodos(pdf: PDF) -> None:
 
 def test_datos_generales_estadillo_a_db(
     pdf: PDF,
-    db_session: scoped_session,
+    session: scoped_session,
 ) -> None:
     """Comprobar que los datos del estadillo se guardan en la base de datos."""
     data = extraer_datos_estadillo(pdf.pages[0])
-    guardar_datos_estadillo(data, db_session)
+    guardar_datos_estadillo(data, session)
 
     # Check the control room shift
-    shift = db_session.query(Estadillo).first()
+    shift = session.query(Estadillo).first()
     assert shift
     assert shift.dependencia == data.dependencia
     assert shift.fecha.strftime("%d.%m.%Y") == data.fecha
 
     for nombre_controlador in data.jefes_de_sala:
-        assert find_user(nombre_controlador, db_session) is not None
+        assert find_user(nombre_controlador, session) is not None
 
     for nombre_controlador in data.supervisores:
-        assert find_user(nombre_controlador, db_session) is not None
+        assert find_user(nombre_controlador, session) is not None
 
     for nombre_controlador in data.tcas:
-        assert find_user(nombre_controlador, db_session) is not None
+        assert find_user(nombre_controlador, session) is not None
 
     # Any controllers names mentioned on the first page should now exist
     # in the Users table
     for nombre_controlador in data.controladores:
-        user = find_user(nombre_controlador, db_session)
+        user = find_user(nombre_controlador, session)
         assert user
         assert user.categoria == data.controladores[nombre_controlador].puesto
 
     # Verificar sectores
     for sector in data.sectores:
         assert (
-            db_session.query(Estadillo)
+            session.query(Estadillo)
             .filter(Estadillo.sectores.any(nombre=sector))
             .first()
         )
@@ -146,18 +146,18 @@ def test_datos_generales_estadillo_a_db(
     # Verificar que cada controlador mencionado tiene en el estadillo
     # los sectores que le tocan
     for nombre_controlador, controlador in data.controladores.items():
-        user = find_user(nombre_controlador, db_session)
+        user = find_user(nombre_controlador, session)
         assert user
         for sector_name in controlador.sectores:
             assert (
-                db_session.query(Estadillo)
+                session.query(Estadillo)
                 .filter(Estadillo.sectores.any(nombre=sector_name))
                 .first()
             )
 
     # Verificar que podemos encontrar este estadillo referenciado
     # en la tabla atcs_estadillos
-    db_estadillo = db_session.query(Estadillo).first()
+    db_estadillo = session.query(Estadillo).first()
     assert db_estadillo
     assert db_estadillo.atcs
 
@@ -174,10 +174,10 @@ def test_datos_generales_estadillo_a_db(
         assert servicio.atc.apellidos_nombre in data.controladores
 
 
-def test_periodos_a_db(pdf: PDF, db_session: scoped_session) -> None:
+def test_periodos_a_db(pdf: PDF, session: scoped_session) -> None:
     """Comprobar que los periodos de los controladores van a la base de datos."""
     with TEST_ESTADILLO_PATH.open("rb") as file:
-        estadillo_db = procesa_estadillo(file, db_session)
+        estadillo_db = procesa_estadillo(file, session)
 
     periodos = extraer_periodos(pdf.pages[1])
 
@@ -209,23 +209,24 @@ def test_periodos_a_db(pdf: PDF, db_session: scoped_session) -> None:
         assert atc.periodos[-1].hora_fin == hora_fin
 
 
-def test_subir_dos_veces_lo_deja_igual(pdf: PDF, db_session: scoped_session) -> None:
+def test_subir_dos_veces_lo_deja_igual(pdf: PDF, session: scoped_session) -> None:
     """Comprobar que subir un estadillo dos veces no cambia nada."""
+    session = session()
     with TEST_ESTADILLO_PATH.open("rb") as file:
-        _estadillo_db = procesa_estadillo(file, db_session)
-    n_estadillos = db_session.query(Estadillo).count()
-    n_servicios = db_session.query(Servicio).count()
-    n_periodos = db_session.query(Periodo).count()
-    n_sectores = db_session.query(Sector).count()
-    n_atcs = db_session.query(ATC).count()
+        _estadillo_db = procesa_estadillo(file, session)
+    n_estadillos = session.query(Estadillo).count()
+    n_servicios = session.query(Servicio).count()
+    n_periodos = session.query(Periodo).count()
+    n_sectores = session.query(Sector).count()
+    n_atcs = session.query(ATC).count()
 
     with TEST_ESTADILLO_PATH.open("rb") as file:
-        _estadillo_db2 = procesa_estadillo(file, db_session)
-    n_estadillos2 = db_session.query(Estadillo).count()
-    n_servicios2 = db_session.query(Servicio).count()
-    n_periodos2 = db_session.query(Periodo).count()
-    n_sectores2 = db_session.query(Sector).count()
-    n_atcs2 = db_session.query(ATC).count()
+        _estadillo_db2 = procesa_estadillo(file, session)
+    n_estadillos2 = session.query(Estadillo).count()
+    n_servicios2 = session.query(Servicio).count()
+    n_periodos2 = session.query(Periodo).count()
+    n_sectores2 = session.query(Sector).count()
+    n_atcs2 = session.query(ATC).count()
 
     assert n_estadillos == n_estadillos2
     assert n_servicios == n_servicios2

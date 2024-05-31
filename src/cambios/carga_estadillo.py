@@ -361,6 +361,9 @@ def guardar_datos_estadillo(
     tz = get_timezone()
     fecha = datetime.strptime(data.fecha, "%d.%m.%Y").astimezone(tz).date()
 
+    # Iniciar transacción
+    transaction = db_session.begin_nested()
+
     # Crear el objeto Estadillo
     estadillo = Estadillo(
         fecha=fecha,
@@ -373,7 +376,7 @@ def guardar_datos_estadillo(
         db_session.add(estadillo)
         db_session.commit()
     except IntegrityError:
-        db_session.rollback()  # Deshacer la transacción en caso de error
+        transaction.rollback()  # Deshacer la transacción en caso de error
         # Manejar la excepción específicamente
         # Ya existía un estadillo así. Hay que borrar los datos anteriores
         logger.warning("Estadillo para la fecha %s ya existe. Se sustituye.", fecha)
