@@ -28,6 +28,7 @@ from .firebase import invalidate_token, verify_id_token
 from .models import ATC, Estadillo
 
 if TYPE_CHECKING:  # pragma: no cover
+    from flask import Flask
     from werkzeug import Response
 
 logger = getLogger(__name__)

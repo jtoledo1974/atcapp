@@ -1,13 +1,20 @@
+"""Procesado de estadillos.
+
+Estas funciones deberían hacer más sencilla la presentación de los estadillos
+por las plantillas.
+"""
+
 from __future__ import annotations
 
-from typing import Any
-
-from sqlalchemy.orm import Session
+from typing import TYPE_CHECKING, Any
 
 from .models import ATC, Estadillo, Periodo
 
+if TYPE_CHECKING:
+    from sqlalchemy.orm import scoped_session
 
-def get_user_estadillo(user: ATC, session: Session) -> list[dict[str, Any]]:
+
+def get_user_estadillo(user: ATC, session: scoped_session) -> list[dict[str, Any]]:
     """Get the latest estadillo for the user."""
     latest_estadillo = (
         session.query(Estadillo)
@@ -56,6 +63,8 @@ def get_user_estadillo(user: ATC, session: Session) -> list[dict[str, Any]]:
 
         for p in same_sector_periodos:
             atc = session.query(ATC).get(p.id_controlador)
+            if not atc:
+                continue
             if p.actividad == "E":
                 periodo_data["ejecutivo"] = f"{atc.nombre} {atc.apellidos}"
             elif p.actividad == "P":
@@ -68,7 +77,7 @@ def get_user_estadillo(user: ATC, session: Session) -> list[dict[str, Any]]:
 
 def get_general_estadillo(
     latest_estadillo: Estadillo,
-    session: Session,
+    session: scoped_session,
 ) -> list[dict[str, Any]]:
     """Get the general estadillo for the control room."""
     all_periodos = (
