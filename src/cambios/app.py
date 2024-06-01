@@ -74,8 +74,7 @@ def configure_logging(
     logger.debug("Logging to %s", LOGFILE)
 
     logs_dir = Path(LOGFILE).parent
-    if not logs_dir.exists():
-        logs_dir.mkdir()
+    logs_dir.mkdir(parents=True, exist_ok=True)
 
     formatter = logging.Formatter(LOGFORMAT)
     file_handler = logging.FileHandler(LOGFILE)

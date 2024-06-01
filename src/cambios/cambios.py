@@ -187,9 +187,7 @@ class CalendarioMensual:
         week = []
         for day in self._dias:
             week.append(day)
-            if (
-                day.fecha.weekday() == NUMERO_DIA_DOMINGO
-            ):  # Sunday is the end of the week
+            if day.fecha.weekday() == NUMERO_DIA_DOMINGO:
                 weeks.append(week)
                 week = []
         if week:

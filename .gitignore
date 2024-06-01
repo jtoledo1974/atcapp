@@ -5,6 +5,7 @@ shifts.db
 *firebase*.json
 file_listings.md
 logs/
+test_db.pickle
 
 # virtualenv
 .venv*/

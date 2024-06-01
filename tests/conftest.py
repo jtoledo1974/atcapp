@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import locale
 import os
-import pickle
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 from unittest.mock import MagicMock, patch
@@ -13,9 +12,18 @@ import pdfplumber
 import pytest
 from cambios.app import create_app
 from cambios.database import db as _db
-from cambios.models import ATC, TipoTurno, Turno
-from sqlalchemy import create_engine
+from cambios.models import ATC, Estadillo
 from sqlalchemy.orm import scoped_session, sessionmaker
+
+from .pickled_db import (
+    __TEST_ESTADILLO_PATH,
+    __TEST_TURNERO_PATH,
+    create_in_memory_db,
+    create_test_data,
+    load_fixture,
+    save_fixture,
+    should_regenerate_pickle,
+)
 
 if TYPE_CHECKING:
     from typing import Any, Generator
@@ -27,11 +35,8 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
     from sqlalchemy.orm import Session
 
-PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 
-# No usar estos paths. Usar los fixtures estadillo_path y turnero_path
-__TEST_ESTADILLO_PATH = Path(__file__).parent / "resources" / "test_estadillo.pdf"
-__TEST_TURNERO_PATH = Path(__file__).parent / "resources" / "test_turnero.pdf"
+PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -56,8 +61,6 @@ def app() -> Flask:
 @pytest.fixture(scope="session")
 def db(app: Flask) -> Generator[SQLAlchemy, None, None]:
     """Provide a database session for tests."""
-    from cambios.database import db as _db
-
     engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
     app.config["SQLALCHEMY_DATABASE_URI"] = engine_str
 
@@ -115,6 +118,17 @@ def estadillo_path(pdf_estadillo: pdfplumber.pdf.PDF) -> Generator[Path, Any, An
         pdf_open_mock.return_value = mock
 
         yield __TEST_ESTADILLO_PATH
+
+
+@pytest.fixture()
+def estadillo(preloaded_session: Session) -> Estadillo:
+    """Return an estadillo from a preloaded database."""
+    # Get the first user from the Users table
+    estadillo = preloaded_session.query(Estadillo).first()
+    if not estadillo:
+        _msg = "No estadillos in the database."
+        raise ValueError(_msg)
+    return estadillo
 
 
 @pytest.fixture(scope="session")
@@ -216,29 +230,18 @@ def new_user(regular_user: ATC, session: scoped_session) -> ATC:
     return regular_user
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def preloaded_session() -> Generator[Session, None, None]:
     """Load the database with test data."""
-    engine = create_engine("sqlite:///:memory:")
-    _db.metadata.create_all(engine)
-
-    session = sessionmaker(bind=engine)()
-
-    with Path.open(PICKLE_FILE, "rb") as file:
-        pickle_data = pickle.load(file)  # noqa: S301
-
-    for table, data in (
-        [ATC, pickle_data["users"]],
-        [Turno, pickle_data["shifts"]],
-        [TipoTurno, pickle_data["shift_types"]],
-    ):
-        for item in data:
-            item.pop("_sa_instance_state", None)
-            session.add(table(**item))
+    if should_regenerate_pickle():
+        session = create_in_memory_db()
+        create_test_data(session)
+        save_fixture(session)
+    else:
+        session = load_fixture()
 
     yield session
-
-    _db.metadata.drop_all(engine)
+    session.close()
 
 
 @pytest.fixture()
