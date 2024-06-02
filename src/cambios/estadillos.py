@@ -23,8 +23,9 @@ class Grupo:
     u otras combinaciones.
     """
 
-    controladores: set[ATC]
+    estadillo: Estadillo
     sectores: set[Sector]
+    controladores: dict[ATC, list[Periodo]]
 
 
 def identifica_grupos(estadillo: Estadillo, session: Session) -> list[Grupo]:
@@ -36,9 +37,11 @@ def identifica_grupos(estadillo: Estadillo, session: Session) -> list[Grupo]:
 
     # Crear un diccionario que mapea cada controlador a los sectores en los que trabaja
     sectores_por_controlador: dict[ATC, set[Sector]] = defaultdict(set)
+    periodos_por_controlador: dict[ATC, list[Periodo]] = defaultdict(list)
     for periodo in periodos:
         if periodo.sector:
             sectores_por_controlador[periodo.controlador].add(periodo.sector)
+        periodos_por_controlador[periodo.controlador].append(periodo)
 
     controladores_sin_asignar = list(sectores_por_controlador.keys())
 
@@ -48,17 +51,19 @@ def identifica_grupos(estadillo: Estadillo, session: Session) -> list[Grupo]:
         sectores_asociados = sectores_por_controlador[controlador]
 
         # Inicializar el nuevo grupo con el controlador actual
-        grupo_controladores = [controlador]
+        grupo_controladores = {controlador: periodos_por_controlador[controlador]}
         grupo_sectores = set(sectores_asociados)
 
         # Buscar controladores que compartan sectores con el controlador actual
         for otro_controlador in controladores_sin_asignar[:]:
             if sectores_asociados & sectores_por_controlador[otro_controlador]:
-                grupo_controladores.append(otro_controlador)
+                grupo_controladores[otro_controlador] = periodos_por_controlador[
+                    otro_controlador
+                ]
                 grupo_sectores.update(sectores_por_controlador[otro_controlador])
                 controladores_sin_asignar.remove(otro_controlador)
 
-        res.append(Grupo(controladores=grupo_controladores, sectores=grupo_sectores))
+        res.append(Grupo(estadillo, grupo_sectores, grupo_controladores))
 
     return res
 
