@@ -4,6 +4,9 @@ Estas funciones deberían hacer más sencilla la presentación de los estadillos
 por las plantillas.
 """
 
+from __future__ import annotations
+
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,68 +19,48 @@ from .models import ATC, Estadillo, Periodo, Sector
 class Grupo:
     """Grupo de controladores que llevan juntos un grupo de sectores.
 
-    Podrían ser un 8x3 (ocho controladres, tres sectores) o un 3x1,
+    Podrían ser un 8x3 (ocho controladores, tres sectores) o un 3x1,
     u otras combinaciones.
     """
 
-    controladores: list[ATC]
-    sectores: list[Sector]
+    controladores: set[ATC]
+    sectores: set[Sector]
 
 
 def identifica_grupos(estadillo: Estadillo, session: Session) -> list[Grupo]:
-    """Identifica los grupos de controladores y sectores en un estadillo.
+    """Identifica los grupos de controladores y sectores en un estadillo."""
+    res: list[Grupo] = []
 
-    Args:
-    ----
-        estadillo: El estadillo a analizar.
-        session: La sesión de SQLAlchemy.
-
-    Returns:
-    -------
-        Una lista de grupos de controladores y sectores.
-
-    """
     # Obtener todos los periodos del estadillo
     periodos = session.query(Periodo).filter_by(id_estadillo=estadillo.id).all()
 
-    # Agrupar periodos por sector
-    sector_controladores: dict[int, set[int | None]] = {}
+    # Crear un diccionario que mapea cada controlador a los sectores en los que trabaja
+    sectores_por_controlador: dict[ATC, set[Sector]] = defaultdict(set)
     for periodo in periodos:
-        if periodo.id_sector not in sector_controladores:
-            sector_controladores[periodo.id_sector] = set()
-        sector_controladores[periodo.id_sector].add(periodo.id_controlador)
+        if periodo.sector:
+            sectores_por_controlador[periodo.controlador].add(periodo.sector)
 
-    # Crear grupos de controladores y sectores
-    grupos = []
-    while sector_controladores:
-        # Tomar un sector y sus controladores
-        id_sector, controladores_ids = sector_controladores.popitem()
+    controladores_sin_asignar = set(sectores_por_controlador.keys())
 
-        # Crear un grupo inicial con este sector y sus controladores
-        grupo_controladores = set(controladores_ids)
-        grupo_sectores: set[int | None] = {id_sector}
+    # Mientras haya controladores sin asignar, buscamos grupos
+    while controladores_sin_asignar:
+        controlador = controladores_sin_asignar.pop()
+        sectores_asociados = sectores_por_controlador[controlador]
 
-        # Buscar otros sectores que compartan al menos un controlador
-        found = True
-        while found:
-            found = False
-            for sector, controladores in list(sector_controladores.items()):
-                if grupo_controladores.intersection(controladores):
-                    grupo_controladores.update(controladores)
-                    grupo_sectores.add(sector)
-                    del sector_controladores[sector]
-                    found = True
+        # Inicializar el nuevo grupo con el controlador actual
+        grupo_controladores = {controlador}
+        grupo_sectores = set(sectores_asociados)
 
-        # Obtener las instancias de ATC y Sector
-        res_controladores = (
-            session.query(ATC).filter(ATC.id.in_(grupo_controladores)).all()
-        )
+        # Buscar controladores que compartan sectores con el controlador actual
+        for otro_controlador in controladores_sin_asignar.copy():
+            if sectores_asociados & sectores_por_controlador[otro_controlador]:
+                grupo_controladores.add(otro_controlador)
+                grupo_sectores.update(sectores_por_controlador[otro_controlador])
+                controladores_sin_asignar.remove(otro_controlador)
 
-        res_sectores = session.query(Sector).filter(Sector.id.in_(grupo_sectores)).all()
+        res.append(Grupo(controladores=grupo_controladores, sectores=grupo_sectores))
 
-        grupos.append(Grupo(controladores=res_controladores, sectores=res_sectores))
-
-    return grupos
+    return res
 
 
 def get_user_estadillo(user: ATC, session: scoped_session) -> list[dict[str, Any]]:

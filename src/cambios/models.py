@@ -68,6 +68,9 @@ class ATC(db.Model):  # type: ignore[name-defined]
         """Nombre completo del controlador."""
         return f"{self.apellidos} {self.nombre}"
 
+    def __repr__(self) -> str:
+        return f"<ATC {self.apellidos_nombre}>"
+
 
 class Turno(db.Model):  # type: ignore[name-defined]
     """Turnos son los publicados en el turnero mensual y actualizados con cambios.
@@ -147,6 +150,9 @@ class Sector(db.Model):  # type: ignore[name-defined]
         secondary=sectores_estadillo,
         back_populates="sectores",
     )
+
+    def __repr__(self) -> str:
+        return f"<Sector {self.nombre}>"
 
 
 class Periodo(db.Model):  # type: ignore[name-defined]
