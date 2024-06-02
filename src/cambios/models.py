@@ -69,6 +69,7 @@ class ATC(db.Model):  # type: ignore[name-defined]
         return f"{self.apellidos} {self.nombre}"
 
     def __repr__(self) -> str:
+        """Representación de un controlador."""
         return f"<ATC {self.apellidos_nombre}>"
 
 
@@ -152,6 +153,7 @@ class Sector(db.Model):  # type: ignore[name-defined]
     )
 
     def __repr__(self) -> str:
+        """Representación de un sector."""
         return f"<Sector {self.nombre}>"
 
 
