@@ -40,21 +40,21 @@ def identifica_grupos(estadillo: Estadillo, session: Session) -> list[Grupo]:
         if periodo.sector:
             sectores_por_controlador[periodo.controlador].add(periodo.sector)
 
-    controladores_sin_asignar = set(sectores_por_controlador.keys())
+    controladores_sin_asignar = list(sectores_por_controlador.keys())
 
     # Mientras haya controladores sin asignar, buscamos grupos
     while controladores_sin_asignar:
-        controlador = controladores_sin_asignar.pop()
+        controlador = controladores_sin_asignar.pop(0)
         sectores_asociados = sectores_por_controlador[controlador]
 
         # Inicializar el nuevo grupo con el controlador actual
-        grupo_controladores = {controlador}
+        grupo_controladores = [controlador]
         grupo_sectores = set(sectores_asociados)
 
         # Buscar controladores que compartan sectores con el controlador actual
-        for otro_controlador in controladores_sin_asignar.copy():
+        for otro_controlador in controladores_sin_asignar[:]:
             if sectores_asociados & sectores_por_controlador[otro_controlador]:
-                grupo_controladores.add(otro_controlador)
+                grupo_controladores.append(otro_controlador)
                 grupo_sectores.update(sectores_por_controlador[otro_controlador])
                 controladores_sin_asignar.remove(otro_controlador)
 
