@@ -7,12 +7,16 @@ por las plantillas.
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy.orm import Session, scoped_session
+from .models import ATC, Estadillo, Periodo
 
-from .models import ATC, Estadillo, Periodo, Sector
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session, scoped_session
+
+    from .models import Sector
 
 
 @dataclass
@@ -21,6 +25,9 @@ class Grupo:
 
     Podrían ser un 8x3 (ocho controladores, tres sectores) o un 3x1,
     u otras combinaciones.
+
+    Esta estrucutra de datos es útil para poder generar luego otra
+    estructura de texto que se pueda presentar en una plantilla.
     """
 
     estadillo: Estadillo
@@ -28,8 +35,46 @@ class Grupo:
     controladores: dict[ATC, list[Periodo]]
 
 
+@dataclass
+class PeriodoData:
+    """Datos de un periodo en un estadillo.
+
+    La finalidad es preparar la información para presentarla en una plantilla.
+    """
+
+    hora_inicio: str
+    hora_fin: str
+    actividad: str
+    color: str
+
+
+@dataclass
+class EstadilloPersonalData:
+    """Datos de estadillo individual.
+
+    La finalidad es preparar la información para presentarla en una plantilla.
+    """
+
+    nombre: str
+    periodos: list[PeriodoData]
+
+
+@dataclass
+class GrupoDatos:
+    """Datos de grupo de estadillo listo para presentar en plantilla HTML."""
+
+    sectores: list[str]
+    atcs: list[EstadilloPersonalData] = field(default_factory=list)
+    """Datos de los controladores en el grupo: nombre y periodos."""
+
+
 def identifica_grupos(estadillo: Estadillo, session: Session) -> list[Grupo]:
-    """Identifica los grupos de controladores y sectores en un estadillo."""
+    """Identifica los grupos de controladores y sectores en un estadillo.
+
+    La base de datos solo guarda periodos individuales asociados a un controlador
+    y a un estadillo. Esta función identifica los grupos de controladores que
+    trabajan juntos en los mismos sectores.
+    """
     res: list[Grupo] = []
 
     # Obtener todos los periodos del estadillo
@@ -66,6 +111,38 @@ def identifica_grupos(estadillo: Estadillo, session: Session) -> list[Grupo]:
         res.append(Grupo(estadillo, grupo_sectores, grupo_controladores))
 
     return res
+
+
+def _genera_actividad(per: Periodo) -> str:
+    """Genera la actividad de un periodo para presentar en una plantilla."""
+    return f"{per.actividad}-{per.sector.nombre}" if per.actividad != "D" else ""
+
+
+def _genera_color(per: Periodo) -> str:
+    """Genera el color de un periodo para presentar en una plantilla."""
+    return "red" if per.actividad == "E" else "blue"
+
+
+def genera_datos_grupo(grupo: Grupo) -> GrupoDatos:
+    """Genera los datos de un grupo de controladores para presentar en una plantilla."""
+    sectores = [sector.nombre for sector in grupo.sectores]
+    atcs = []
+    for controlador, periodos in grupo.controladores.items():
+        atc_data = EstadilloPersonalData(
+            nombre=f"{controlador.apellidos_nombre}",
+            periodos=[
+                PeriodoData(
+                    hora_inicio=datetime.strftime(p.hora_inicio, "%H:%M"),
+                    hora_fin=datetime.strftime(p.hora_fin, "%H:%M"),
+                    actividad=_genera_actividad(p),
+                    color=_genera_color(p),
+                )
+                for p in periodos
+            ],
+        )
+        atcs.append(atc_data)
+
+    return GrupoDatos(sectores=sectores, atcs=atcs)
 
 
 def get_user_estadillo(user: ATC, session: scoped_session) -> list[dict[str, Any]]:
