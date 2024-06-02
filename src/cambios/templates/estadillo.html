@@ -4,59 +4,35 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Mi Estadillo del día {{ user_estadillo[0].hora_inicio.strftime("%d/%m/%Y") if user_estadillo else "" }}</h2>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Hora Inicio</th>
-                <th>Hora Fin</th>
-                <th>Sector</th>
-                <th>Actividad</th>
-                <th>Ejecutivo</th>
-                <th>Planificador</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for periodo in user_estadillo %}
-            <tr>
-                <td>{{ periodo.hora_inicio.strftime("%H:%M") }}</td>
-                <td>{{ periodo.hora_fin.strftime("%H:%M") }}</td>
-                <td>{{ periodo.sector }}</td>
-                <td>{{ periodo.actividad }}</td>
-                <td>{{ periodo.ejecutivo }}</td>
-                <td>{{ periodo.planificador }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <h2 class="mt-5">Estadillo General</h2>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Sector</th>
-                <th>Hora Inicio</th>
-                <th>Hora Fin</th>
-                <th>Actividad</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for atc in general_estadillo %}
-            <tr>
-                <td rowspan="{{ atc.periodos|length }}">{{ atc.nombre }}</td>
+    <h1>Estadillo</h1>
+    {% for grupo in grupos %}
+    <div class="grupo">
+        <h2>Sectores: {{ grupo.sectores | join(', ') }}</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Controlador</th>
+                    <th>Hora Inicio</th>
+                    <th>Hora Fin</th>
+                    <th>Actividad</th>
+                    <th>Color</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for atc in grupo.atcs %}
                 {% for periodo in atc.periodos %}
-                {% if not loop.first %}
-            <tr>
-                {% endif %}
-                <td>{{ periodo.sector }}</td>
-                <td>{{ periodo.hora_inicio.strftime("%H:%M") }}</td>
-                <td>{{ periodo.hora_fin.strftime("%H:%M") }}</td>
-                <td>{{ periodo.actividad }}</td>
-            </tr>
-            {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
+                <tr>
+                    <td>{{ atc.nombre }}</td>
+                    <td>{{ periodo.hora_inicio }}</td>
+                    <td>{{ periodo.hora_fin }}</td>
+                    <td>{{ periodo.actividad }}</td>
+                    <td><span style="color: {{ periodo.color }};">&#9679;</span></td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}

@@ -23,7 +23,7 @@ from .cambios import GenCalMensual, es_admin
 from .carga_estadillo import procesa_estadillo
 from .carga_turnero import procesa_turnero
 from .database import db
-from .estadillos import get_general_estadillo, get_user_estadillo
+from .estadillos import genera_datos_estadillo
 from .firebase import invalidate_token, verify_id_token
 from .models import ATC, Estadillo
 
@@ -292,7 +292,7 @@ def upload_estadillo() -> Response | str:
     return redirect(url_for("main.index"))
 
 
-@main.route("/estadillo")
+@main.route("/estadillo", methods=["GET", "POST"])
 @privacy_policy_accepted
 def estadillo() -> Response | str:
     """Show the latest estadillo for the logged-in user."""
@@ -316,13 +316,11 @@ def estadillo() -> Response | str:
         flash("No hay estadillos disponibles para ti.", "info")
         return redirect(url_for("main.index"))
 
-    user_estadillo = get_user_estadillo(user, db.session)
-    general_estadillo = get_general_estadillo(latest_estadillo, db.session)
+    grupos = genera_datos_estadillo(latest_estadillo, db.session)
 
     return render_template(
         "estadillo.html",
-        user_estadillo=user_estadillo,
-        general_estadillo=general_estadillo,
+        grupos=grupos,
     )
 
 

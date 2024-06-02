@@ -125,13 +125,7 @@ def test_month_calendar_weeks() -> None:
 
 
 def test_load_weeks_from_user(atc: ATC, preloaded_session: Session) -> None:
-    """Test loading weeks from user data.
-
-    Si este test falla podría ser porque la base de datos de
-    preloaded session no se ajusta a el modelo actual.
-
-    Hay que volver a ejecutar el script de utils/db_bulk.py.
-    """
+    """Test loading weeks from user data."""
     calendar = GenCalMensual.generate(2024, 6, atc, preloaded_session)
     days = calendar.dias
     day = days[0]
