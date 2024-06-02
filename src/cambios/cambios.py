@@ -166,7 +166,11 @@ class Dia:
 
 @dataclass
 class CalendarioMensual:
-    """Calendar for a month."""
+    """Calendario mensual de un ATC.
+
+    El objetivo de esta clase es facilitar la presentación de un calendario
+    mensual en una plantilla HTML.
+    """
 
     año: int
     mes: int
