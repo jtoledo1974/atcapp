@@ -140,8 +140,21 @@
 /* ATC rows */
 .atc {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     margin-top: 10px;
+}
+
+.atc .nombre {
+    flex: 0 0 150px;
+    /* Ancho fijo de la columna de nombres */
+    background-color: #f8f9fa;
+    padding: 10px;
+    font-weight: bold;
+}
+
+.atc .periodos {
+    flex: 1;
+    display: flex;
 }
 
 .nombre {
@@ -168,13 +181,18 @@
 
 /* Media query for better mobile responsiveness */
 @media (max-width: 768px) {
-    .nombre {
-        font-size: 1em;
-        padding: 8px;
+    .atc {
+        flex-direction: column;
     }
 
-    .periodo {
-        font-size: 0.9em;
-        padding: 8px;
+    .atc .nombre {
+        flex: none;
+        width: 100%;
+    }
+
+    .atc .periodos {
+        flex: none;
+        width: 100%;
+        display: flex;
     }
 }
