@@ -4,11 +4,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cambios.estadillos import genera_datos_grupo, identifica_grupos
+import pytest
+from cambios.estadillos import ColorManager, genera_datos_grupo, identifica_grupos
 
 if TYPE_CHECKING:
     from cambios.models import Estadillo
     from sqlalchemy.orm import Session
+
+
+@pytest.fixture()
+def color_manager() -> ColorManager:
+    """Fixture para el ColorManager."""
+    return ColorManager()
 
 
 def test_identifica_grupos(estadillo: Estadillo, preloaded_session: Session) -> None:
@@ -29,10 +36,14 @@ def test_identifica_grupos(estadillo: Estadillo, preloaded_session: Session) -> 
     assert controladores == controladores_en_grupos
 
 
-def test_genera_datos_grupo(estadillo: Estadillo, preloaded_session: Session) -> None:
+def test_genera_datos_grupo(
+    estadillo: Estadillo,
+    preloaded_session: Session,
+    color_manager: ColorManager,
+) -> None:
     """Verifica que se generen correctamente los datos de un grupo."""
     grupos = identifica_grupos(estadillo, preloaded_session)
-    dg = genera_datos_grupo(grupos[2])
+    dg = genera_datos_grupo(grupos[2], color_manager)
     assert dg
     assert set(dg.sectores) == {"ASV", "CEN", "MAR"}
     assert dg.atcs[0].nombre == "VICTORIA ALBERDI FRANCISCO"

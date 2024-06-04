@@ -6,6 +6,7 @@ por las plantillas.
 
 from __future__ import annotations
 
+import colorsys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -132,12 +133,64 @@ def _genera_actividad(per: Periodo) -> str:
     return f"{per.actividad}-{per.sector.nombre}" if per.actividad != "D" else ""
 
 
-def _genera_color(per: Periodo) -> str:
+@dataclass
+class ColorManager:
+    """Clase para gestionar los colores de los sectores."""
+
+    sector_colors: dict[str, tuple[str, str]] = field(default_factory=dict)
+    used_colors: set[str] = field(default_factory=set)
+
+    def __post_init__(self) -> None:
+        """Inicializa la tabla de colores disponibles."""
+        self.available_colors = [
+            "#FF5733",
+            "#33FF57",
+            "#3357FF",
+            "#FF33A1",
+            "#A133FF",
+            "#33FFF2",
+            "#FFC133",
+            "#FF3333",
+            "#33FF99",
+            "#FF33FF",
+            "#FF5733",
+            "#33FF57",
+            "#3357FF",
+            "#FF33A1",
+            "#A133FF",
+            "#33FFF2",
+            "#FFC133",
+            "#FF3333",
+            "#33FF99",
+            "#FF33FF",
+        ]
+
+    def get_color(self, sector: str, *, is_executive: bool) -> str:
+        """Devuelve un color para el sector, diferenciando entre ejecutivo y plani."""
+        if sector not in self.sector_colors:
+            color = self.available_colors.pop(0)
+            self.sector_colors[sector] = (color, self._darken_color(color))
+        executive_color, planner_color = self.sector_colors[sector]
+        return executive_color if is_executive else planner_color
+
+    def _darken_color(self, color: str) -> str:
+        """Genera una versión más oscura del color."""
+        red, green, blue = (float(int(color[i : i + 2], 16)) for i in (1, 3, 5))
+        hue, lum, sat = colorsys.rgb_to_hls(red / 255.0, green / 255.0, blue / 255.0)
+        lum = max(0, lum - 0.3)  # Reduce lightness by 30%
+        red, green, blue = colorsys.hls_to_rgb(hue, lum, sat)
+        return f"#{int(red * 255):02x}{int(green * 255):02x}{int(blue * 255):02x}"
+
+
+# Actualización de funciones para usar ColorManager
+def _genera_color(per: Periodo, color_manager: ColorManager) -> str:
     """Genera el color de un periodo para presentar en una plantilla."""
-    return "red" if per.actividad == "E" else "blue"
+    if per.actividad == "D":
+        return "white"
+    return color_manager.get_color(per.sector.nombre, is_executive=per.actividad == "E")
 
 
-def genera_datos_grupo(grupo: Grupo) -> GrupoDatos:
+def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
     """Genera los datos de un grupo de controladores para presentar en una plantilla."""
     sectores = [sector.nombre for sector in grupo.sectores]
     atcs = []
@@ -149,7 +202,7 @@ def genera_datos_grupo(grupo: Grupo) -> GrupoDatos:
                     hora_inicio=datetime.strftime(p.hora_inicio, "%H:%M"),
                     hora_fin=datetime.strftime(p.hora_fin, "%H:%M"),
                     actividad=_genera_actividad(p),
-                    color=_genera_color(p),
+                    color=_genera_color(p, color_manager),
                     duracion=(p.hora_fin - p.hora_inicio).seconds // 60,
                     porcentaje=(p.hora_fin - p.hora_inicio).seconds
                     / grupo.duracion
@@ -169,4 +222,5 @@ def genera_datos_estadillo(
 ) -> list[GrupoDatos]:
     """Genera los datos de un estadillo para presentar en una plantilla."""
     grupos = identifica_grupos(estadillo, session)
-    return [genera_datos_grupo(grupo) for grupo in grupos]
+    color_manager = ColorManager()  # Crear una instancia de ColorManager
+    return [genera_datos_grupo(grupo, color_manager) for grupo in grupos]
