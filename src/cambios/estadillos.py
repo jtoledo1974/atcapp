@@ -46,6 +46,8 @@ class PeriodoData:
     hora_fin: str
     actividad: str
     color: str
+    duracion: int
+    """Duracion en minutos"""
 
 
 @dataclass
@@ -139,6 +141,7 @@ def genera_datos_grupo(grupo: Grupo) -> GrupoDatos:
                     hora_fin=datetime.strftime(p.hora_fin, "%H:%M"),
                     actividad=_genera_actividad(p),
                     color=_genera_color(p),
+                    duracion=(p.hora_fin - p.hora_inicio).seconds // 60,
                 )
                 for p in periodos
             ],

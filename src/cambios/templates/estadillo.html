@@ -3,36 +3,27 @@
 {% block title %}Mi Estadillo{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1>Estadillo</h1>
+<table>
     {% for grupo in grupos %}
-    <div class="grupo">
-        <h2>Sectores: {{ grupo.sectores | join(', ') }}</h2>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Controlador</th>
-                    <th>Hora Inicio</th>
-                    <th>Hora Fin</th>
-                    <th>Actividad</th>
-                    <th>Color</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for atc in grupo.atcs %}
-                {% for periodo in atc.periodos %}
-                <tr>
-                    <td>{{ atc.nombre }}</td>
-                    <td>{{ periodo.hora_inicio }}</td>
-                    <td>{{ periodo.hora_fin }}</td>
-                    <td>{{ periodo.actividad }}</td>
-                    <td><span style="color: {{ periodo.color }};">&#9679;</span></td>
-                </tr>
-                {% endfor %}
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <thead>
+        <tr>
+            {% for sector in grupo.sectores %}
+            <th>{{ sector }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for atc in grupo.atcs %}
+        <tr>
+            <td>{{ atc.nombre }}</td>
+            {% for periodo in atc.periodos %}
+            <td style="background-color:{{ periodo.color }};">
+                {{ periodo.actividad }}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
     {% endfor %}
-</div>
+</table>
 {% endblock %}
