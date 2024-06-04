@@ -236,6 +236,8 @@ def extrae_actividad_y_sector(funcion: str) -> tuple[str, str]:
     La cadena de texto tiene el formato "P-ASN" o "E-ASN" donde
     "P" es el rol y "ASN" es el sector.
     """
+    if funcion == "CAS":
+        return "CAS", "CAS"
     res = funcion.split("-")
     if len(res) != 2:  # noqa: PLR2004
         _msg = f"Fallo al extraer actividad y sector de {funcion}"

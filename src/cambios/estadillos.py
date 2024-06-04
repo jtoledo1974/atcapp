@@ -130,7 +130,11 @@ def identifica_grupos(
 
 def _genera_actividad(per: Periodo) -> str:
     """Genera la actividad de un periodo para presentar en una plantilla."""
-    return f"{per.actividad}-{per.sector.nombre}" if per.actividad != "D" else ""
+    if per.actividad == "D":
+        return "Descanso"
+    if per.actividad == "CAS":
+        return "CAS"
+    return f"{per.actividad}-{per.sector.nombre}"
 
 
 @dataclass
