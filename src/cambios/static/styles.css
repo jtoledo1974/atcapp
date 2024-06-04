@@ -1,4 +1,4 @@
-/* Add this CSS to your existing stylesheet or create a new one */
+/* Existing styles */
 
 /* Style for the day number */
 .calendar-day {
@@ -108,4 +108,73 @@
 /* Increase padding for better spacing on mobile */
 .calendar-cell {
     padding-bottom: 2em;
+}
+
+/* New styles for the timetable */
+
+/* General container for the timetable */
+.timetable-container {
+    width: 100%;
+    padding: 5px;
+}
+
+/* Group container */
+.grupo {
+    margin-bottom: 20px;
+}
+
+/* Sector headers */
+.sectores {
+    display: flex;
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.sector {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* ATC rows */
+.atc {
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+}
+
+.nombre {
+    background-color: #f8f9fa;
+    padding: 10px;
+    font-weight: bold;
+}
+
+/* Periods container */
+.periodos {
+    display: flex;
+}
+
+/* Individual period cells */
+.periodo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    color: white;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+/* Media query for better mobile responsiveness */
+@media (max-width: 768px) {
+    .nombre {
+        font-size: 1em;
+        padding: 8px;
+    }
+
+    .periodo {
+        font-size: 0.9em;
+        padding: 8px;
+    }
 }

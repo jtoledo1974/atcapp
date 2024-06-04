@@ -3,27 +3,28 @@
 {% block title %}Mi Estadillo{% endblock %}
 
 {% block content %}
-<table>
+<div class="container">
     {% for grupo in grupos %}
-    <thead>
-        <tr>
+    <div class="grupo mb-4">
+        <div class="sectores d-flex">
             {% for sector in grupo.sectores %}
-            <th>{{ sector }}</th>
+            <div class="sector flex-fill p-2 text-center fw-bold bg-secondary text-white">{{ sector }}</div>
             {% endfor %}
-        </tr>
-    </thead>
-    <tbody>
+        </div>
         {% for atc in grupo.atcs %}
-        <tr>
-            <td>{{ atc.nombre }}</td>
-            {% for periodo in atc.periodos %}
-            <td style="background-color:{{ periodo.color }};">
-                {{ periodo.actividad }}
-            </td>
-            {% endfor %}
-        </tr>
+        <div class="atc mt-2">
+            <div class="nombre p-2 fw-bold bg-light">{{ atc.nombre }}</div>
+            <div class="periodos d-flex">
+                {% for periodo in atc.periodos %}
+                <div class="periodo d-flex align-items-center justify-content-center text-white"
+                    style="flex: {{ periodo.duracion }}; background-color: {{ periodo.color }};">
+                    <span>{{ periodo.actividad }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
         {% endfor %}
-    </tbody>
+    </div>
     {% endfor %}
-</table>
+</div>
 {% endblock %}
