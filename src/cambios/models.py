@@ -18,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import db
+from .name_utils import capitaliza_nombre
 
 # This is a hack due to flask_sqlalchemy seeming incompatible with mypy
 # It is explained in https://github.com/pallets-eco/flask-sqlalchemy/issues/1327
@@ -65,8 +66,13 @@ class ATC(db.Model):  # type: ignore[name-defined]
 
     @property
     def apellidos_nombre(self) -> str:
-        """Nombre completo del controlador."""
+        """Nombre completo del controlador según lo presenta enaire."""
         return f"{self.apellidos} {self.nombre}"
+
+    @property
+    def nombre_apellidos(self) -> str:
+        """Nombre completo del controlador capitalizado correctamente."""
+        return capitaliza_nombre(self.nombre, self.apellidos)
 
     def __repr__(self) -> str:
         """Representación de un controlador."""

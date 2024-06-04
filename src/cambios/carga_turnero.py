@@ -22,7 +22,7 @@ from pdfminer.pdfparser import PDFSyntaxError
 from . import get_timezone
 from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
 from .models import ATC, Turno
-from .utils import create_user, find_user, update_user
+from .user_utils import create_user, find_user, update_user
 
 logger = getLogger(__name__)
 

@@ -19,7 +19,7 @@ from cambios.models import (
     Sector,
     Servicio,
 )
-from cambios.utils import find_user
+from cambios.user_utils import find_user
 
 if TYPE_CHECKING:
     from pathlib import Path

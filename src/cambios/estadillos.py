@@ -196,7 +196,7 @@ def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
     atcs = []
     for controlador, periodos in grupo.controladores.items():
         atc_data = EstadilloPersonalData(
-            nombre=f"{controlador.apellidos_nombre}",
+            nombre=f"{controlador.nombre_apellidos}",
             periodos=[
                 PeriodoData(
                     hora_inicio=datetime.strftime(p.hora_inicio, "%H:%M"),

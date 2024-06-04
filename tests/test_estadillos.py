@@ -46,7 +46,7 @@ def test_genera_datos_grupo(
     dg = genera_datos_grupo(grupos[2], color_manager)
     assert dg
     assert set(dg.sectores) == {"ASV", "CEN", "MAR"}
-    assert dg.atcs[0].nombre == "VICTORIA ALBERDI FRANCISCO"
+    assert dg.atcs[0].nombre == "Francisco Victoria Alberdi"
 
     periodo_0 = dg.atcs[0].periodos[0]
     assert periodo_0.hora_inicio == "07:30"

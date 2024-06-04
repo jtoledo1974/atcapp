@@ -23,7 +23,7 @@ from sqlalchemy.orm import scoped_session
 
 from . import get_timezone
 from .models import Estadillo, Periodo, Sector, Servicio
-from .utils import create_user, find_user, update_user
+from .user_utils import create_user, find_user, update_user
 
 logger = getLogger(__name__)
 
