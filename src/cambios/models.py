@@ -197,6 +197,11 @@ class Periodo(db.Model):  # type: ignore[name-defined]
     )
     sector: Mapped[Sector] = relationship("Sector", backref="periodos")
 
+    @property
+    def duracion(self) -> int:
+        """Duración del periodo en minutos."""
+        return (self.hora_fin - self.hora_inicio).seconds // 60
+
 
 class Servicio(db.Model):  # type: ignore[name-defined]
     """Modelo intermedio para gestionar la relación entre ATC y Estadillo.

@@ -33,6 +33,8 @@ class Grupo:
     estadillo: Estadillo
     sectores: set[Sector]
     controladores: dict[ATC, list[Periodo]]
+    duracion: int
+    """Duración total del grupo en minutos."""
 
 
 @dataclass
@@ -48,6 +50,8 @@ class PeriodoData:
     color: str
     duracion: int
     """Duracion en minutos"""
+    porcentaje: float
+    """Fracción de la jornada que ocupa este periodo."""
 
 
 @dataclass
@@ -113,7 +117,12 @@ def identifica_grupos(
                 grupo_sectores.update(sectores_por_controlador[otro_controlador])
                 controladores_sin_asignar.remove(otro_controlador)
 
-        res.append(Grupo(estadillo, grupo_sectores, grupo_controladores))
+        # Calcular la duración total del grupo
+        inicio = grupo_controladores[controlador][0].hora_inicio
+        fin = grupo_controladores[controlador][-1].hora_fin
+        duracion = (fin - inicio).seconds // 60
+
+        res.append(Grupo(estadillo, grupo_sectores, grupo_controladores, duracion))
 
     return res
 
@@ -142,6 +151,9 @@ def genera_datos_grupo(grupo: Grupo) -> GrupoDatos:
                     actividad=_genera_actividad(p),
                     color=_genera_color(p),
                     duracion=(p.hora_fin - p.hora_inicio).seconds // 60,
+                    porcentaje=(p.hora_fin - p.hora_inicio).seconds
+                    / grupo.duracion
+                    * 100,
                 )
                 for p in periodos
             ],
