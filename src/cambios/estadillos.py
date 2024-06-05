@@ -106,6 +106,8 @@ def identifica_grupos(
     while controladores_sin_asignar:
         controlador = controladores_sin_asignar.pop(0)
         sectores_asociados = sectores_por_controlador[controlador]
+        if not sectores_asociados:
+            continue
 
         # Inicializar el nuevo grupo con el controlador actual
         grupo_controladores = {controlador: periodos_por_controlador[controlador]}
@@ -113,7 +115,7 @@ def identifica_grupos(
 
         # Buscar controladores que compartan sectores con el controlador actual
         for otro_controlador in controladores_sin_asignar[:]:
-            if sectores_asociados & sectores_por_controlador[otro_controlador]:
+            if sectores_por_controlador[otro_controlador] & grupo_sectores:
                 grupo_controladores[otro_controlador] = periodos_por_controlador[
                     otro_controlador
                 ]
