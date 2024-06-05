@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from . import get_timezone
 from .models import ATC, Estadillo, Periodo
 
 if TYPE_CHECKING:
@@ -53,6 +54,8 @@ class PeriodoData:
     """Duracion en minutos"""
     porcentaje: float
     """Fracción de la jornada que ocupa este periodo."""
+    activo: str = field(default="FUT")
+    """Indica si el periodo está activo, está pasado o es futuro. PAS, ACT, FUT."""
 
 
 @dataclass
@@ -135,7 +138,7 @@ def identifica_grupos(
 def _genera_actividad(per: Periodo) -> str:
     """Genera la actividad de un periodo para presentar en una plantilla."""
     if per.actividad == "D":
-        return "D"
+        return ""
     if per.actividad == "CAS":
         return "CAS"
     return f"{per.actividad}-{per.sector.nombre}"
@@ -241,6 +244,23 @@ def _genera_horas_de_inicio(
     return horas_inicio
 
 
+def _es_activo(
+    hora_inicio: datetime,
+    hora_fin: datetime,
+    grupo_hora_inicio: datetime,
+    grupo_hora_fin: datetime,
+) -> str:
+    """Determina si un periodo está activo, pasado o futuro."""
+    now = datetime.now(tz=get_timezone())
+    if now < grupo_hora_inicio or now > grupo_hora_fin:
+        return "FUT"
+    if hora_fin < now:
+        return "PAS"
+    if hora_inicio > now:
+        return "FUT"
+    return "ACT"
+
+
 def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
     """Genera los datos de un grupo de controladores para presentar en una plantilla."""
     sectores = [sector.nombre for sector in grupo.sectores]
@@ -257,6 +277,12 @@ def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
                     color=_genera_color(p, color_manager),
                     duracion=(duracion := (p.hora_fin - p.hora_inicio).seconds // 60),
                     porcentaje=duracion / grupo.duracion * 100,
+                    activo=_es_activo(
+                        p.hora_inicio_tz,
+                        p.hora_fin_tz,
+                        grupo.estadillo.hora_inicio,
+                        grupo.estadillo.hora_fin,
+                    ),
                 )
                 for p in periodos
             ],

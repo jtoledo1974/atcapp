@@ -173,6 +173,12 @@ def test_datos_generales_estadillo_a_db(
             continue
         assert servicio.atc.apellidos_nombre in data.controladores
 
+    # Verificar que horas de inicio y final de los periodos no son naif
+    for servicio in controladores:
+        for periodo in servicio.atc.periodos:
+            assert periodo.hora_inicio.tzinfo
+            assert periodo.hora_fin.tzinfo
+
 
 def test_periodos_a_db(
     pdf_estadillo: PDF,

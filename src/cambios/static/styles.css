@@ -204,6 +204,43 @@
     border: 1px solid #ddd;
 }
 
+.periodo_pas {
+    background-color: #d3d3d3;
+    /* Color gris claro */
+    opacity: 0.7;
+    /* Reduce opacidad para dar efecto de pasado */
+    border: 1px solid #a9a9a9;
+    /* Borde gris oscuro */
+    color: #666;
+    /* Texto gris oscuro */
+}
+
+/* Estilo para periodo activo */
+.periodo_act {
+    background-color: #ffd700;
+    /* Color dorado para destacar */
+    border: 2px solid #ff8c00;
+    /* Borde naranja oscuro */
+    animation: pulse 2s infinite;
+    /* Animación suave */
+    font-weight: bold;
+}
+
+/* Animación para periodo activo */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 5px #ff8c00;
+    }
+
+    50% {
+        box-shadow: 0 0 20px #22c656;
+    }
+
+    100% {
+        box-shadow: 0 0 5px #ff8c00;
+    }
+}
+
 /* Media query for better mobile responsiveness */
 @media (max-width: 768px) {
     .grupo {

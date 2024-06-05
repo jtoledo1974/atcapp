@@ -27,7 +27,7 @@
             <div class="periodos">
                 {% for periodo in atc.periodos %}
                 <! {{ periodo.duracion}} {{periodo.porcentaje}}>
-                    <div class="periodo"
+                    <div class="periodo periodo_{{ periodo.activo.lower()}}"
                         style="flex: 0 0 {{ periodo.porcentaje }}%; background-color: {{ periodo.color }};">
                         <span>{{ periodo.actividad }}</span>
                     </div>

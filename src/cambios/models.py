@@ -17,6 +17,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from . import get_timezone
 from .database import db
 from .name_utils import capitaliza_nombre
 
@@ -146,12 +147,14 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
     @property
     def hora_inicio(self) -> datetime:
         """Hora de inicio del estadillo."""
-        return min(periodo.hora_inicio for periodo in self.periodos)
+        hora_min = min(periodo.hora_inicio for periodo in self.periodos)
+        return hora_min.astimezone(get_timezone())
 
     @property
     def hora_fin(self) -> datetime:
         """Hora de fin del estadillo."""
-        return max(periodo.hora_fin for periodo in self.periodos)
+        hora_max = max(periodo.hora_fin for periodo in self.periodos)
+        return hora_max.astimezone(get_timezone())
 
 
 class Sector(db.Model):  # type: ignore[name-defined]
@@ -215,6 +218,16 @@ class Periodo(db.Model):  # type: ignore[name-defined]
         back_populates="periodos",
     )
     sector: Mapped[Sector] = relationship("Sector", backref="periodos")
+
+    @property
+    def hora_inicio_tz(self) -> datetime:
+        """Hora de inicio del periodo en la zona horaria del controlador."""
+        return self.hora_inicio.astimezone(get_timezone())
+
+    @property
+    def hora_fin_tz(self) -> datetime:
+        """Hora de fin del periodo en la zona horaria del controlador."""
+        return self.hora_fin.astimezone(get_timezone())
 
     @property
     def duracion(self) -> int:
