@@ -3,24 +3,35 @@
 {% block title %}Mi Estadillo{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="grupos">
     {% for grupo in grupos %}
-    <div class="grupo mb-4">
-        <div class="sectores d-flex">
+    <div class="grupo">
+        <div class="sectores">
             {% for sector in grupo.sectores %}
-            <div class="sector flex-fill p-2 text-center fw-bold bg-secondary text-white">{{ sector }}</div>
+            <div class="sector">{{ sector }}</div>
             {% endfor %}
         </div>
-        {% for atc in grupo.atcs %}
-        <div class="atc mt-2">
-            <div class="nombre p-2 fw-bold bg-light">{{ atc.nombre }}</div>
-            <div class="periodos d-flex">
-                {% for periodo in atc.periodos %}
-                <div class="periodo d-flex align-items-center justify-content-center text-white"
-                    style="flex: {{ periodo.duracion }}; background-color: {{ periodo.color }};">
-                    <span>{{ periodo.actividad }}</span>
+        <div class="cabecera-estadillo">
+            <div class="nombre">NOMBRE</div>
+            <div class="horas">
+                {% for hora_inicio in grupo.horas_inicio %}
+                <div class="hora-inicio" style="flex: 0 0 {{ hora_inicio.porcentaje }}%;">
+                    <span>{{ hora_inicio.hora_inicio }}</span>
                 </div>
                 {% endfor %}
+            </div>
+        </div>
+        {% for atc in grupo.atcs %}
+        <div class="atc">
+            <div class="nombre">{{ atc.nombre }}</div>
+            <div class="periodos">
+                {% for periodo in atc.periodos %}
+                <! {{ periodo.duracion}} {{periodo.porcentaje}}>
+                    <div class="periodo"
+                        style="flex: 0 0 {{ periodo.porcentaje }}%; background-color: {{ periodo.color }};">
+                        <span>{{ periodo.actividad }}</span>
+                    </div>
+                    {% endfor %}
             </div>
         </div>
         {% endfor %}

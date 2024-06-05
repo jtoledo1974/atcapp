@@ -7,7 +7,7 @@ por las plantillas.
 from __future__ import annotations
 
 import colorsys
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -73,6 +73,8 @@ class GrupoDatos:
     sectores: list[str]
     atcs: list[EstadilloPersonalData] = field(default_factory=list)
     """Datos de los controladores en el grupo: nombre y periodos."""
+    horas_inicio: list[PeriodoData] = field(default_factory=list)
+    """Horas de inicio de todos los periodos para la cabecera."""
 
 
 def identifica_grupos(
@@ -131,7 +133,7 @@ def identifica_grupos(
 def _genera_actividad(per: Periodo) -> str:
     """Genera la actividad de un periodo para presentar en una plantilla."""
     if per.actividad == "D":
-        return "Descanso"
+        return "D"
     if per.actividad == "CAS":
         return "CAS"
     return f"{per.actividad}-{per.sector.nombre}"
@@ -194,9 +196,53 @@ def _genera_color(per: Periodo, color_manager: ColorManager) -> str:
     return color_manager.get_color(per.sector.nombre, is_executive=per.actividad == "E")
 
 
+def _genera_horas_de_inicio(
+    dur_total: int,
+    controladores: dict[ATC, list[Periodo]],
+) -> list[PeriodoData]:
+    """Busca todas las horas de inicio de todos los periodos.
+
+    El objetivo es dar a la plantilla los datos necesarios para hacer
+    una fila que muestre cuándo empiezan los periodos de cada controlador.
+    """
+    periodos_todos = []
+    for periodos in controladores.values():
+        periodos_todos.extend(periodos)
+
+    periodos_todos.sort(key=lambda p: p.hora_inicio)
+    periodos_deque: deque[Periodo] = deque(periodos_todos)
+
+    horas_inicio = []
+
+    while periodos_deque:
+        current_period = periodos_deque.popleft()
+        hora_inicio = current_period.hora_inicio
+        while periodos_deque and periodos_deque[0].hora_inicio == hora_inicio:
+            current_period = periodos_deque.popleft()
+
+        if periodos_deque:
+            duracion = (periodos_deque[0].hora_inicio - hora_inicio).seconds // 60
+        else:
+            duracion = (current_period.hora_fin - hora_inicio).seconds // 60
+
+        horas_inicio.append(
+            PeriodoData(
+                hora_inicio=datetime.strftime(hora_inicio, "%H:%M"),
+                hora_fin="",
+                actividad="",
+                color="",
+                duracion=duracion,
+                porcentaje=duracion / dur_total * 100,
+            ),
+        )
+
+    return horas_inicio
+
+
 def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
     """Genera los datos de un grupo de controladores para presentar en una plantilla."""
     sectores = [sector.nombre for sector in grupo.sectores]
+    sectores.sort()
     atcs = []
     for controlador, periodos in grupo.controladores.items():
         atc_data = EstadilloPersonalData(
@@ -207,17 +253,17 @@ def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
                     hora_fin=datetime.strftime(p.hora_fin, "%H:%M"),
                     actividad=_genera_actividad(p),
                     color=_genera_color(p, color_manager),
-                    duracion=(p.hora_fin - p.hora_inicio).seconds // 60,
-                    porcentaje=(p.hora_fin - p.hora_inicio).seconds
-                    / grupo.duracion
-                    * 100,
+                    duracion=(duracion := (p.hora_fin - p.hora_inicio).seconds // 60),
+                    porcentaje=duracion / grupo.duracion * 100,
                 )
                 for p in periodos
             ],
         )
         atcs.append(atc_data)
 
-    return GrupoDatos(sectores=sectores, atcs=atcs)
+    horas_inicio = _genera_horas_de_inicio(grupo.duracion, grupo.controladores)
+
+    return GrupoDatos(sectores=sectores, atcs=atcs, horas_inicio=horas_inicio)
 
 
 def genera_datos_estadillo(

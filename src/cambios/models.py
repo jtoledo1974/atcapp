@@ -208,6 +208,10 @@ class Periodo(db.Model):  # type: ignore[name-defined]
         """Duración del periodo en minutos."""
         return (self.hora_fin - self.hora_inicio).seconds // 60
 
+    def __repr__(self) -> str:
+        """Representación de un periodo."""
+        return f"<Per. {self.hora_inicio.strftime('%H:%M')} {self.duracion}'>"
+
 
 class Servicio(db.Model):  # type: ignore[name-defined]
     """Modelo intermedio para gestionar la relación entre ATC y Estadillo.

@@ -58,6 +58,11 @@ def test_genera_datos_grupo(
     assert periodo_1.hora_fin == "15:00"
     assert periodo_1.actividad == "P-CEN"
 
+    duracion_atc = sum(periodo.duracion for periodo in dg.atcs[0].periodos)
+    duracion_horas = sum(periodo.duracion for periodo in dg.horas_inicio)
+    assert duracion_atc == duracion_horas
+    assert duracion_atc == 450
+
 
 def test_mismas_duraciones(estadillo: Estadillo, preloaded_session: Session) -> None:
     """Verifica que la duración_total de la jornada es igual para todos.
@@ -66,9 +71,11 @@ def test_mismas_duraciones(estadillo: Estadillo, preloaded_session: Session) -> 
     la duración total del grupo.
     """
     grupos = identifica_grupos(estadillo, preloaded_session)
+
     for grupo in grupos:
         duracion_total = grupo.duracion
-        assert duracion_total == grupo.duracion
+        # Verificar que la duración total es de 7h30m en minutos
+        assert duracion_total == 450
         for periodos in grupo.controladores.values():
             duracion_controlador = sum(periodo.duracion for periodo in periodos)
             assert duracion_total == duracion_controlador
