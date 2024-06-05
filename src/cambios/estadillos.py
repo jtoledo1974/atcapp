@@ -301,4 +301,6 @@ def genera_datos_estadillo(
     """Genera los datos de un estadillo para presentar en una plantilla."""
     grupos = identifica_grupos(estadillo, session)
     color_manager = ColorManager()  # Crear una instancia de ColorManager
-    return [genera_datos_grupo(grupo, color_manager) for grupo in grupos]
+    datos_grupo = [genera_datos_grupo(grupo, color_manager) for grupo in grupos]
+    datos_grupo.sort(key=lambda g: len(g.atcs), reverse=True)
+    return datos_grupo

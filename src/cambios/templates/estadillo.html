@@ -3,7 +3,7 @@
 {% block title %}Mi Estadillo{% endblock %}
 
 {% block content %}
-<div class="grupos">
+<div class="grupos" id="grupo" style="overflow-x: auto; white-space: nowrap;">
     {% for grupo in grupos %}
     <div class="grupo">
         <div class="sectores">
@@ -23,19 +23,40 @@
         </div>
         {% for atc in grupo.atcs %}
         <div class="atc">
-            <div class="nombre">{{ atc.nombre }}</div>
             <div class="periodos">
+                {% set first_active_found = false %}
                 {% for periodo in atc.periodos %}
                 <! {{ periodo.duracion}} {{periodo.porcentaje}}>
+                    {% if periodo.activo == "ACT" and not first_active_found %}
+                    {% set first_active_found = true %}
+                    <div id="active-period" class="periodo periodo_{{ periodo.activo.lower()}}"
+                        style="flex: 0 0 {{ periodo.porcentaje }}%; background-color: {{ periodo.color }};">
+                        <span>{{ periodo.actividad }}</span>
+                    </div>
+                    {% else %}
                     <div class="periodo periodo_{{ periodo.activo.lower()}}"
                         style="flex: 0 0 {{ periodo.porcentaje }}%; background-color: {{ periodo.color }};">
                         <span>{{ periodo.actividad }}</span>
                     </div>
+                    {% endif %}
                     {% endfor %}
             </div>
+            <div class="nombre">{{ atc.nombre }}</div>
         </div>
         {% endfor %}
     </div>
     {% endfor %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.onload = function () {
+        const activePeriod = document.getElementById('active-period');
+        const scrollbox = document.getElementById('grupo');
+        if (activePeriod && scrollbox) {
+            scrollbox.scrollLeft = activePeriod.offsetLeft - scrollbox.offsetLeft;
+        }
+    };
+</script>
 {% endblock %}

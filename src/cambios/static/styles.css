@@ -204,13 +204,12 @@
     border: 1px solid #ddd;
 }
 
+/* Estilo para periodo pasado */
 .periodo_pas {
     background-color: #d3d3d3;
     /* Color gris claro */
     opacity: 0.7;
     /* Reduce opacidad para dar efecto de pasado */
-    border: 1px solid #a9a9a9;
-    /* Borde gris oscuro */
     color: #666;
     /* Texto gris oscuro */
 }
