@@ -70,7 +70,7 @@ def index() -> Response | str:
         return redirect(url_for("main.logout"))
 
     # Check if the user has a latest estadillo and redirect to it
-    latest_estadillo = (
+    estadillo = (
         db.session.query(Estadillo)
         .join(Estadillo.atcs)
         .filter(ATC.id == user.id)
@@ -78,7 +78,8 @@ def index() -> Response | str:
         .first()
     )
 
-    if latest_estadillo:
+    now = datetime.now(tz=get_timezone())
+    if estadillo and estadillo.hora_inicio <= now <= estadillo.hora_fin:
         return redirect(url_for("main.estadillo"))
 
     # TODO #3 It would be better to use the user's timezone here
@@ -307,13 +308,12 @@ def estadillo() -> Response | str:
     latest_estadillo = (
         db.session.query(Estadillo)
         .join(Estadillo.atcs)
-        .filter(ATC.id == user.id)
         .order_by(Estadillo.fecha.desc())
         .first()
     )
 
     if not latest_estadillo:
-        flash("No hay estadillos disponibles para ti.", "info")
+        flash("No hay estadillos disponibles.", "info")
         return redirect(url_for("main.index"))
 
     grupos = genera_datos_estadillo(latest_estadillo, db.session)

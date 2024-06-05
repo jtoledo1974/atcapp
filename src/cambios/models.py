@@ -143,6 +143,16 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
         cascade="all, delete-orphan",
     )
 
+    @property
+    def hora_inicio(self) -> datetime:
+        """Hora de inicio del estadillo."""
+        return min(periodo.hora_inicio for periodo in self.periodos)
+
+    @property
+    def hora_fin(self) -> datetime:
+        """Hora de fin del estadillo."""
+        return max(periodo.hora_fin for periodo in self.periodos)
+
 
 class Sector(db.Model):  # type: ignore[name-defined]
     """Modelo de la tabla sectores."""
@@ -191,8 +201,11 @@ class Periodo(db.Model):  # type: ignore[name-defined]
         nullable=True,
     )
     """Sector en el que se realiza la actividad. Puede ser nulo en caso de descanso."""
-    hora_inicio: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    hora_fin: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    hora_inicio: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    hora_fin: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     actividad: Mapped[str] = mapped_column(String(20), nullable=False)
     """E, P o D: ejecutivo, planificador o descanso."""
 
