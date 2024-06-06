@@ -12,16 +12,17 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from io import BytesIO
+from io import BufferedReader, BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
 
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
 
+from . import get_timezone
 from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
 from .models import ATC, Turno
-from .utils import create_user, find_user, update_user
+from .user_utils import create_user, find_user, update_user
 
 logger = getLogger(__name__)
 
@@ -137,7 +138,10 @@ def insert_shift_data(
         if shift_code:  # Skip empty shift codes
             date_str = f"{day:02d} {month} {year}"
             try:
-                shift_date = datetime.strptime(date_str, "%d %B %Y")  # noqa: DTZ007
+                tz = get_timezone()
+                shift_date = (
+                    datetime.strptime(date_str, "%d %B %Y").astimezone(tz).date()
+                )
             except ValueError:
                 continue
 
@@ -210,7 +214,7 @@ def parse_and_insert_data(
 
 
 def procesa_turnero(
-    file: FileStorage,
+    file: FileStorage | BufferedReader,
     db_session: scoped_session,
     *,
     add_new: bool = False,

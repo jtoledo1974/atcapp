@@ -1,7 +1,11 @@
 """Decouples the database initialization from flask app creation."""
 
+from logging import getLogger
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
+
+logger = getLogger(__name__)
 
 # Naming conventions for Alembic migrations
 naming_convention = {
@@ -21,4 +25,5 @@ def init_db() -> None:
 
     This should make sure that tables are created in the right order.
     """
+    logger.debug("Creando las tablas de la base de datos.")
     db.metadata.create_all(bind=db.engine)

@@ -1,9 +1,14 @@
 import subprocess
+import sys
 from pathlib import Path
 
 import pathspec
 
-SUFFIXES = (".py", ".html", ".js", ".txt", ".ini", ".toml", ".md", ".json")
+SUFFIXES = {
+    "all": (".py", ".html", ".js", ".txt", ".ini", ".toml", ".md", ".json"),
+    "tests_and_src": (".py",),
+    "src_only": (".py",),
+}
 
 
 def load_gitignore_patterns(gitignore_path: Path) -> pathspec.PathSpec:
@@ -35,14 +40,16 @@ def output_file_content(file: Path, startpath: Path, output) -> None:
     output.write("\n```\n\n")
 
 
-def list_files(startpath: Path, output_file_path: Path) -> None:
-    """List all files with the specified extensions in the project in Markdown format."""
+def list_files(startpath: Path, output_file_path: Path, option: str) -> None:
+    """List files based on the given option in the project in Markdown format."""
     gitignore_path = startpath / ".gitignore"
     ignore_patterns = (
         load_gitignore_patterns(gitignore_path)
         if gitignore_path.exists()
         else pathspec.PathSpec([])
     )
+
+    suffixes = SUFFIXES[option]
 
     with output_file_path.open("w", encoding="utf-8") as output:
         output.write("# Project Source Files\n\n")
@@ -57,8 +64,19 @@ def list_files(startpath: Path, output_file_path: Path) -> None:
                 continue
             if ignore_patterns.match_file(relative_path):
                 continue
-            if file.suffix in SUFFIXES:
+            if file.suffix in suffixes:
+                if (
+                    option == "tests_and_src"
+                    and "tests" not in str(relative_path)
+                    and "src" not in str(relative_path)
+                ):
+                    continue
+                if option == "src_only" and "src" not in str(relative_path):
+                    continue
                 output_file_content(file, startpath, output)
+
+        if option != "all":
+            return
 
         output.write("# Git Log\n\n")
         output.write("```\n")
@@ -78,4 +96,5 @@ def list_files(startpath: Path, output_file_path: Path) -> None:
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parent.parent
     output_file_path = project_root / "file_listings.md"
-    list_files(project_root, output_file_path)
+    option = sys.argv[1] if len(sys.argv) > 1 else "all"
+    list_files(project_root, output_file_path, option)

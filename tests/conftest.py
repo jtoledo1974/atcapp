@@ -4,24 +4,37 @@ from __future__ import annotations
 
 import locale
 import os
-import pickle
-import secrets
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
+from unittest.mock import MagicMock, patch
 
+import pdfplumber
 import pytest
-from cambios.app import Config, create_app
+from cambios.app import create_app
 from cambios.database import db as _db
-from cambios.models import ATC, TipoTurno, Turno
-from sqlalchemy import create_engine
+from cambios.models import ATC, Estadillo
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from .pickled_db import (
+    __TEST_ESTADILLO_PATH,
+    __TEST_TURNERO_PATH,
+    create_in_memory_db,
+    create_test_data,
+    load_fixture,
+    save_fixture,
+    should_regenerate_pickle,
+)
+
 if TYPE_CHECKING:
+    from typing import Any, Generator
+
     from flask import Flask
     from flask.testing import FlaskClient
     from flask_sqlalchemy import SQLAlchemy
+    from pdfplumber import PDF
     from pytest_mock import MockerFixture
     from sqlalchemy.orm import Session
+
 
 PICKLE_FILE = Path(__file__).parent / "resources" / "test_db.pickle"
 
@@ -31,23 +44,25 @@ def _set_env() -> None:
     """Set up logging using the environment variable."""
     os.environ["ENABLE_LOGGING"] = "true"
     os.environ["LOG_LEVEL"] = "INFO"
+
     locale.setlocale(locale.LC_ALL, "es_ES.UTF-8")
+    os.environ["FLASK_SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    # Usar  "sqlite:///testing.db" para ver la base de datos de prueba
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def app() -> Flask:
     """Create and configure a new app instance for each test."""
-    config = Config()
-    config.SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
-    app = create_app(config_class=Config)
+    app = create_app()
     app.config.update({"TESTING": True})
     return app
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def db(app: Flask) -> Generator[SQLAlchemy, None, None]:
     """Provide a database session for tests."""
-    from cambios.database import db as _db
+    engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
+    app.config["SQLALCHEMY_DATABASE_URI"] = engine_str
 
     with app.app_context():
         _db.create_all()
@@ -71,6 +86,78 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
     session.remove()
     transaction.rollback()
     connection.close()
+
+
+@pytest.fixture(scope="session")
+def pdf_estadillo() -> Generator[PDF, Any, Any]:
+    """Precarga el pdf de estadillo para pruebas.
+
+    Se precargan las tablas de las páginas para evitar volver a procesar el
+    pdf en cada test.
+    """
+    test_file_path = __TEST_ESTADILLO_PATH
+    with pdfplumber.open(test_file_path) as pdf:
+        # precarga las páginas del pdf
+        table = pdf.pages[0].extract_table()
+        pdf.pages[0].extract_table = MagicMock(return_value=table)  # type: ignore[method-assign]
+        tables = pdf.pages[1].extract_tables()
+        pdf.pages[1].extract_tables = MagicMock(return_value=tables)  # type: ignore[method-assign]
+        yield pdf
+
+
+@pytest.fixture()
+def estadillo_path(pdf_estadillo: pdfplumber.pdf.PDF) -> Generator[Path, Any, Any]:
+    """Return the path to the test PDF file.
+
+    Hacemos un mock de pdfplumber.open para que su uso con un context manager
+    devuelva el pdf precargado.
+    """
+    with patch("pdfplumber.open") as pdf_open_mock:
+        mock = MagicMock()
+        mock.__enter__.return_value = pdf_estadillo
+        pdf_open_mock.return_value = mock
+
+        yield __TEST_ESTADILLO_PATH
+
+
+@pytest.fixture()
+def estadillo(preloaded_session: Session) -> Estadillo:
+    """Return an estadillo from a preloaded database."""
+    # Get the first user from the Users table
+    estadillo = preloaded_session.query(Estadillo).first()
+    if not estadillo:
+        _msg = "No estadillos in the database."
+        raise ValueError(_msg)
+    return estadillo
+
+
+@pytest.fixture(scope="session")
+def pdf_turnero() -> Generator[PDF, Any, Any]:
+    """Precarga el pdf de turnero para pruebas.
+
+    Se precargan las tablas de las páginas para evitar volver a procesar el
+    pdf en cada test.
+    """
+    test_file_path = __TEST_TURNERO_PATH
+    with pdfplumber.open(test_file_path) as pdf:
+        table = pdf.pages[0].extract_table()
+        pdf.pages[0].extract_table = MagicMock(return_value=table)  # type: ignore[method-assign]
+        yield pdf
+
+
+@pytest.fixture()
+def turnero_path(pdf_turnero: pdfplumber.pdf.PDF) -> Generator[Path, Any, Any]:
+    """Return the path to the test PDF file.
+
+    Hacemos un mock de pdfplumber.open para que su uso con un context manager
+    devuelva el pdf precargado.
+    """
+    with patch("pdfplumber.open") as pdf_open_mock:
+        mock = MagicMock()
+        mock.__enter__.return_value = pdf_turnero
+        pdf_open_mock.return_value = mock
+
+        yield __TEST_TURNERO_PATH
 
 
 @pytest.fixture()
@@ -108,7 +195,6 @@ def regular_user(session: scoped_session) -> ATC:
     """Create a regular user for testing."""
     user = ATC(
         email="user@example.com",
-        firebase_uid="user_uid",
         nombre="Regular",
         apellidos="User",
         categoria="User",
@@ -144,29 +230,18 @@ def new_user(regular_user: ATC, session: scoped_session) -> ATC:
     return regular_user
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def preloaded_session() -> Generator[Session, None, None]:
     """Load the database with test data."""
-    engine = create_engine("sqlite:///:memory:")
-    _db.metadata.create_all(engine)
-
-    session = sessionmaker(bind=engine)()
-
-    with Path.open(PICKLE_FILE, "rb") as file:
-        pickle_data = pickle.load(file)  # noqa: S301
-
-    for table, data in (
-        [ATC, pickle_data["users"]],
-        [Turno, pickle_data["shifts"]],
-        [TipoTurno, pickle_data["shift_types"]],
-    ):
-        for item in data:
-            item.pop("_sa_instance_state", None)
-            session.add(table(**item))
+    if should_regenerate_pickle():
+        session = create_in_memory_db()
+        create_test_data(session)
+        save_fixture(session)
+    else:
+        session = load_fixture()
 
     yield session
-
-    _db.metadata.drop_all(engine)
+    session.close()
 
 
 @pytest.fixture()

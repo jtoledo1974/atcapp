@@ -1,4 +1,4 @@
-/* Add this CSS to your existing stylesheet or create a new one */
+/* Existing styles */
 
 /* Style for the day number */
 .calendar-day {
@@ -108,4 +108,169 @@
 /* Increase padding for better spacing on mobile */
 .calendar-cell {
     padding-bottom: 2em;
+}
+
+/* New styles for the timetable */
+
+/* General container for the timetable */
+.grupos {
+    width: 100%;
+    padding: 5px;
+    overflow-x: auto;
+}
+
+/* Group container */
+.grupo {
+    margin-bottom: 20px;
+}
+
+/* Sector headers */
+.sectores {
+    display: flex;
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.sector {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.cabecera-estadillo {
+    display: flex;
+    width: 100%;
+}
+
+.cabecera-estadillo .nombre {
+    flex: 1;
+    max-width: 20%;
+    min-width: 150px;
+}
+
+.horas {
+    display: flex;
+    flex: 1;
+    min-width: 800px;
+}
+
+
+/* ATC rows */
+.atc {
+    display: flex;
+    flex-direction: row;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.atc .nombre {
+    flex: 1;
+    max-width: 20%;
+    min-width: 150px;
+    /* Ancho fijo de la columna de nombres */
+    background-color: #f8f9fa;
+    padding: 10px;
+    font-weight: bold;
+}
+
+.atc .periodos {
+    flex: 1;
+    display: flex;
+    min-width: 800px;
+}
+
+.nombre {
+    background-color: #f8f9fa;
+    padding: 10px;
+    font-weight: bold;
+}
+
+/* Periods container */
+.periodos {
+    flex: 1;
+    display: flex;
+    width: 100%;
+}
+
+/* Individual period cells */
+.periodo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    color: white;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+/* Estilo para periodo pasado */
+.periodo_pas {
+    background-color: #d3d3d3;
+    /* Color gris claro */
+    opacity: 0.7;
+    /* Reduce opacidad para dar efecto de pasado */
+    color: #666;
+    /* Texto gris oscuro */
+}
+
+/* Estilo para periodo activo */
+.periodo_act {
+    background-color: #ffd700;
+    /* Color dorado para destacar */
+    border: 2px solid #ff8c00;
+    /* Borde naranja oscuro */
+    animation: pulse 2s infinite;
+    /* Animación suave */
+    font-weight: bold;
+}
+
+/* Animación para periodo activo */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 5px #ff8c00;
+    }
+
+    50% {
+        box-shadow: 0 0 20px #22c656;
+    }
+
+    100% {
+        box-shadow: 0 0 5px #ff8c00;
+    }
+}
+
+/* Media query for better mobile responsiveness */
+@media (max-width: 768px) {
+    .grupo {
+        font-size: 0.9em;
+    }
+
+    .atc {
+        flex-direction: column;
+    }
+
+    .atc .nombre {
+        flex: none;
+        max-width: 100%;
+        position: absolute;
+        background-color: #ffffff30;
+        padding: 0;
+        text-shadow: 1px 1px 2px white;
+        z-index: 10;
+    }
+
+    .atc .periodos {
+        flex: none;
+        width: 100%;
+        display: flex;
+    }
+
+    .cabecera-estadillo .nombre {
+        display: none;
+    }
+
+    .periodo {
+        flex-basis: auto;
+    }
 }

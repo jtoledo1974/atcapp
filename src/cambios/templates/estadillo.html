@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Estadillo{% endblock %}
+
+{% block content %}
+<div class="grupos" id="grupos" style="overflow-x: auto; white-space: nowrap;">
+    {% for grupo in grupos %}
+    <div class="grupo">
+        <div class="sectores">
+            {% for sector in grupo.sectores %}
+            <div class="sector">{{ sector }}</div>
+            {% endfor %}
+        </div>
+        <div class="cabecera-estadillo">
+            <div class="nombre">NOMBRE</div>
+            <div class="horas">
+                {% for hora_inicio in grupo.horas_inicio %}
+                <div class="hora-inicio" style="flex: 0 0 {{ hora_inicio.porcentaje }}%;">
+                    <span>{{ hora_inicio.hora_inicio }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% for atc in grupo.atcs %}
+
+        <div class="atc">
+            <div class="nombre">{{ atc.nombre }}</div>
+            <div class="periodos">
+                {% for periodo in atc.periodos %}
+                <div {% if periodo.scroll_anchor %} id="active-period" {% endif %}
+                    class="periodo periodo_{{ periodo.activo.lower()}}"
+                    style="flex: 0 0 {{ periodo.porcentaje }}%; background-color: {{ periodo.color }};">
+                    <span>{{ periodo.actividad }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.onload = function () {
+        const activePeriod = document.getElementById('active-period');
+        const scrollbox = document.getElementById('grupos');
+        if (activePeriod && scrollbox) {
+            // Scroll horizontal
+            scrollbox.scrollLeft = activePeriod.offsetLeft - scrollbox.offsetLeft;
+
+            // Scroll vertical
+            const yOffset = activePeriod.getBoundingClientRect().top + window.pageYOffset - (window.innerHeight / 2);
+            window.scrollTo({ top: yOffset, behavior: 'smooth' });
+        }
+    };
+</script>
+{% endblock %}

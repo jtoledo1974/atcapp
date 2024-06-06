@@ -17,13 +17,15 @@ from flask import (
     session,
     url_for,
 )
-from pytz import timezone as tzinfo
 
+from . import get_timezone
 from .cambios import GenCalMensual, es_admin
+from .carga_estadillo import procesa_estadillo
 from .carga_turnero import procesa_turnero
 from .database import db
+from .estadillos import genera_datos_estadillo
 from .firebase import invalidate_token, verify_id_token
-from .models import ATC
+from .models import ATC, Estadillo
 
 if TYPE_CHECKING:  # pragma: no cover
     from flask import Flask
@@ -67,9 +69,23 @@ def index() -> Response | str:
     if not user:
         return redirect(url_for("main.logout"))
 
+    # Check if the user has a latest estadillo and redirect to it
+    estadillo = (
+        db.session.query(Estadillo)
+        .join(Estadillo.atcs)
+        .filter(ATC.id == user.id)
+        .order_by(Estadillo.fecha.desc())
+        .first()
+    )
+
+    now = datetime.now(tz=get_timezone())
+    if estadillo and estadillo.hora_inicio <= now <= estadillo.hora_fin:
+        return redirect(url_for("main.estadillo"))
+
     # TODO #3 It would be better to use the user's timezone here
     # Currently forcing continental Spain using pytz
-    today = datetime.now(tz=tzinfo("Europe/Madrid"))
+    tz = get_timezone()
+    today = datetime.now(tz=tz)
 
     # Get month and year from query parameters or use current month and year
     month = request.args.get("month", type=int, default=today.month)
@@ -241,6 +257,71 @@ def upload() -> Response | str:
         "success",
     )
     return redirect(url_for("main.index"))
+
+
+@main.route("/upload_estadillo", methods=["GET", "POST"])
+@privacy_policy_accepted
+def upload_estadillo() -> Response | str:
+    """Upload estadillo data to the server.
+
+    For GET requests, render the upload page.
+    For POST requests, upload the estadillo data to the server.
+    """
+    if session.get("es_admin") is not True:
+        return redirect(url_for("main.index"))
+    if request.method != "POST":
+        return render_template("upload_estadillo.html")
+    file = request.files["file"]
+    if not file.filename:
+        flash("No se ha seleccionado un archivo", "danger")
+        return redirect(url_for("main.upload_estadillo"))
+
+    try:
+        estadillo_db = procesa_estadillo(file, db.session)
+        n_controladores = len(estadillo_db.servicios)
+        n_periodos = sum(len(atc.periodos) for atc in estadillo_db.atcs)
+    except ValueError:
+        flash("Formato de archivo no válido", "danger")
+        return redirect(url_for("main.upload_estadillo"))
+
+    flash(
+        "Archivo cargado con éxito. "
+        f"Controladores reconocidos: {n_controladores},"
+        f" periodos agregados: {n_periodos}",
+        "success",
+    )
+    return redirect(url_for("main.index"))
+
+
+@main.route("/estadillo", methods=["GET", "POST"])
+@privacy_policy_accepted
+def estadillo() -> Response | str:
+    """Show the latest estadillo for the logged-in user."""
+    if "id_atc" not in session:
+        return redirect(url_for("main.login"))
+
+    user = db.session.get(ATC, session["id_atc"])
+    if not user:
+        return redirect(url_for("main.logout"))
+
+    # Get the latest estadillo for the user
+    latest_estadillo = (
+        db.session.query(Estadillo)
+        .join(Estadillo.atcs)
+        .order_by(Estadillo.fecha.desc())
+        .first()
+    )
+
+    if not latest_estadillo:
+        flash("No hay estadillos disponibles.", "info")
+        return redirect(url_for("main.index"))
+
+    grupos = genera_datos_estadillo(latest_estadillo, db.session)
+
+    return render_template(
+        "estadillo.html",
+        grupos=grupos,
+    )
 
 
 def register_routes(app: Flask) -> Blueprint:

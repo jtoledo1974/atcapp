@@ -65,11 +65,17 @@
 
         <h2>5. Derechos de los Usuarios</h2>
         <p>Tienes derecho a acceder, rectificar y suprimir tus datos personales, así como a oponerte a su
-            tratamiento. Para ejercer estos derechos, por favor, puedes hacerlo en {{ contact_data }}.</p>
+            tratamiento.
+            {% if current_user %}
+            Para ejercer estos derechos, por favor, puedes hacerlo en {{ contact_data }}.
+            {% endif %}
+        </p>
 
+        {% if current_user %}
         <h2>6. Contacto</h2>
         <p>Si tienes alguna pregunta sobre esta política de privacidad, por favor puedes hacerlo en {{ contact_data }}.
         </p>
+        {% endif %}
     </div>
 
     {% if current_user and not current_user.politica_aceptada %}

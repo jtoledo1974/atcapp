@@ -34,15 +34,17 @@ def extract_users_and_shifts_inserted(response: bytes) -> tuple[int, int]:
 
 
 @pytest.mark.usefixtures("_verify_admin_id_token_mock")
-def test_upload_admin_post(client: FlaskClient, admin_user: ATC) -> None:
+def test_upload_admin_post(
+    client: FlaskClient,
+    admin_user: ATC,
+    turnero_path: Path,
+) -> None:
     """Test that the upload route processes a valid PDF file."""
     # Log in as admin user
     client.post("/login", data={"idToken": "test_token"})
 
     # Path to the test PDF file
-    test_file_path = Path(__file__).parent / "resources" / "test_turnero.pdf"
-
-    with test_file_path.open("rb") as file:
+    with turnero_path.open("rb") as file:
         response = client.post(
             "/upload",
             data={"file": file},
@@ -63,15 +65,13 @@ def test_upload_admin_post_add_new(
     client: FlaskClient,
     admin_user: ATC,
     db: SQLAlchemy,
+    turnero_path: Path,
 ) -> None:
     """Test that the upload route processes a valid PDF file."""
     # Log in as admin user
     client.post("/login", data={"idToken": "test_token"})
 
-    # Path to the test PDF file
-    test_file_path = Path(__file__).parent / "resources" / "test_turnero.pdf"
-
-    with test_file_path.open("rb") as file:
+    with turnero_path.open("rb") as file:
         response = client.post(
             "/upload",
             data={"file": file, "add_new": "on"},
@@ -101,7 +101,7 @@ def test_upload_admin_post_add_new(
     user.equipo = "X"
     user.categoria = "CON"
 
-    with test_file_path.open("rb") as file:
+    with turnero_path.open("rb") as file:
         response = client.post(
             "/upload",
             data={"file": file},

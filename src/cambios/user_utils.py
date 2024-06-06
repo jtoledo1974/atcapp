@@ -1,85 +1,17 @@
-"""Utility functions for the application."""
+"""Utilities for working with users in the database."""
 
 from __future__ import annotations
 
-import unicodedata
 from logging import getLogger
 from typing import TYPE_CHECKING
 
 from .models import ATC
+from .name_utils import normalize_string, parse_name
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import scoped_session
 
 logger = getLogger(__name__)
-
-
-def parse_name(name: str) -> tuple[str, str]:
-    """Parse the name into first and last name.
-
-    El archivo tiene los dos apellidos primero y luego el nombre, pero
-    no identifica las partes. Tanto los apellidos como el nombre pueden
-    ser compuestos.
-
-    El algoritmo a seguir será identificar dos apellidos, lo que reste
-    será el nombre.
-
-    Entendemos como un apellido bien una única palabra, o bien:
-      - DE APELLIDO
-      - DEL APELLIDO
-      - DE LA APELLIDO
-      - DE LOS APELLIDOS
-      - DE LAS APELLIDOS
-
-    Ejemplos:
-    CASTILLO PINTO JAIME -> Nombre: JAIME, Apellidos: CASTILLO PINTO
-    MARTINEZ MORALES MARIA VIRGINIA: Nombre: MARIA VIRGINIA, Apellidos: MARTINEZ MORALES
-    DE ANDRES RICO MARIO -> Nombre: MARIO, Apellidos: DE ANDRES RICO
-    """
-    parts = name.split()
-    prepositions = {"DE", "DEL", "DE LA", "DE LOS", "DE LAS"}
-    apellidos_parts: list[str] = []
-    i = 0
-
-    # Identify the last names
-    while i < len(parts) and len(apellidos_parts) < 2:  # noqa: PLR2004 Dos apellidos
-        if parts[i].upper() in prepositions:
-            # Handle multi-word prepositions (e.g., "DE LA", "DE LOS")
-            if i + 1 < len(parts):
-                if parts[i].upper() in {"DE", "DEL"}:
-                    if i + 2 < len(parts) and parts[i + 1].upper() in {
-                        "LA",
-                        "LOS",
-                        "LAS",
-                    }:
-                        apellidos_parts.append(" ".join(parts[i : i + 3]))
-                        i += 3
-                    else:
-                        apellidos_parts.append(" ".join(parts[i : i + 2]))
-                        i += 2
-                else:
-                    apellidos_parts.append(" ".join(parts[i : i + 2]))
-                    i += 2
-            else:
-                break
-        else:
-            apellidos_parts.append(parts[i])
-            i += 1
-
-    # The rest is the first name
-    nombre_parts = parts[i:]
-
-    apellidos = " ".join(apellidos_parts)
-    nombre = " ".join(nombre_parts)
-
-    return nombre, apellidos
-
-
-def normalize_string(s: str) -> str:
-    """Normalize string by removing accents and converting to lowercase."""
-    return "".join(
-        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
-    ).lower()
 
 
 def create_user(
@@ -94,7 +26,7 @@ def create_user(
     Args:
     ----
         name: The full name as a single string or a tuple of (nombre, apellidos).
-              If a full name is provided it's expected to be in the format "apellidos nombre".
+              If a full name is provided it should be in the format "apellidos nombre".
         role: The role of the user. (CON, PDT, etc.)
         equipo: The equipo of the user (A, B, C, ...).
         db_session (scoped_session): The database session.

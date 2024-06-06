@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import Session
 
 from .models import ATC
@@ -166,7 +166,11 @@ class Dia:
 
 @dataclass
 class CalendarioMensual:
-    """Calendar for a month."""
+    """Calendario mensual de un ATC.
+
+    El objetivo de esta clase es facilitar la presentación de un calendario
+    mensual en una plantilla HTML.
+    """
 
     año: int
     mes: int
@@ -187,9 +191,7 @@ class CalendarioMensual:
         week = []
         for day in self._dias:
             week.append(day)
-            if (
-                day.fecha.weekday() == NUMERO_DIA_DOMINGO
-            ):  # Sunday is the end of the week
+            if day.fecha.weekday() == NUMERO_DIA_DOMINGO:
                 weeks.append(week)
                 week = []
         if week:
@@ -213,7 +215,7 @@ class GenCalMensual:
         session: Session | None = None,
     ) -> CalendarioMensual:
         """Generate a calendar for a month and year."""
-        dias = []
+        dias: list[Dia] = []
         first_day = date(año, mes, 1)
         last_day = GenCalMensual._ultimo_dia_del_mes(año, mes)
 
@@ -254,7 +256,7 @@ class GenCalMensual:
         )
 
         # Add a Shift dataclass for each day that has a shift
-        turnos_por_fecha = {dbshift.fecha.date(): dbshift for dbshift in user_shifts}
+        turnos_por_fecha = {dbshift.fecha: dbshift for dbshift in user_shifts}
 
         for dia in (dia for dia in dias if dia.fecha in turnos_por_fecha):
             dbshift = turnos_por_fecha[dia.fecha]
