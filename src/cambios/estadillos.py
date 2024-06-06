@@ -37,6 +37,7 @@ class Grupo:
     controladores: dict[ATC, list[Periodo]]
     duracion: int
     """Duración total del grupo en minutos."""
+    anchor: Periodo | None = None
 
 
 @dataclass
@@ -56,6 +57,8 @@ class PeriodoData:
     """Fracción de la jornada que ocupa este periodo."""
     activo: str = field(default="FUT")
     """Indica si el periodo está activo, está pasado o es futuro. PAS, ACT, FUT."""
+    scroll_anchor: bool = False
+    "Indica si es este periodo el que se debe mostrar en la pantalla al cargar la página."
 
 
 @dataclass
@@ -133,6 +136,44 @@ def identifica_grupos(
         res.append(Grupo(estadillo, grupo_sectores, grupo_controladores, duracion))
 
     return res
+
+
+def marca_anchor(grupos: list[Grupo], user: ATC | None) -> None:
+    """Marca el periodo activo en el grupo de controladores.
+
+    El periodo activo es el que está en curso en el momento de la consulta.
+    Primero se identifican todos los periodos que estén activos.
+    Si user no es None y alguno de los periodos activos está asociado a user,
+    se marca como el group anchor.
+    Si no, se marca el periodo que pertenezca a un grupo con más controladores.
+    """
+    now = datetime.now(tz=get_timezone())
+    periodos_activos = [
+        periodo
+        for grupo in grupos
+        for controlador, periodos in grupo.controladores.items()
+        for periodo in periodos
+        if periodo.hora_inicio_tz <= now <= periodo.hora_fin_tz
+    ]
+
+    if user:
+        for periodo in periodos_activos:
+            if periodo.controlador == user:
+                grupo = next(
+                    (grupo for grupo in grupos if user in grupo.controladores),
+                    None,
+                )
+                if grupo:
+                    grupo.anchor = periodo
+                    return
+
+    # Si no hay grupo con el usuario, se marca el grupo con más controladores
+    if periodos_activos:
+        grupo_con_mas_controladores = max(grupos, key=lambda g: len(g.controladores))
+        for periodo in periodos_activos:
+            if periodo.controlador in grupo_con_mas_controladores.controladores:
+                grupo_con_mas_controladores.anchor = periodo
+                return
 
 
 def _genera_actividad(per: Periodo) -> str:
@@ -283,6 +324,7 @@ def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
                         grupo.estadillo.hora_inicio,
                         grupo.estadillo.hora_fin,
                     ),
+                    scroll_anchor=p == grupo.anchor,
                 )
                 for p in periodos
             ],
@@ -297,10 +339,12 @@ def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
 def genera_datos_estadillo(
     estadillo: Estadillo,
     session: Session | scoped_session,
+    user: ATC | None = None,
 ) -> list[GrupoDatos]:
     """Genera los datos de un estadillo para presentar en una plantilla."""
     grupos = identifica_grupos(estadillo, session)
+    marca_anchor(grupos, user)
     color_manager = ColorManager()  # Crear una instancia de ColorManager
     datos_grupo = [genera_datos_grupo(grupo, color_manager) for grupo in grupos]
-    datos_grupo.sort(key=lambda g: len(g.atcs), reverse=True)
+    # datos_grupo.sort(key=lambda g: len(g.atcs), reverse=True)
     return datos_grupo
