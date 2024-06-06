@@ -47,7 +47,12 @@
         const activePeriod = document.getElementById('active-period');
         const scrollbox = document.getElementById('grupos');
         if (activePeriod && scrollbox) {
+            // Scroll horizontal
             scrollbox.scrollLeft = activePeriod.offsetLeft - scrollbox.offsetLeft;
+
+            // Scroll vertical
+            const yOffset = activePeriod.getBoundingClientRect().top + window.pageYOffset - (window.innerHeight / 2);
+            window.scrollTo({ top: yOffset, behavior: 'smooth' });
         }
     };
 </script>
