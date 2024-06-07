@@ -212,6 +212,7 @@ def guardar_atc_en_estadillo(
     """
     user = find_user(name, db_session)
     if not user:
+        logger.debug("Controlador %s no encontrado en la base de datos", name)
         user = create_user(name, role, None, db_session)
 
     servicio = (
