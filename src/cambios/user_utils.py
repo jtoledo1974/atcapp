@@ -37,14 +37,7 @@ def create_user(
         User: The created user.
 
     """
-    name = name.strip()
-    if isinstance(name, str):
-        nombre, apellidos = parse_name(name)
-    elif isinstance(name, tuple) and len(name) == 2:  # noqa: PLR2004
-        nombre, apellidos = name
-    else:
-        _msg = "name either full name string or tuple of (nombre, apellidos)"
-        raise ValueError(_msg)
+    nombre, apellidos = parse_name(name.strip())
 
     if not email:
         # Substitute spaces for dots and remove accents
