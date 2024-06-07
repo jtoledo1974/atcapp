@@ -6,7 +6,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 from .models import ATC
-from .name_utils import normalize_string, parse_name
+from .name_utils import parse_name, to_lower_no_accents
 
 if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import scoped_session
@@ -87,19 +87,20 @@ def find_user(
     The name is expected to be in the format "apellidos nombre".
     """
     nombre, apellidos = parse_name(name)
-    normalized_nombre = normalize_string(nombre)
-    normalized_apellidos = normalize_string(apellidos)
-    normalized_full_name = normalize_string(f"{apellidos} {nombre}")
+    normalized_nombre = to_lower_no_accents(nombre)
+    normalized_apellidos = to_lower_no_accents(apellidos)
+    normalized_full_name = to_lower_no_accents(f"{apellidos} {nombre}")
 
     # Fetch all users and normalize names for comparison
     users = db_session.query(ATC).all()
 
     for user in users:
         if (
-            normalize_string(user.nombre) == normalized_nombre
-            and normalize_string(user.apellidos) == normalized_apellidos
+            to_lower_no_accents(user.nombre) == normalized_nombre
+            and to_lower_no_accents(user.apellidos) == normalized_apellidos
         ) or (
-            normalize_string(f"{user.apellidos} {user.nombre}") == normalized_full_name
+            to_lower_no_accents(f"{user.apellidos} {user.nombre}")
+            == normalized_full_name
         ):
             return user
 
