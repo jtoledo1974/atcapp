@@ -87,7 +87,7 @@ def parse_name(name: str) -> tuple[str, str]:
     return nombre, apellidos
 
 
-def capitaliza_nombre(nombre: str, apellidos: str) -> str:
+def capitaliza_nombre(nombre: str, apellidos: str) -> tuple[str, str]:
     """Capitaliza el nombre, manteniendo las preposiciones como minúsculas."""
     nombre_parts = nombre.split()
     apellidos_parts = apellidos.split()
@@ -111,7 +111,7 @@ def capitaliza_nombre(nombre: str, apellidos: str) -> str:
 
     n = " ".join(nombre_parts)
     a = " ".join(apellidos_parts)
-    return f"{n} {a}"
+    return n, a
 
 
 def to_lower_no_accents(s: str) -> str:

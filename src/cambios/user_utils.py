@@ -6,7 +6,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 from .models import ATC
-from .name_utils import parse_name
+from .name_utils import capitaliza_nombre, parse_name
 
 if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import scoped_session
@@ -38,6 +38,7 @@ def create_user(
 
     """
     nombre, apellidos = parse_name(name.strip())
+    nombre, apellidos = capitaliza_nombre(nombre, apellidos)
 
     if not email:
         # Substitute spaces for dots and remove accents

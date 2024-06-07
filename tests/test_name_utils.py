@@ -78,5 +78,5 @@ def test_capitaliza_nombre(
     expected_full_name: str,
 ) -> None:
     """Test the capitaliza_nombre function."""
-    full_name = capitaliza_nombre(nombre, apellidos)
-    assert to_no_accents(full_name) == to_no_accents(expected_full_name)
+    nombre, apellidos = capitaliza_nombre(nombre, apellidos)
+    assert to_no_accents(f"{nombre} {apellidos}") == to_no_accents(expected_full_name)
