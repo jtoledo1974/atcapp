@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
+from sqlalchemy.exc import IntegrityError
 
 from . import get_timezone
 from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
@@ -198,12 +199,19 @@ def parse_and_insert_data(
             logger.warning("User not found for entry: %s", entry["name"])
             continue
         else:
-            user = create_user(
-                entry["name"],
-                entry["role"],
-                entry["equipo"],
-                db_session,
-            )
+            db_session.begin_nested()
+            try:
+                user = create_user(
+                    entry["name"],
+                    entry["role"],
+                    entry["equipo"],
+                    db_session,
+                )
+                db_session.commit()
+            except IntegrityError:
+                db_session.rollback()
+                logger.exception("Error creating user: %s", entry["name"])
+                continue
 
         n_users += 1
         n_shifts += insert_shift_data(entry["shifts"], month, year, user, db_session)
