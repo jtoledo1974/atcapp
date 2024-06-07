@@ -20,7 +20,7 @@ from flask import (
 from sqlalchemy.exc import IntegrityError
 
 from . import get_timezone
-from .cambios import GenCalMensual, es_admin
+from .cambios import GenCalMensual
 from .carga_estadillo import procesa_estadillo
 from .carga_turnero import procesa_turnero
 from .database import db
@@ -55,6 +55,29 @@ def privacy_policy_accepted(f: Callable) -> Callable:
             return redirect(url_for("main.privacy_policy"))
 
         return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def es_admin(f: Callable) -> Callable:
+    """Check if the user is an admin dectorator."""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs) -> Response | str:  # noqa: ANN002, ANN003
+        """Check if the user is an admin."""
+        id_atc = session.get("id_atc")
+        if not id_atc:
+            # User is not logged in, redirect to login
+            return redirect(url_for("main.login"))
+
+        user = db.session.get(ATC, id_atc)
+        if user and user.es_admin:
+            # User is an admin, proceed with the original function
+            return f(*args, **kwargs)
+
+        # User is not an admin, redirect to index with a warning
+        flash("Debes ser administrador para acceder a esta página.", "warning")
+        return redirect(url_for("main.index"))
 
     return decorated_function
 
@@ -185,7 +208,7 @@ def login() -> Response | str:
     flash("Bienvenido, " + user.nombre + " " + user.apellidos, "success")
 
     # Check for admin user.
-    if es_admin(email):
+    if user.es_admin:
         session["es_admin"] = True
 
     # Verificar si el usuario ha aceptado la política de privacidad
@@ -227,15 +250,13 @@ def privacy_policy() -> Response | str:
 
 @main.route("/upload", methods=["GET", "POST"])
 @privacy_policy_accepted
+@es_admin
 def upload() -> Response | str:
     """Upload shift data to the server.
 
     For GET requests, render the upload page.
     For POST requests, upload the shift data to the server.
     """
-    if session.get("es_admin") is not True:
-        return redirect(url_for("main.index"))
-
     if request.method != "POST":
         return render_template("upload.html")
 
@@ -275,14 +296,13 @@ def upload() -> Response | str:
 
 @main.route("/upload_estadillo", methods=["GET", "POST"])
 @privacy_policy_accepted
+@es_admin
 def upload_estadillo() -> Response | str:
     """Upload estadillo data to the server.
 
     For GET requests, render the upload page.
     For POST requests, upload the estadillo data to the server.
     """
-    if session.get("es_admin") is not True:
-        return redirect(url_for("main.index"))
     if request.method != "POST":
         return render_template("upload_estadillo.html")
     file = request.files["file"]
@@ -339,11 +359,9 @@ def estadillo() -> Response | str:
 
 
 @main.route("/admin/user_list")
+@es_admin
 def admin_user_list() -> Response | str:
     """Render a page with a list of users in a copy-friendly format."""
-    if session.get("es_admin") is not True:
-        return redirect(url_for("main.index"))
-
     users = ATC.query.all()
     user_list = [
         f"{user.id}, {user.nombre}, {user.apellidos}, {user.apellidos_nombre}"
@@ -353,11 +371,9 @@ def admin_user_list() -> Response | str:
 
 
 @main.route("/admin/update_users", methods=["POST"])
+@es_admin
 def admin_update_users() -> Response:
     """Update users in the database based on provided corrected data."""
-    if session.get("es_admin") is not True:
-        return redirect(url_for("main.index"))
-
     corrected_data = request.form.get("corrected_data")
     if not corrected_data:
         flash("No data provided", "danger")
