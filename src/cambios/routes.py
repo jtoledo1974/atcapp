@@ -338,6 +338,54 @@ def estadillo() -> Response | str:
     )
 
 
+@main.route("/admin/user_list")
+def admin_user_list() -> Response | str:
+    """Render a page with a list of users in a copy-friendly format."""
+    if session.get("es_admin") is not True:
+        return redirect(url_for("main.index"))
+
+    users = ATC.query.all()
+    user_list = [
+        f"{user.id}, {user.nombre}, {user.apellidos}, {user.apellidos_nombre}"
+        for user in users
+    ]
+    return render_template("admin_user_list.html", user_list=user_list)
+
+
+@main.route("/admin/update_users", methods=["POST"])
+def admin_update_users() -> Response:
+    """Update users in the database based on provided corrected data."""
+    if session.get("es_admin") is not True:
+        return redirect(url_for("main.index"))
+
+    corrected_data = request.form.get("corrected_data")
+    if not corrected_data:
+        flash("No data provided", "danger")
+        return redirect(url_for("main.admin_user_list"))
+
+    try:
+        updated_users = 0
+        for line in corrected_data.splitlines():
+            try:
+                user_id, nombre, apellidos, _ = line.split(",")
+            except ValueError:
+                flash(f"valores inválidos en: {line}", "danger")
+                logger.warning("Vaores inválidos en: %s", line)
+                continue
+            user = ATC.query.get(user_id)
+            if user:
+                user.nombre = nombre.strip()
+                user.apellidos = apellidos.strip()
+                db.session.commit()
+                updated_users += 1
+
+        flash(f"Successfully updated {updated_users} users", "success")
+    except IntegrityError as e:
+        flash(f"Error updating users: {e}", "danger")
+
+    return redirect(url_for("main.admin_user_list"))
+
+
 def register_routes(app: Flask) -> Blueprint:
     """Register the routes with the app."""
     app.register_blueprint(main)
