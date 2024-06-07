@@ -17,6 +17,7 @@ from flask import (
     session,
     url_for,
 )
+from sqlalchemy.exc import IntegrityError
 
 from . import get_timezone
 from .cambios import GenCalMensual, es_admin
@@ -234,27 +235,39 @@ def upload() -> Response | str:
     """
     if session.get("es_admin") is not True:
         return redirect(url_for("main.index"))
+
     if request.method != "POST":
         return render_template("upload.html")
-    file = request.files["file"]
+
+    files = request.files.getlist("files")
     add_new = bool(request.form.get("add_new"))
-    if not file.filename:
-        flash("No se ha seleccionado un archivo", "danger")
-        return redirect(url_for("main.upload"))
 
-    try:
-        n_users, n_shifts = procesa_turnero(
-            file,
-            db.session,
-            add_new=add_new,
+    if not files or any(not file.filename for file in files):
+        flash(
+            "No se han seleccionado archivos o algunos archivos no tienen nombre",
+            "danger",
         )
-    except ValueError:
-        flash("Formato de archivo no válido", "danger")
         return redirect(url_for("main.upload"))
 
+    total_users = 0
+    total_shifts = 0
+    for file in files:
+        try:
+            n_users, n_shifts = procesa_turnero(
+                file,
+                db.session,
+                add_new=add_new,
+            )
+            total_users += n_users
+            total_shifts += n_shifts
+        except ValueError:
+            flash(f"Formato de archivo no válido: {file.filename}", "danger")
+            return redirect(url_for("main.upload"))
+
+    plural = "s" if len(files) > 1 else ""
     flash(
-        "Archivo cargado con éxito. "
-        f"Usuarios reconocidos: {n_users}, turnos agregados: {n_shifts}",
+        f"Archivo{plural} cargado{plural} con éxito. "
+        f"Usuarios reconocidos: {total_users}, turnos agregados: {total_shifts}",
         "success",
     )
     return redirect(url_for("main.index"))
