@@ -44,7 +44,7 @@ def create_user(
         # Substitute spaces for dots and remove accents
         email_name = (
             f"{name.replace(' ', '.').encode('ascii', 'ignore').decode('utf-8')}"
-        )
+        ).lower()
         email = f"{email_name}@example.com"
 
     # Check first whether the user already exists

@@ -88,7 +88,7 @@ def test_upload_admin_post_add_new(
     user = ATC.query.offset(1).first()
     assert user.nombre == "Manuel"
     assert user.apellidos == "Gil Romero"
-    assert user.email == "GIL.ROMERO.MANUEL@example.com"
+    assert user.email == "gil.romero.manuel@example.com"
     assert user.categoria == "TS"
     assert user.equipo == "A"
     assert user.numero_de_licencia == ""

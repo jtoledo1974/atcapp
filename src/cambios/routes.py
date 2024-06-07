@@ -364,7 +364,7 @@ def admin_user_list() -> Response | str:
     """Render a page with a list of users in a copy-friendly format."""
     users = ATC.query.all()
     user_list = [
-        f"{user.id}, {user.nombre}, {user.apellidos}, {user.apellidos_nombre}"
+        f"{user.id}, {user.nombre}, {user.apellidos}, {user.apellidos_nombre}, {user.email}"
         for user in users
     ]
     return render_template("admin_user_list.html", user_list=user_list)
@@ -383,7 +383,7 @@ def admin_update_users() -> Response:
         updated_users = 0
         for line in corrected_data.splitlines():
             try:
-                user_id, nombre, apellidos, _ = line.split(",")
+                user_id, nombre, apellidos, _, email = line.split(",")
             except ValueError:
                 flash(f"valores inválidos en: {line}", "danger")
                 logger.warning("Vaores inválidos en: %s", line)
@@ -392,6 +392,7 @@ def admin_update_users() -> Response:
             if user:
                 user.nombre = nombre.strip()
                 user.apellidos = apellidos.strip()
+                user.email = email.strip()
                 db.session.commit()
                 updated_users += 1
 
