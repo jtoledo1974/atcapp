@@ -15,7 +15,7 @@ logger = getLogger(__name__)
 
 
 def create_user(
-    name: str | tuple[str, str],
+    name: str,
     role: str,
     equipo: str | None,
     db_session: scoped_session,
@@ -37,6 +37,7 @@ def create_user(
         User: The created user.
 
     """
+    name = name.strip()
     if isinstance(name, str):
         nombre, apellidos = parse_name(name)
     elif isinstance(name, tuple) and len(name) == 2:  # noqa: PLR2004
@@ -46,7 +47,11 @@ def create_user(
         raise ValueError(_msg)
 
     if not email:
-        email = f"fixme{nombre.strip()}{apellidos.strip()}fixme@example.com"
+        # Substitute spaces for dots and remove accents
+        email_name = (
+            f"{name.replace(' ', '.').encode('ascii', 'ignore').decode('utf-8')}"
+        )
+        email = f"{email_name}@example.com"
 
     # Check first whether the user already exists
     existing_user = find_user(f"{apellidos} {nombre}", db_session)
@@ -66,6 +71,7 @@ def create_user(
         equipo=equipo.upper() if equipo else None,
         numero_de_licencia="",
     )
+    logger.debug("Creando nuevo controlador: %s", new_user)
     db_session.add(new_user)
     return new_user
 
