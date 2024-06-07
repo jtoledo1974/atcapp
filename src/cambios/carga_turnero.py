@@ -101,7 +101,12 @@ def extract_schedule_data(page: Page) -> list[dict]:
                 shifts.extend([""] * (MAX_DAYS_IN_MONTH - len(shifts)))
 
             data.append(
-                {"name": name, "role": role, "equipo": equipo, "shifts": shifts},
+                {
+                    "name": name.strip(),
+                    "role": role.strip(),
+                    "equipo": equipo.strip() if equipo else None,
+                    "shifts": shifts,
+                },
             )
 
     return data

@@ -194,6 +194,7 @@ def _verify_admin_id_token_mock(mocker: MockerFixture) -> None:
 def regular_user(session: scoped_session) -> ATC:
     """Create a regular user for testing."""
     user = ATC(
+        apellidos_nombre="User Regular",
         email="user@example.com",
         nombre="Regular",
         apellidos="User",
