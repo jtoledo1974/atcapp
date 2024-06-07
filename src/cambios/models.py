@@ -10,6 +10,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Table,
@@ -45,13 +46,21 @@ class ATC(db.Model):  # type: ignore[name-defined]
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
-    nombre: Mapped[str] = mapped_column(String(100), nullable=False)
-    apellidos: Mapped[str] = mapped_column(String(100), nullable=False)
+    apellidos_nombre: Mapped[str] = mapped_column(
+        String(70),
+        unique=True,
+        nullable=False,
+    )
+    """Nombre completo del controlador según lo presenta enaire."""
+    nombre: Mapped[str] = mapped_column(String(40), nullable=False)
+    apellidos: Mapped[str] = mapped_column(String(40), nullable=False)
     categoria: Mapped[str] = mapped_column(String(50), nullable=False)
     equipo: Mapped[str | None] = mapped_column(String(1), nullable=True)
-    numero_de_licencia: Mapped[str] = mapped_column(String(50), nullable=False)
+    numero_de_licencia: Mapped[str] = mapped_column(String(50), nullable=True)
     es_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     politica_aceptada: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    __table_args__ = (Index("idx_apellidos_nombre", "apellidos_nombre"),)
 
     servicios: Mapped[list[Servicio]] = relationship("Servicio", back_populates="atc")
     estadillos: Mapped[list[Estadillo]] = relationship(
@@ -64,11 +73,6 @@ class ATC(db.Model):  # type: ignore[name-defined]
         "Periodo",
         back_populates="controlador",
     )
-
-    @property
-    def apellidos_nombre(self) -> str:
-        """Nombre completo del controlador según lo presenta enaire."""
-        return f"{self.apellidos} {self.nombre}"
 
     @property
     def nombre_apellidos(self) -> str:

@@ -153,6 +153,7 @@ def login() -> Response | str:
                 " Se asume que el primer usuario es un administrador.",
             )
             user = ATC(
+                apellidos_nombre="Admin User",
                 email=email,
                 nombre="Admin",
                 apellidos="User",
