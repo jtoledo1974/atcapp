@@ -261,7 +261,6 @@ def upload() -> Response | str:
         return render_template("upload.html")
 
     files = request.files.getlist("files")
-    add_new = bool(request.form.get("add_new"))
 
     if not files or any(not file.filename for file in files):
         flash(
@@ -277,7 +276,6 @@ def upload() -> Response | str:
             n_users, n_shifts = procesa_turnero(
                 file,
                 db.session,
-                add_new=add_new,
             )
             total_users += n_users
             total_shifts += n_shifts

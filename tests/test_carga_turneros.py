@@ -36,33 +36,6 @@ def extract_users_and_shifts_inserted(response: bytes) -> tuple[int, int]:
 def test_upload_admin_post(
     client: FlaskClient,
     admin_user: ATC,
-    turnero_path: Path,
-) -> None:
-    """Test that the upload route processes a valid PDF file."""
-    # Log in as admin user
-    client.post("/login", data={"idToken": "test_token"})
-
-    # Path to the test PDF file
-    with turnero_path.open("rb") as file:
-        response = client.post(
-            "/upload",
-            data={"files": (file, "turnero.pdf")},
-            content_type="multipart/form-data",
-            follow_redirects=True,
-        )
-
-    assert response.status_code == 200
-    assert "Archivo cargado con éxito".encode() in response.data
-    users, shifts = extract_users_and_shifts_inserted(response.data)
-    # We never checked the add_new checkbox, so no users or shifts should be added
-    assert users == 0
-    assert shifts == 0
-
-
-@pytest.mark.usefixtures("_verify_admin_id_token_mock")
-def test_upload_admin_post_add_new(
-    client: FlaskClient,
-    admin_user: ATC,
     db: SQLAlchemy,
     turnero_path: Path,
 ) -> None:
@@ -73,14 +46,13 @@ def test_upload_admin_post_add_new(
     with turnero_path.open("rb") as file:
         response = client.post(
             "/upload",
-            data={"files": (file, "turnero.pdf"), "add_new": "on"},
+            data={"files": (file, "turnero.pdf")},
             content_type="multipart/form-data",
             follow_redirects=True,
         )
 
     assert response.status_code == 200
     users, shifts = extract_users_and_shifts_inserted(response.data)
-    # We checked the add_new checkbox, so users and shifts should be added
     assert users == 20
     assert shifts == 445
 

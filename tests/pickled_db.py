@@ -44,7 +44,7 @@ def create_in_memory_db() -> Session:
 def create_test_data(session: Session) -> None:
     """Crea datos de prueba en la base de datos."""
     with __TEST_TURNERO_PATH.open("rb") as file:
-        procesa_turnero(file, session, add_new=True)  # type: ignore[arg-type]
+        procesa_turnero(file, session)  # type: ignore[arg-type]
     with __TEST_ESTADILLO_PATH.open("rb") as file:
         procesa_estadillo(file, session)  # type: ignore[arg-type]
 

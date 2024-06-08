@@ -187,8 +187,6 @@ def parse_and_insert_data(
     month: str,
     year: str,
     db_session: scoped_session,
-    *,
-    add_new: bool = False,
 ) -> tuple[int, int]:
     """Parse extracted data and insert it into the database.
 
@@ -213,9 +211,6 @@ def parse_and_insert_data(
 
             if user:
                 user = update_user(user, entry.role, entry.equipo)
-            elif not add_new:
-                logger.warning("User not found for entry: %s", entry.name)
-                continue
             else:
                 user = create_user(
                     entry.name,
@@ -242,14 +237,13 @@ def parse_and_insert_data(
 def procesa_turnero(
     file: FileStorage | BufferedReader,
     db_session: scoped_session,
-    *,
-    add_new: bool = False,
 ) -> tuple[int, int]:
     """Process the uploaded file and insert data into the database.
 
     The function extracts the schedule data from the uploaded file, parses the data,
-    and inserts it into the database. The add_new parameter determines whether new
-    users should be added to the database. The app_logger parameter can be used to
+    and inserts it into the database.
+    Usuarios desconocidos se añaden a la base de datos.
+    The app_logger parameter can be used to
     pass a logger instance to the function.
 
     Returns the number of users and shifts inserted.
@@ -268,7 +262,6 @@ def procesa_turnero(
                 month,
                 year,
                 db_session,
-                add_new=add_new,
             )
 
     except PDFSyntaxError as e:
