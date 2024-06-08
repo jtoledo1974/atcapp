@@ -364,7 +364,8 @@ def admin_user_list() -> Response | str:
     """Render a page with a list of users in a copy-friendly format."""
     users = ATC.query.all()
     user_list = [
-        f"{user.id}, {user.nombre}, {user.apellidos}, {user.apellidos_nombre}, {user.email}"
+        f"{user.id}, {user.nombre}, {user.apellidos}, "
+        f"{user.apellidos_nombre}, {user.email}"
         for user in users
     ]
     return render_template("admin_user_list.html", user_list=user_list)

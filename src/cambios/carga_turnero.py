@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING
 
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
-from sqlalchemy.exc import IntegrityError
 
 from . import get_timezone
 from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
@@ -149,13 +148,13 @@ def insert_shift_data(
     The shifts list contains the shift codes for each day of the month.
     Returns the number of shifts inserted.
     """
+    tz = get_timezone()
     n_shifts = 0
     logger.info("Inserting shifts for %s %s", user.nombre, user.apellidos)
     for day, shift_code in enumerate(shifts, start=1):
         if shift_code:  # Skip empty shift codes
             date_str = f"{day:02d} {month} {year}"
             try:
-                tz = get_timezone()
                 shift_date = (
                     datetime.strptime(date_str, "%d %B %Y").astimezone(tz).date()
                 )
@@ -163,12 +162,13 @@ def insert_shift_data(
                 continue
 
             # Check if shift already exists for the user on this date
-            existing_shift = (
+            servicio = (
                 db_session.query(Turno)
                 .filter_by(id_atc=user.id, fecha=shift_date)
                 .first()
             )
-            if existing_shift:
+            if servicio:
+                servicio.turno = shift_code
                 continue
 
             new_shift = Turno(
@@ -192,46 +192,48 @@ def parse_and_insert_data(
 ) -> tuple[int, int]:
     """Parse extracted data and insert it into the database.
 
-    The data is a list of ScheduleEntry instances, each containing the name, role, equipo,
-    and shifts for a user. The function parses the data, finds or creates the
+    The data is a list of ScheduleEntry instances, each containing the name, role,
+    equipo, and shifts for a user. The function parses the data, finds or creates the
     user in the database, and inserts the shift data for each user.
 
     Returns the number of identified users and shifts inserted.
     """
     n_users = 0
     n_shifts = 0
-    for entry in all_data:
-        if not is_valid_user_entry(entry):
-            continue
 
-        user = find_user(
-            entry.name,
-            db_session,
-        )
+    try:
+        for entry in all_data:
+            if not is_valid_user_entry(entry):
+                continue
 
-        if user:
-            user = update_user(user, entry.role, entry.equipo)
-        elif not add_new:
-            logger.warning("User not found for entry: %s", entry.name)
-            continue
-        else:
-            db_session.begin_nested()
-            try:
+            user = find_user(
+                entry.name,
+                db_session,
+            )
+
+            if user:
+                user = update_user(user, entry.role, entry.equipo)
+            elif not add_new:
+                logger.warning("User not found for entry: %s", entry.name)
+                continue
+            else:
                 user = create_user(
                     entry.name,
                     entry.role,
                     entry.equipo,
                     db_session,
                 )
-                db_session.commit()
-            except IntegrityError:
-                db_session.rollback()
-                logger.exception("Error creating user: %s", entry.name)
-                continue
+                db_session.flush()
 
-        n_users += 1
-        n_shifts += insert_shift_data(entry.shifts, month, year, user, db_session)
+            n_users += 1
+            n_shifts += insert_shift_data(entry.shifts, month, year, user, db_session)
+            db_session.flush()
+
         db_session.commit()
+    except Exception:
+        logger.exception("Error processing schedule data")
+        db_session.rollback()
+        raise
 
     logger.info("Inserted %d users and %d shifts", n_users, n_shifts)
     return n_users, n_shifts
