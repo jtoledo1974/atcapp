@@ -103,6 +103,14 @@ class ATC(Base):
         "Periodo",
         back_populates="controlador",
     )
+    archivos: Mapped[list[Archivo]] = relationship("Archivo", back_populates="atc")
+    """Archivos subidos por el controlador."""
+
+    cambios_manuales: Mapped[list[TurnoManual]] = relationship(
+        "TurnoManual",
+        back_populates="atc",
+    )
+    """Cambios de turno manuales realizados por el controlador."""
 
     @property
     def nombre_apellidos(self) -> str:
