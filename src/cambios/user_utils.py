@@ -6,7 +6,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 from .models import ATC
-from .name_utils import capitaliza_nombre, parse_name
+from .name_utils import capitaliza_nombre, fix_encoding, parse_name
 
 if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import scoped_session
@@ -88,11 +88,7 @@ def find_user(
     The name is expected to be in the format "apellidos nombre".
     """
     # Find the user in the database by name
-    user = db_session.query(ATC).filter(ATC.apellidos_nombre == name).first()
-    users = db_session.query(ATC).all()
-
-    for user in users:
-        if user.apellidos_nombre == name:
-            return user
-
+    query = db_session.query(ATC).filter(ATC.apellidos_nombre == fix_encoding(name))
+    if query.count() > 0:
+        return query.first()
     return None

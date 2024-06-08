@@ -27,6 +27,19 @@ MAX_N_NOMBRE = 2
 """Limitar a dos nombres para evitar problemas con nombres compuestos."""
 
 
+def fix_encoding(name: str) -> str:
+    """Corregir una codificación incorrecta de un nombre.
+
+    Enaire no incluye acentos en los nombres pero sí las eñes.
+    Si se detecta el código incorrecto que corresponde a la Ñ, se reemplaza por
+    el carácter correcto.
+    """
+    misencoded_eñe = "Ã‘"  # noqa: RUF001
+    if misencoded_eñe in name:
+        name = name.replace(misencoded_eñe, "Ñ")
+    return name
+
+
 def parse_name(name: str) -> tuple[str, str]:
     """Parse the name into first and last name.
 
@@ -49,7 +62,7 @@ def parse_name(name: str) -> tuple[str, str]:
     MARTINEZ MORALES MARIA VIRGINIA: Nombre: MARIA VIRGINIA, Apellidos: MARTINEZ MORALES
     DE ANDRES RICO MARIO -> Nombre: MARIO, Apellidos: DE ANDRES RICO
     """
-    parts = name.split()
+    parts = fix_encoding(name).split()
     apellidos_parts: list[str] = []
     i = 0
 
