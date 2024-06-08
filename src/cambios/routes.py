@@ -22,7 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from . import get_timezone
 from .cambios import GenCalMensual
 from .carga_estadillo import procesa_estadillo
-from .carga_turnero import procesa_turnero
+from .carga_turnero import ResultadoProcesadoTurnero, procesa_turnero
 from .database import db
 from .estadillos import genera_datos_estadillo
 from .firebase import invalidate_token, verify_id_token
@@ -269,16 +269,14 @@ def upload() -> Response | str:
         )
         return redirect(url_for("main.upload"))
 
-    total_users = 0
-    total_shifts = 0
+    total = ResultadoProcesadoTurnero()
     for file in files:
         try:
-            n_users, n_shifts = procesa_turnero(
+            res = procesa_turnero(
                 file,
                 db.session,
             )
-            total_users += n_users
-            total_shifts += n_shifts
+            total = total.incluye(res)
         except ValueError:
             flash(f"Formato de archivo no válido: {file.filename}", "danger")
             return redirect(url_for("main.upload"))
@@ -286,7 +284,8 @@ def upload() -> Response | str:
     plural = "s" if len(files) > 1 else ""
     flash(
         f"Archivo{plural} cargado{plural} con éxito. "
-        f"Usuarios reconocidos: {total_users}, turnos agregados: {total_shifts}",
+        f"Usuarios reconocidos: {total.n_total_users}, "
+        f"turnos agregados: {total.n_created_shifts}",
         "success",
     )
     return redirect(url_for("main.index"))

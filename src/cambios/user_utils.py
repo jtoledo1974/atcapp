@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import Enum, auto
 from logging import getLogger
 from typing import TYPE_CHECKING
 
@@ -12,6 +13,13 @@ if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import scoped_session
 
 logger = getLogger(__name__)
+
+
+class UpdateResult(Enum):
+    """The result of updating a user."""
+
+    NO_CHANGE = auto()
+    UPDATED = auto()
 
 
 def create_user(
@@ -70,13 +78,16 @@ def create_user(
     return new_user
 
 
-def update_user(user: ATC, role: str, equipo: str | None) -> ATC:
+def update_user(user: ATC, role: str, equipo: str | None) -> UpdateResult:
     """Update the user's equipo and role if they differ from the provided values."""
+    res = UpdateResult.NO_CHANGE
     if role and user.categoria != role:
         user.categoria = role
+        res = UpdateResult.UPDATED
     if equipo and user.equipo != equipo.upper():
         user.equipo = equipo.upper()
-    return user
+        res = UpdateResult.UPDATED
+    return res
 
 
 def find_user(
