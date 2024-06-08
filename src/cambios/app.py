@@ -62,7 +62,7 @@ def configure_logging(
     env_enable_logging = os.getenv("ENABLE_LOGGING")
     if env_enable_logging:
         enable_logging = env_enable_logging.lower() in ["true", "1", "t"]
-        if log_level < logging.INFO:
+        if log_level > logging.INFO:
             log_level = logging.INFO
 
     logger = logging.getLogger()

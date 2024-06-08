@@ -17,9 +17,10 @@ from flask import (
     session,
     url_for,
 )
+from sqlalchemy.exc import IntegrityError
 
 from . import get_timezone
-from .cambios import GenCalMensual, es_admin
+from .cambios import GenCalMensual
 from .carga_estadillo import procesa_estadillo
 from .carga_turnero import procesa_turnero
 from .database import db
@@ -54,6 +55,29 @@ def privacy_policy_accepted(f: Callable) -> Callable:
             return redirect(url_for("main.privacy_policy"))
 
         return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def es_admin(f: Callable) -> Callable:
+    """Check if the user is an admin dectorator."""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs) -> Response | str:  # noqa: ANN002, ANN003
+        """Check if the user is an admin."""
+        id_atc = session.get("id_atc")
+        if not id_atc:
+            # User is not logged in, redirect to login
+            return redirect(url_for("main.login"))
+
+        user = db.session.get(ATC, id_atc)
+        if user and user.es_admin:
+            # User is an admin, proceed with the original function
+            return f(*args, **kwargs)
+
+        # User is not an admin, redirect to index with a warning
+        flash("Debes ser administrador para acceder a esta página.", "warning")
+        return redirect(url_for("main.index"))
 
     return decorated_function
 
@@ -153,6 +177,7 @@ def login() -> Response | str:
                 " Se asume que el primer usuario es un administrador.",
             )
             user = ATC(
+                apellidos_nombre="Admin User",
                 email=email,
                 nombre="Admin",
                 apellidos="User",
@@ -183,7 +208,7 @@ def login() -> Response | str:
     flash("Bienvenido, " + user.nombre + " " + user.apellidos, "success")
 
     # Check for admin user.
-    if es_admin(email):
+    if user.es_admin:
         session["es_admin"] = True
 
     # Verificar si el usuario ha aceptado la política de privacidad
@@ -225,35 +250,45 @@ def privacy_policy() -> Response | str:
 
 @main.route("/upload", methods=["GET", "POST"])
 @privacy_policy_accepted
+@es_admin
 def upload() -> Response | str:
     """Upload shift data to the server.
 
     For GET requests, render the upload page.
     For POST requests, upload the shift data to the server.
     """
-    if session.get("es_admin") is not True:
-        return redirect(url_for("main.index"))
     if request.method != "POST":
         return render_template("upload.html")
-    file = request.files["file"]
+
+    files = request.files.getlist("files")
     add_new = bool(request.form.get("add_new"))
-    if not file.filename:
-        flash("No se ha seleccionado un archivo", "danger")
-        return redirect(url_for("main.upload"))
 
-    try:
-        n_users, n_shifts = procesa_turnero(
-            file,
-            db.session,
-            add_new=add_new,
+    if not files or any(not file.filename for file in files):
+        flash(
+            "No se han seleccionado archivos o algunos archivos no tienen nombre",
+            "danger",
         )
-    except ValueError:
-        flash("Formato de archivo no válido", "danger")
         return redirect(url_for("main.upload"))
 
+    total_users = 0
+    total_shifts = 0
+    for file in files:
+        try:
+            n_users, n_shifts = procesa_turnero(
+                file,
+                db.session,
+                add_new=add_new,
+            )
+            total_users += n_users
+            total_shifts += n_shifts
+        except ValueError:
+            flash(f"Formato de archivo no válido: {file.filename}", "danger")
+            return redirect(url_for("main.upload"))
+
+    plural = "s" if len(files) > 1 else ""
     flash(
-        "Archivo cargado con éxito. "
-        f"Usuarios reconocidos: {n_users}, turnos agregados: {n_shifts}",
+        f"Archivo{plural} cargado{plural} con éxito. "
+        f"Usuarios reconocidos: {total_users}, turnos agregados: {total_shifts}",
         "success",
     )
     return redirect(url_for("main.index"))
@@ -261,14 +296,13 @@ def upload() -> Response | str:
 
 @main.route("/upload_estadillo", methods=["GET", "POST"])
 @privacy_policy_accepted
+@es_admin
 def upload_estadillo() -> Response | str:
     """Upload estadillo data to the server.
 
     For GET requests, render the upload page.
     For POST requests, upload the estadillo data to the server.
     """
-    if session.get("es_admin") is not True:
-        return redirect(url_for("main.index"))
     if request.method != "POST":
         return render_template("upload_estadillo.html")
     file = request.files["file"]
@@ -322,6 +356,51 @@ def estadillo() -> Response | str:
         "estadillo.html",
         grupos=grupos,
     )
+
+
+@main.route("/admin/user_list")
+@es_admin
+def admin_user_list() -> Response | str:
+    """Render a page with a list of users in a copy-friendly format."""
+    users = ATC.query.all()
+    user_list = [
+        f"{user.id}, {user.nombre}, {user.apellidos}, {user.apellidos_nombre}, {user.email}"
+        for user in users
+    ]
+    return render_template("admin_user_list.html", user_list=user_list)
+
+
+@main.route("/admin/update_users", methods=["POST"])
+@es_admin
+def admin_update_users() -> Response:
+    """Update users in the database based on provided corrected data."""
+    corrected_data = request.form.get("corrected_data")
+    if not corrected_data:
+        flash("No data provided", "danger")
+        return redirect(url_for("main.admin_user_list"))
+
+    try:
+        updated_users = 0
+        for line in corrected_data.splitlines():
+            try:
+                user_id, nombre, apellidos, _, email = line.split(",")
+            except ValueError:
+                flash(f"valores inválidos en: {line}", "danger")
+                logger.warning("Vaores inválidos en: %s", line)
+                continue
+            user = ATC.query.get(user_id)
+            if user:
+                user.nombre = nombre.strip()
+                user.apellidos = apellidos.strip()
+                user.email = email.strip()
+                db.session.commit()
+                updated_users += 1
+
+        flash(f"Successfully updated {updated_users} users", "success")
+    except IntegrityError as e:
+        flash(f"Error updating users: {e}", "danger")
+
+    return redirect(url_for("main.admin_user_list"))
 
 
 def register_routes(app: Flask) -> Blueprint:

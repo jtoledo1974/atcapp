@@ -23,11 +23,10 @@ users_shifts_pattern = re.compile(
 def extract_users_and_shifts_inserted(response: bytes) -> tuple[int, int]:
     """Extract the number of users and shifts inserted from the response."""
     match = re.search(
-        rb"(\d+) users and (\d+) shifts inserted",
+        rb"Usuarios reconocidos: (\d+), turnos agregados: (\d+)",
         response,
         re.IGNORECASE,
     )
-    match = users_shifts_pattern.search(response)
 
     assert match is not None, "Expected flash message not found"
     return int(match.group(1)), int(match.group(2))
@@ -47,7 +46,7 @@ def test_upload_admin_post(
     with turnero_path.open("rb") as file:
         response = client.post(
             "/upload",
-            data={"file": file},
+            data={"files": (file, "turnero.pdf")},
             content_type="multipart/form-data",
             follow_redirects=True,
         )
@@ -74,7 +73,7 @@ def test_upload_admin_post_add_new(
     with turnero_path.open("rb") as file:
         response = client.post(
             "/upload",
-            data={"file": file, "add_new": "on"},
+            data={"files": (file, "turnero.pdf"), "add_new": "on"},
             content_type="multipart/form-data",
             follow_redirects=True,
         )
@@ -87,9 +86,9 @@ def test_upload_admin_post_add_new(
 
     # Skip the first user (Admin) and get the second user
     user = ATC.query.offset(1).first()
-    assert user.nombre == "MANUEL"
-    assert user.apellidos == "GIL ROMERO"
-    assert user.email == "fixmeMANUELGIL ROMEROfixme@example.com"
+    assert user.nombre == "Manuel"
+    assert user.apellidos == "Gil Romero"
+    assert user.email == "gil.romero.manuel@example.com"
     assert user.categoria == "TS"
     assert user.equipo == "A"
     assert user.numero_de_licencia == ""
@@ -104,7 +103,7 @@ def test_upload_admin_post_add_new(
     with turnero_path.open("rb") as file:
         response = client.post(
             "/upload",
-            data={"file": file},
+            data={"files": (file, "turnero.pdf")},
             content_type="multipart/form-data",
             follow_redirects=True,
         )
@@ -129,7 +128,7 @@ def test_upload_post_invalid_file(
     with test_file_path.open("rb") as file:
         response = client.post(
             "/upload",
-            data={"file": file},
+            data={"files": (file, "turnero.pdf")},
             content_type="multipart/form-data",
             follow_redirects=True,
         )

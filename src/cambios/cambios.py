@@ -127,22 +127,6 @@ def description_from_code(code: str) -> str:
     return code
 
 
-def es_admin(email: str) -> bool:
-    """Check if the user is an admin.
-
-    Checks the es_admin column in Users.
-    If no users have the es_admin flag set, the first user to log in becomes the admin.
-
-    """
-    user = ATC.query.filter_by(email=email).first()
-    if user:
-        # The user was found
-        return user.es_admin
-
-    # User is not an admin. Check whether anyone is an admin.
-    return not ATC.query.filter_by(es_admin=True).first()
-
-
 @dataclass
 class Turno:
     """Shift information."""

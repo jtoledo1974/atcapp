@@ -7,7 +7,37 @@ from logging import getLogger
 
 logger = getLogger(__name__)
 
-PREPOSITIONS = {"DE", "DEL", "DE LA", "DE LOS", "DE LAS", "DA", "DAS", "DO", "DOS"}
+PREPOSITIONS = {
+    "DE",
+    "DEL",
+    "DA",
+    "DAS",
+    "DO",
+    "DOS",
+}
+ARTICLES = {
+    "LA",
+    "EL",
+    "LOS",
+    "LAS",
+}
+
+MIN_N_APELLIDOS = 2
+MAX_N_NOMBRE = 2
+"""Limitar a dos nombres para evitar problemas con nombres compuestos."""
+
+
+def fix_encoding(name: str) -> str:
+    """Corregir una codificación incorrecta de un nombre.
+
+    Enaire no incluye acentos en los nombres pero sí las eñes.
+    Si se detecta el código incorrecto que corresponde a la Ñ, se reemplaza por
+    el carácter correcto.
+    """
+    misencoded_eñe = "Ã‘"  # noqa: RUF001
+    if misencoded_eñe in name:
+        name = name.replace(misencoded_eñe, "Ñ")
+    return name
 
 
 def parse_name(name: str) -> tuple[str, str]:
@@ -32,21 +62,20 @@ def parse_name(name: str) -> tuple[str, str]:
     MARTINEZ MORALES MARIA VIRGINIA: Nombre: MARIA VIRGINIA, Apellidos: MARTINEZ MORALES
     DE ANDRES RICO MARIO -> Nombre: MARIO, Apellidos: DE ANDRES RICO
     """
-    parts = name.split()
+    parts = fix_encoding(name).split()
     apellidos_parts: list[str] = []
     i = 0
 
     # Identify the last names
-    while i < len(parts) and len(apellidos_parts) < 2:  # noqa: PLR2004 Dos apellidos
-        if parts[i].upper() in PREPOSITIONS:
+    n_parts = len(parts)
+    while i < n_parts and (
+        len(apellidos_parts) < MIN_N_APELLIDOS or i < n_parts - MAX_N_NOMBRE
+    ):  # Dos apellidos
+        if parts[i].upper() in PREPOSITIONS.union(ARTICLES):
             # Handle multi-word prepositions (e.g., "DE LA", "DE LOS")
-            if i + 1 < len(parts):
-                if parts[i].upper() in {"DE", "DEL"}:
-                    if i + 2 < len(parts) and parts[i + 1].upper() in {
-                        "LA",
-                        "LOS",
-                        "LAS",
-                    }:
+            if i + 1 < n_parts:
+                if parts[i].upper() in PREPOSITIONS:
+                    if i + 2 < n_parts and parts[i + 1].upper() in ARTICLES:
                         apellidos_parts.append(" ".join(parts[i : i + 3]))
                         i += 3
                     else:
@@ -64,13 +93,14 @@ def parse_name(name: str) -> tuple[str, str]:
     # The rest is the first name
     nombre_parts = parts[i:]
 
+    # Join the components into full names
     apellidos = " ".join(apellidos_parts)
     nombre = " ".join(nombre_parts)
 
     return nombre, apellidos
 
 
-def capitaliza_nombre(nombre: str, apellidos: str) -> str:
+def capitaliza_nombre(nombre: str, apellidos: str) -> tuple[str, str]:
     """Capitaliza el nombre, manteniendo las preposiciones como minúsculas."""
     nombre_parts = nombre.split()
     apellidos_parts = apellidos.split()
@@ -82,18 +112,30 @@ def capitaliza_nombre(nombre: str, apellidos: str) -> str:
             nombre_parts[i] = part.lower()
 
     for i, part in enumerate(apellidos_parts):
-        if part.upper() not in PREPOSITIONS:
+        if part.upper() not in PREPOSITIONS.union(ARTICLES) or (
+            part.upper() in ARTICLES
+            and (
+                i == 0 or (i > 0 and apellidos_parts[i - 1].upper() not in PREPOSITIONS)
+            )
+        ):
             apellidos_parts[i] = part.capitalize()
         else:
             apellidos_parts[i] = part.lower()
 
     n = " ".join(nombre_parts)
     a = " ".join(apellidos_parts)
-    return f"{n} {a}"
+    return n, a
 
 
-def normalize_string(s: str) -> str:
+def to_lower_no_accents(s: str) -> str:
     """Normalize string by removing accents and converting to lowercase."""
     return "".join(
         c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
     ).lower()
+
+
+def to_no_accents(s: str) -> str:
+    """Normalize string by removing accents."""
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+    )

@@ -81,9 +81,12 @@ def test_upload_post_no_file(client: FlaskClient, admin_user: ATC) -> None:
     """Test that the upload route fails if no file is selected."""
     client.post("/login", data={"idToken": "test_token"})
     # Submit the upload form with an empty file field
-    response = client.post("/upload", data={"file": (None, "")}, follow_redirects=True)
+    response = client.post("/upload", data={"files": (None, "")}, follow_redirects=True)
     assert response.status_code == 200
-    assert b"No se ha seleccionado un archivo" in response.data
+    assert (
+        b"No se han seleccionado archivos o algunos archivos no tienen nombre"
+        in response.data
+    )
 
 
 @pytest.mark.usefixtures("_verify_id_token_mock")

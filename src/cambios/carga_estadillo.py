@@ -210,8 +210,13 @@ def guardar_atc_en_estadillo(
 
     Si el atc no existe en la base de datos, se crea.
     """
+    if not name:
+        _msg = "El nombre del controlador no puede estar vacío"
+        raise ValueError(_msg)
+
     user = find_user(name, db_session)
     if not user:
+        logger.debug("Controlador %s no encontrado en la base de datos", name)
         user = create_user(name, role, None, db_session)
 
     servicio = (
@@ -333,14 +338,18 @@ def procesar_controladores_y_sectores(
     Añade a la base de datos a los controladores y sectores que no existan.
     """
     for nombre_controlador, controller in controladores.items():
-        user = guardar_atc_en_estadillo(
-            nombre_controlador,
-            "Controlador",
-            estadillo,
-            controller.puesto,
-            db_session,
-        )
-        update_user(user, controller.puesto, None)
+        try:
+            user = guardar_atc_en_estadillo(
+                nombre_controlador,
+                "Controlador",
+                estadillo,
+                controller.puesto,
+                db_session,
+            )
+            update_user(user, controller.puesto, None)
+        except ValueError:
+            logger.exception("Error al guardar controlador %s", nombre_controlador)
+            continue
 
         for sector_name in controller.sectores:
             sector = db_session.query(Sector).filter_by(nombre=sector_name).first()
@@ -397,35 +406,25 @@ def guardar_datos_estadillo(
         db_session.add(estadillo)
         db_session.commit()
 
-    # Procesar jefes de sala
-    for nombre_jefe_de_sala in data.jefes_de_sala:
-        guardar_atc_en_estadillo(
-            nombre_jefe_de_sala,
-            "Jefe de Sala",
-            estadillo,
-            "JDS",
-            db_session,
-        )
+    roles = {
+        "jefes_de_sala": ("Jefe de Sala", "JDS"),
+        "supervisores": ("Supervisor", "SUP"),
+        "tcas": ("TCA", "TCA"),
+    }
 
-    # Procesar supervisores
-    for nombre_supervisor in data.supervisores:
-        guardar_atc_en_estadillo(
-            nombre_supervisor,
-            "Supervisor",
-            estadillo,
-            "SUP",
-            db_session,
-        )
-
-    # Procesar TCAs
-    for nombre_tca in data.tcas:
-        guardar_atc_en_estadillo(
-            nombre_tca,
-            "TCA",
-            estadillo,
-            "TCA",
-            db_session,
-        )
+    for rol, (titulo, identificador) in roles.items():
+        for nombre in (nombre for nombre in getattr(data, rol) if nombre):
+            try:
+                guardar_atc_en_estadillo(
+                    nombre,
+                    titulo,
+                    estadillo,
+                    identificador,
+                    db_session,
+                )
+            except ValueError:
+                logger.exception("Error al guardar %s %s", titulo, nombre)
+                continue
 
     # Procesar controladores y sus sectores
     procesar_controladores_y_sectores(data.controladores, estadillo, db_session)

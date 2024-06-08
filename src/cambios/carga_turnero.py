@@ -11,6 +11,7 @@ the data into the database.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 from datetime import datetime
 from io import BufferedReader, BytesIO
 from logging import getLogger
@@ -18,6 +19,7 @@ from typing import TYPE_CHECKING
 
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
+from sqlalchemy.exc import IntegrityError
 
 from . import get_timezone
 from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
@@ -30,6 +32,16 @@ if TYPE_CHECKING:  # pragma: no cover
     from pdfplumber.page import Page
     from sqlalchemy.orm.scoping import scoped_session
     from werkzeug.datastructures import FileStorage
+
+
+@dataclass
+class ScheduleEntry:
+    """Data for a single schedule entry."""
+
+    name: str
+    role: str
+    equipo: str | None = None
+    shifts: list[str] = field(default_factory=list)
 
 
 def is_valid_shift_code(shift_code: str) -> bool:
@@ -59,7 +71,7 @@ def extract_month_year(text: str) -> tuple[str, str]:
 MAX_DAYS_IN_MONTH = 31
 
 
-def extract_schedule_data(page: Page) -> list[dict]:
+def extract_schedule_data(page: Page) -> list[ScheduleEntry]:
     """Extract the schedule data from the page."""
     table = page.extract_table()
     if table is None:
@@ -100,16 +112,21 @@ def extract_schedule_data(page: Page) -> list[dict]:
                 shifts.extend([""] * (MAX_DAYS_IN_MONTH - len(shifts)))
 
             data.append(
-                {"name": name, "role": role, "equipo": equipo, "shifts": shifts},
+                ScheduleEntry(
+                    name=name.strip(),
+                    role=role.strip(),
+                    equipo=equipo.strip() if equipo else None,
+                    shifts=shifts,
+                ),
             )
 
     return data
 
 
-def is_valid_user_entry(entry: dict) -> bool:
+def is_valid_user_entry(entry: ScheduleEntry) -> bool:
     """Check if the user entry is valid."""
     days_of_week = {"S", "D", "L", "M", "X", "J", "V"}
-    if not entry["name"] or all(day in days_of_week for day in entry["shifts"]):
+    if not entry.name or all(day in days_of_week for day in entry.shifts):
         return False
     return True
 
@@ -166,7 +183,7 @@ def insert_shift_data(
 
 
 def parse_and_insert_data(
-    all_data: list[dict],
+    all_data: list[ScheduleEntry],
     month: str,
     year: str,
     db_session: scoped_session,
@@ -175,7 +192,7 @@ def parse_and_insert_data(
 ) -> tuple[int, int]:
     """Parse extracted data and insert it into the database.
 
-    The data is a list of dictionaries, each containing the name, role, equipo,
+    The data is a list of ScheduleEntry instances, each containing the name, role, equipo,
     and shifts for a user. The function parses the data, finds or creates the
     user in the database, and inserts the shift data for each user.
 
@@ -188,25 +205,32 @@ def parse_and_insert_data(
             continue
 
         user = find_user(
-            entry["name"],
+            entry.name,
             db_session,
         )
 
         if user:
-            user = update_user(user, entry["role"], entry["equipo"])
+            user = update_user(user, entry.role, entry.equipo)
         elif not add_new:
-            logger.warning("User not found for entry: %s", entry["name"])
+            logger.warning("User not found for entry: %s", entry.name)
             continue
         else:
-            user = create_user(
-                entry["name"],
-                entry["role"],
-                entry["equipo"],
-                db_session,
-            )
+            db_session.begin_nested()
+            try:
+                user = create_user(
+                    entry.name,
+                    entry.role,
+                    entry.equipo,
+                    db_session,
+                )
+                db_session.commit()
+            except IntegrityError:
+                db_session.rollback()
+                logger.exception("Error creating user: %s", entry.name)
+                continue
 
         n_users += 1
-        n_shifts += insert_shift_data(entry["shifts"], month, year, user, db_session)
+        n_shifts += insert_shift_data(entry.shifts, month, year, user, db_session)
         db_session.commit()
 
     logger.info("Inserted %d users and %d shifts", n_users, n_shifts)
