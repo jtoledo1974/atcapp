@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime  # noqa: TCH003  # Necesario para el mapping
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
@@ -17,6 +18,9 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
 )
+from sqlalchemy import (
+    Enum as EnumType,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.orm.decl_api import DeclarativeBase
 from sqlalchemy.schema import MetaData
@@ -27,6 +31,14 @@ if TYPE_CHECKING:
     from typing import ClassVar
 
     from sqlalchemy.orm import Query
+
+class TipoFuente(Enum):
+    """Enum para indicar el tipo de fuente de un turno."""
+
+    TURNERO = "turnero"
+    MANUAL = "manual"
+    OTRO = "otro"
+
 
 # Naming conventions for Alembic migrations
 naming_convention = {
@@ -115,7 +127,13 @@ class Turno(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     fecha: Mapped[date] = mapped_column(Date, nullable=False)
     turno: Mapped[str] = mapped_column(String(10), nullable=False)
+    """Código del turno: p.ej. MB09 ."""
     id_atc: Mapped[int] = mapped_column(Integer, ForeignKey("atcs.id"), nullable=False)
+    tipo_fuente: Mapped[TipoFuente] = mapped_column(
+        EnumType(TipoFuente),
+        nullable=False,
+    )
+    """Tipo de fuente del turno (turnero, manual, otro)."""
 
     atc: Mapped[ATC] = relationship("ATC", backref="turnos")
 
@@ -295,3 +313,147 @@ class Servicio(Base):
         back_populates="servicios",
         overlaps="atcs,estadillos",
     )
+
+
+class Archivo(db.Model):  # type: ignore[name-defined]
+    """Tabla para almacenar información general sobre archivos subidos.
+
+    La tabla Archivo se utiliza para mantener un registro de todos los archivos
+    que se suben al sistema, independientemente de su tipo. Esto incluye turneros,
+    estadillos y otros tipos de archivos que    puedan ser introducidos en el futuro.
+    Cada registro contiene metadatos sobre el archivo subido, como su hash para evitar
+    duplicados, la URI para su localización, el tipo de archivo y la información
+    del usuario que lo subió.
+    """
+
+    __tablename__ = "archivos"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    """Identificador único del archivo."""
+
+    hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    """Hash del archivo para identificar duplicados."""
+
+    uri: Mapped[str] = mapped_column(String(256), nullable=False)
+    """URI del archivo (local o en la nube)."""
+
+    tipo: Mapped[str] = mapped_column(String(50), nullable=False)
+    """Tipo de archivo (turnero, estadillo, etc.)."""
+
+    fecha_subida: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    """Fecha y hora de la subida del archivo."""
+
+    id_atc: Mapped[int] = mapped_column(Integer, ForeignKey("atcs.id"), nullable=False)
+    """Identificador del ATC que subió el archivo."""
+
+    nombre_apellidos_subidor: Mapped[str] = mapped_column(String(80), nullable=False)
+    """Nombre y apellidos del ATC que subió el archivo en el momento de la subida."""
+
+    atc: Mapped[ATC] = relationship("ATC", back_populates="archivos")
+
+    __table_args__ = (UniqueConstraint("hash"),)
+
+
+class Turnero(db.Model):  # type: ignore[name-defined]
+    """Tabla para almacenar metadatos específicos de archivos de turnero.
+
+    La tabla Turnero se utiliza para guardar información específica sobre los
+    archivos de turnero que se suben al sistema. Cada registro de turnero está
+    asociado a un archivo en la tabla Archivo y contiene detalles adicionales como
+    el año y el mes del turnero, así como la dependencia correspondiente. Esto
+    permite una mejor organización y búsqueda de los turneros subidos.
+
+    """
+
+    __tablename__ = "turneros"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    """Identificador único del turnero."""
+
+    id_archivo: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("archivos.id"),
+        nullable=False,
+    )
+    """Identificador del archivo relacionado."""
+
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    """Año del turnero."""
+
+    month: Mapped[int] = mapped_column(Integer, nullable=False)
+    """Mes del turnero."""
+
+    dependencia: Mapped[str] = mapped_column(String(4), nullable=False)
+    """Dependencia a la que pertenece el turnero."""
+
+    archivo: Mapped[Archivo] = relationship("Archivo", back_populates="turnero")
+
+
+class TurnoTurnero(db.Model):  # type: ignore[name-defined]
+    """Tabla intermedia para asociar turnos con archivos de turnero.
+
+    Esta tabla se utiliza para mantener una relación entre los turnos y los
+    archivos de turnero que los originaron. Cada registro en esta tabla indica
+    que un turno específico proviene de un archivo de turnero particular.
+
+    """
+
+    __tablename__ = "turnos_turneros"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    """Identificador único de la relación."""
+
+    id_turno: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("turnos.id"),
+        nullable=False,
+    )
+    """Identificador del turno."""
+
+    id_turnero: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("turneros.id"),
+        nullable=False,
+    )
+    """Identificador del turnero."""
+
+    turno: Mapped[Turno] = relationship("Turno", backref="turno_turnero")
+    turnero: Mapped[Turnero] = relationship("Turnero", backref="turno_turnero")
+
+
+class TurnoManual(db.Model):  # type: ignore[name-defined]
+    """Tabla intermedia para asociar turnos con cambios manuales.
+
+    Esta tabla se utiliza para mantener una relación entre los turnos y los cambios
+    manuales realizados por los usuarios. Cada registro en esta tabla indica que
+    un turno específico fue modificado manualmente por un usuario en una fecha
+    particular.
+
+    """
+
+    __tablename__ = "turnos_manuales"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    """Identificador único de la relación."""
+
+    id_turno: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("turnos.id"),
+        nullable=False,
+    )
+    """Identificador del turno."""
+
+    fecha_cambio: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    """Fecha y hora del cambio manual."""
+
+    id_atc: Mapped[int] = mapped_column(Integer, ForeignKey("atcs.id"), nullable=False)
+    """Identificador del ATC que realizó el cambio manual."""
+
+    turno: Mapped[Turno] = relationship("Turno", backref="turno_manual")
+    atc: Mapped[ATC] = relationship("ATC", backref="cambios_manuales")
