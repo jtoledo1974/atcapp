@@ -48,7 +48,7 @@ def create_user(
         email = f"{email_name}@example.com"
 
     # Check first whether the user already exists
-    existing_user = find_user(f"{apellidos} {nombre}", db_session)
+    existing_user = find_user(name, db_session)
     if existing_user:
         logger.warning(
             "Controlador existente: %s. No creamos uno nuevo con el mismo nombre.",
@@ -57,7 +57,7 @@ def create_user(
         return existing_user
 
     new_user = ATC(
-        apellidos_nombre=name,
+        apellidos_nombre=fix_encoding(name),
         nombre=nombre,
         apellidos=apellidos,
         email=email,
