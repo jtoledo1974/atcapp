@@ -74,3 +74,9 @@ def invalidate_token(id_token: str) -> None:
         _msg = "Token invalidation failed"
         logger.exception(_msg)
         raise ValueError(_msg) from None
+
+
+def get_recognized_emails() -> list[str]:
+    """Retrieve the list of recognized user emails from Firebase."""
+    users = auth.list_users().users
+    return [user.email for user in users if user.email is not None]

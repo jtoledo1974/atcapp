@@ -25,7 +25,7 @@ from .carga_estadillo import procesa_estadillo
 from .carga_turnero import ResultadoProcesadoTurnero, procesa_turnero
 from .database import db
 from .estadillos import genera_datos_estadillo
-from .firebase import invalidate_token, verify_id_token
+from .firebase import get_recognized_emails, invalidate_token, verify_id_token
 from .models import ATC, Estadillo
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -359,12 +359,24 @@ def estadillo() -> Response | str:
 @es_admin
 def admin_user_list() -> Response | str:
     """Render a page with a list of users in a copy-friendly format."""
-    users = ATC.query.all()
+    filter_by_recognized = (
+        request.args.get("filter_recognized", default="false").lower() == "true"
+    )
+
+    users_query = ATC.query.order_by(ATC.apellidos_nombre)
+
+    if filter_by_recognized:
+        recognized_emails = get_recognized_emails()
+        users_query = users_query.filter(ATC.email.in_(recognized_emails))
+
+    users = users_query.all()
+
     user_list = [
         f"{user.id}, {user.nombre}, {user.apellidos}, "
         f"{user.apellidos_nombre}, {user.email}"
         for user in users
     ]
+
     return render_template("admin_user_list.html", user_list=user_list)
 
 
