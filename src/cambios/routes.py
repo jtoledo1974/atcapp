@@ -85,7 +85,7 @@ def es_admin(f: Callable) -> Callable:
 @main.route("/")
 @privacy_policy_accepted
 def index() -> Response | str:
-    """Render the index page."""
+    """Render the index page or redirect to the appropriate page."""
     if "id_atc" not in session:
         return redirect(url_for("main.login"))
 
@@ -105,6 +105,20 @@ def index() -> Response | str:
     now = datetime.now(tz=get_timezone())
     if estadillo and estadillo.hora_inicio <= now <= estadillo.hora_fin:
         return redirect(url_for("main.estadillo"))
+
+    return redirect(url_for("main.calendario"))
+
+
+@main.route("/calendario")
+@privacy_policy_accepted
+def calendario() -> Response | str:
+    """Render the calendar page."""
+    if "id_atc" not in session:
+        return redirect(url_for("main.login"))
+
+    user = db.session.get(ATC, session["id_atc"])
+    if not user:
+        return redirect(url_for("main.logout"))
 
     # TODO #3 It would be better to use the user's timezone here
     # Currently forcing continental Spain using pytz
@@ -126,7 +140,7 @@ def index() -> Response | str:
         ]
 
     return render_template(
-        "index.html",
+        "calendario.html",
         user=user,
         calendar=calendar,
         toggle_descriptions=session["toggleDescriptions"],
