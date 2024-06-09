@@ -58,7 +58,7 @@ class PeriodoData:
     activo: str = field(default="FUT")
     """Indica si el periodo está activo, está pasado o es futuro. PAS, ACT, FUT."""
     scroll_anchor: bool = False
-    "Indica si es este periodo el que se debe mostrar en la pantalla al cargar la página."
+    "Indica si este periodo se debe mostrar en la pantalla al cargar la página."
 
 
 @dataclass
@@ -303,7 +303,11 @@ def _es_activo(
     return "ACT"
 
 
-def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager, user: ATC | None = None) -> GrupoDatos:
+def genera_datos_grupo(
+    grupo: Grupo,
+    color_manager: ColorManager,
+    user: ATC | None = None,
+) -> GrupoDatos:
     """Genera los datos de un grupo de controladores para presentar en una plantilla."""
     sectores = [sector.nombre for sector in grupo.sectores]
     sectores.sort()
@@ -347,6 +351,4 @@ def genera_datos_estadillo(
     grupos = identifica_grupos(estadillo, session)
     marca_anchor(grupos, user)
     color_manager = ColorManager()  # Crear una instancia de ColorManager
-    datos_grupo = [genera_datos_grupo(grupo, color_manager, user) for grupo in grupos]
-    # datos_grupo.sort(key=lambda g: len(g.atcs), reverse=True)
-    return datos_grupo
+    return [genera_datos_grupo(grupo, color_manager, user) for grupo in grupos]
