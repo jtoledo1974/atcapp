@@ -82,6 +82,8 @@ class GrupoDatos:
     """Datos de los controladores en el grupo: nombre y periodos."""
     horas_inicio: list[PeriodoData] = field(default_factory=list)
     """Horas de inicio de todos los periodos para la cabecera."""
+    marcador: float = 0.0
+    """Posición del marcador de la hora actual en porcentaje."""
 
 
 def identifica_grupos(
@@ -303,6 +305,22 @@ def _es_activo(
     return "ACT"
 
 
+def calcula_marcador(grupo: Grupo) -> float:
+    """Calcula la posición del marcador de la hora actual en porcentaje."""
+    now = datetime.now(tz=get_timezone())
+    inicio_grupo = grupo.estadillo.hora_inicio
+    fin_grupo = grupo.estadillo.hora_fin
+
+    if now < inicio_grupo:
+        return 0.0
+    if now > fin_grupo:
+        return 100.0
+
+    total_duracion = (fin_grupo - inicio_grupo).total_seconds()
+    duracion_actual = (now - inicio_grupo).total_seconds()
+    return (duracion_actual / total_duracion) * 100
+
+
 def genera_datos_grupo(
     grupo: Grupo,
     color_manager: ColorManager,
@@ -338,8 +356,14 @@ def genera_datos_grupo(
         atcs.append(atc_data)
 
     horas_inicio = _genera_horas_de_inicio(grupo.duracion, grupo.controladores)
+    marcador = calcula_marcador(grupo)
 
-    return GrupoDatos(sectores=sectores, atcs=atcs, horas_inicio=horas_inicio)
+    return GrupoDatos(
+        sectores=sectores,
+        atcs=atcs,
+        horas_inicio=horas_inicio,
+        marcador=marcador,
+    )
 
 
 def genera_datos_estadillo(
