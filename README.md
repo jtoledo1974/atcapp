@@ -43,7 +43,14 @@ Estas variables de entorno se utilizan para configurar la aplicación.
 - `LOG_LEVEL`: Nivel de registro de la aplicación. Los valores válidos son DEBUG, INFO, WARNING, ERROR y CRITICAL.
 - `TZ`: Zona horaria utilizada por la aplicación. Si no se proporciona, se utilizará "Europe/Madrid".
 
+### Arrancar la aplicación
+Suponiendo que el entorno está cargado (mirar más abajo), se puede arrancar la aplicación con el siguiente comando:
+```sh
+python -m cambios.app
+```
+
 ### Instalar imágenes precompiladas
+El docker es sólo de interés cuando para entornos en la nube. La imagen podría estar desactualizada.
 ```sh
 docker run -d -p 80:80 toledo74/cambios
 ```
@@ -58,5 +65,6 @@ source venv/bin/activate
 
 ### Instalar paquete y dependencias
 ```sh
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
+

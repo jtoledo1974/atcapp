@@ -80,6 +80,14 @@
 </style>
 <div class="container">
     <h1>User List</h1>
+    <form method="get" action="{{ url_for('main.admin_user_list') }}" id="filter-form">
+        <label>
+            <input type="checkbox" name="filter_recognized" value="true" {% if
+                request.args.get('filter_recognized')=='true' %}checked{% endif %}
+                onchange="document.getElementById('filter-form').submit()">
+            Show only recognized users from Firebase
+        </label>
+    </form>
     <textarea id="user-list" readonly>{{ user_list|join('\n') }}</textarea>
     <button class="copy-button" onclick="copyToClipboard('user-list')">Copy to Clipboard</button>
 </div>

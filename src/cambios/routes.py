@@ -22,10 +22,10 @@ from sqlalchemy.exc import IntegrityError
 from . import get_timezone
 from .cambios import GenCalMensual
 from .carga_estadillo import procesa_estadillo
-from .carga_turnero import procesa_turnero
+from .carga_turnero import ResultadoProcesadoTurnero, procesa_turnero
 from .database import db
 from .estadillos import genera_datos_estadillo
-from .firebase import invalidate_token, verify_id_token
+from .firebase import get_recognized_emails, invalidate_token, verify_id_token
 from .models import ATC, Estadillo
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -261,7 +261,6 @@ def upload() -> Response | str:
         return render_template("upload.html")
 
     files = request.files.getlist("files")
-    add_new = bool(request.form.get("add_new"))
 
     if not files or any(not file.filename for file in files):
         flash(
@@ -270,17 +269,14 @@ def upload() -> Response | str:
         )
         return redirect(url_for("main.upload"))
 
-    total_users = 0
-    total_shifts = 0
+    total = ResultadoProcesadoTurnero()
     for file in files:
         try:
-            n_users, n_shifts = procesa_turnero(
+            res = procesa_turnero(
                 file,
                 db.session,
-                add_new=add_new,
             )
-            total_users += n_users
-            total_shifts += n_shifts
+            total = total.incluye(res)
         except ValueError:
             flash(f"Formato de archivo no válido: {file.filename}", "danger")
             return redirect(url_for("main.upload"))
@@ -288,7 +284,8 @@ def upload() -> Response | str:
     plural = "s" if len(files) > 1 else ""
     flash(
         f"Archivo{plural} cargado{plural} con éxito. "
-        f"Usuarios reconocidos: {total_users}, turnos agregados: {total_shifts}",
+        f"Usuarios reconocidos: {total.n_total_users}, "
+        f"turnos agregados: {total.n_created_shifts}",
         "success",
     )
     return redirect(url_for("main.index"))
@@ -350,7 +347,7 @@ def estadillo() -> Response | str:
         flash("No hay estadillos disponibles.", "info")
         return redirect(url_for("main.index"))
 
-    grupos = genera_datos_estadillo(latest_estadillo, db.session)
+    grupos = genera_datos_estadillo(latest_estadillo, db.session, user=user)
 
     return render_template(
         "estadillo.html",
@@ -362,11 +359,24 @@ def estadillo() -> Response | str:
 @es_admin
 def admin_user_list() -> Response | str:
     """Render a page with a list of users in a copy-friendly format."""
-    users = ATC.query.all()
+    filter_by_recognized = (
+        request.args.get("filter_recognized", default="false").lower() == "true"
+    )
+
+    users_query = ATC.query.order_by(ATC.apellidos_nombre)
+
+    if filter_by_recognized:
+        recognized_emails = get_recognized_emails()
+        users_query = users_query.filter(ATC.email.in_(recognized_emails))
+
+    users = users_query.all()
+
     user_list = [
-        f"{user.id}, {user.nombre}, {user.apellidos}, {user.apellidos_nombre}, {user.email}"
+        f"{user.id}, {user.nombre}, {user.apellidos}, "
+        f"{user.apellidos_nombre}, {user.email}"
         for user in users
     ]
+
     return render_template("admin_user_list.html", user_list=user_list)
 
 

@@ -70,6 +70,7 @@ class EstadilloPersonalData:
 
     nombre: str
     periodos: list[PeriodoData]
+    usuario_actual: bool = False
 
 
 @dataclass
@@ -302,7 +303,7 @@ def _es_activo(
     return "ACT"
 
 
-def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
+def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager, user: ATC | None = None) -> GrupoDatos:
     """Genera los datos de un grupo de controladores para presentar en una plantilla."""
     sectores = [sector.nombre for sector in grupo.sectores]
     sectores.sort()
@@ -328,6 +329,7 @@ def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager) -> GrupoDatos:
                 )
                 for p in periodos
             ],
+            usuario_actual=controlador == user,
         )
         atcs.append(atc_data)
 
@@ -345,6 +347,6 @@ def genera_datos_estadillo(
     grupos = identifica_grupos(estadillo, session)
     marca_anchor(grupos, user)
     color_manager = ColorManager()  # Crear una instancia de ColorManager
-    datos_grupo = [genera_datos_grupo(grupo, color_manager) for grupo in grupos]
+    datos_grupo = [genera_datos_grupo(grupo, color_manager, user) for grupo in grupos]
     # datos_grupo.sort(key=lambda g: len(g.atcs), reverse=True)
     return datos_grupo

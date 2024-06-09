@@ -23,12 +23,12 @@
         </div>
         {% for atc in grupo.atcs %}
 
-        <div class="atc">
+        <div class="atc {% if atc.usuario_actual %}usuario-actual{% endif %}">
             <div class="nombre">{{ atc.nombre }}</div>
             <div class="periodos">
                 {% for periodo in atc.periodos %}
                 <div {% if periodo.scroll_anchor %} id="active-period" {% endif %}
-                    class="periodo periodo_{{ periodo.activo.lower()}}"
+                    class="periodo periodo_{{ periodo.activo.lower()}}  {% if atc.usuario_actual %}periodo-usuario-actual{% endif %}"
                     style="flex: 0 0 {{ periodo.porcentaje }}%; background-color: {{ periodo.color }};">
                     <span>{{ periodo.actividad }}</span>
                 </div>

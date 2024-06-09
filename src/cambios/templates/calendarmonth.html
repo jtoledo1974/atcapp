@@ -40,10 +40,10 @@
 
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="{{ url_for('main.index', year=(calendar.ano - 1) if calendar.mes == 1 else calendar.ano, month=12 if calendar.mes == 1 else calendar.mes - 1) }}"
+    <a href="{{ url_for('main.index', year=(calendar.año - 1) if calendar.mes == 1 else calendar.año, month=12 if calendar.mes == 1 else calendar.mes - 1) }}"
         class="btn btn-primary">&laquo; Previo</a>
     <h2>{{ calendar.nombre_mes }} {{ calendar.year }}</h2>
-    <a href="{{ url_for('main.index', year=(calendar.ano + 1) if calendar.mes == 12 else calendar.ano, month=1 if calendar.mes == 12 else calendar.mes + 1) }}"
+    <a href="{{ url_for('main.index', year=(calendar.año + 1) if calendar.mes == 12 else calendar.año, month=1 if calendar.mes == 12 else calendar.mes + 1) }}"
         class="btn btn-primary">Siguiente &raquo;</a>
 </div>
 

@@ -164,6 +164,7 @@
     width: 100%;
 }
 
+
 .atc .nombre {
     flex: 1;
     max-width: 20%;
@@ -202,6 +203,17 @@
     color: white;
     text-align: center;
     border: 1px solid #ddd;
+}
+
+/* Estilo para los periodos del usuario actual */
+.periodo-usuario-actual {
+    border: 2px solid black;
+    /* Borde negro grueso */
+    background-color: #e6ffe6;
+    color: black;
+    /* Asegurar que el texto sea visible */
+    font-weight: bold;
+    /* Texto en negrita */
 }
 
 /* Estilo para periodo pasado */
