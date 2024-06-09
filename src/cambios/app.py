@@ -6,6 +6,7 @@ import locale
 import logging
 import os
 import secrets
+from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -39,6 +40,8 @@ class Config:
     DEBUG = False
     HOST = "localhost"
     PORT = 80
+    PERMANENT_SESSION_LIFETIME = timedelta(days=90)
+    SESSION_TYPE = "filesystem"
 
 
 def configure_logging(
@@ -142,6 +145,10 @@ def create_app() -> Flask:
     def inject_user() -> dict[str, str]:
         user = ATC.query.filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
         return {"current_user": user}
+
+    @app.before_request
+    def make_session_permanent() -> None:
+        session.permanent = True
 
     return app
 
