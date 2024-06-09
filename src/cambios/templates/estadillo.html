@@ -56,4 +56,48 @@
         }
     };
 </script>
+<script>
+    window.onload = function () {
+        const activePeriod = document.getElementById('active-period');
+        const scrollbox = document.getElementById('grupos');
+        if (activePeriod && scrollbox) {
+            // Scroll horizontal
+            scrollbox.scrollLeft = activePeriod.offsetLeft - scrollbox.offsetLeft;
+
+            // Scroll vertical
+            const yOffset = activePeriod.getBoundingClientRect().top + window.pageYOffset - (window.innerHeight / 2);
+            window.scrollTo({ top: yOffset, behavior: 'smooth' });
+        }
+    };
+
+    let intervalId;
+
+    // Función para recargar la página
+    function reloadPage() {
+        location.reload();
+    }
+
+    // Función para iniciar la recarga automática
+    function startAutoReload() {
+        intervalId = setInterval(reloadPage, 60000); // 60000 ms = 1 minuto
+    }
+
+    // Función para detener la recarga automática
+    function stopAutoReload() {
+        clearInterval(intervalId);
+    }
+
+    // Configurar recarga al volver al foco
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            stopAutoReload();
+        } else {
+            reloadPage(); // Recarga inmediatamente al recuperar el foco
+            startAutoReload();
+        }
+    });
+
+    // Iniciar recarga automática cuando la página se carga
+    startAutoReload();
+</script>
 {% endblock %}
