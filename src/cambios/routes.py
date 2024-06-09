@@ -347,7 +347,7 @@ def estadillo() -> Response | str:
         flash("No hay estadillos disponibles.", "info")
         return redirect(url_for("main.index"))
 
-    grupos = genera_datos_estadillo(latest_estadillo, db.session)
+    grupos = genera_datos_estadillo(latest_estadillo, db.session, user=user)
 
     return render_template(
         "estadillo.html",
