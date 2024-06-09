@@ -7,7 +7,12 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 from .models import ATC
-from .name_utils import capitaliza_nombre, fix_encoding, parse_name
+from .name_utils import (
+    capitaliza_nombre,
+    fix_encoding,
+    no_extraneous_spaces,
+    parse_name,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from sqlalchemy.orm import scoped_session
@@ -45,7 +50,12 @@ def create_user(
         User: The created user.
 
     """
-    nombre, apellidos = parse_name(name.strip())
+    name = no_extraneous_spaces(name)
+    name = fix_encoding(name)
+    role = no_extraneous_spaces(role)
+    equipo = no_extraneous_spaces(equipo) if equipo else None
+
+    nombre, apellidos = parse_name(name)
     nombre, apellidos = capitaliza_nombre(nombre, apellidos)
 
     if not email:
@@ -65,7 +75,7 @@ def create_user(
         return existing_user
 
     new_user = ATC(
-        apellidos_nombre=fix_encoding(name),
+        apellidos_nombre=name,
         nombre=nombre,
         apellidos=apellidos,
         email=email,

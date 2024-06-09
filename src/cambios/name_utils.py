@@ -27,6 +27,12 @@ MAX_N_NOMBRE = 2
 """Limitar a dos nombres para evitar problemas con nombres compuestos."""
 
 
+def no_extraneous_spaces(string: str) -> str:
+    """Remove extraneous spaces from a string."""
+    string = string.replace("\n", " ").replace("\r", " ").replace("\t", " ")
+    return " ".join(string.split())
+
+
 def fix_encoding(name: str) -> str:
     """Corregir una codificación incorrecta de un nombre.
 

@@ -22,3 +22,17 @@ def test_duplicados_con_caracteres_mal_codificados(
     user2 = create_user("PEPA NUÑEZ", "CON", "A", preloaded_session)
     assert user is not None
     assert user == user2
+
+
+def test_no_duplicates(session: scoped_session) -> None:
+    """Comprobar que no se producen duplicados."""
+    user = create_user("PEPA NUÑEZ", "CON", "A", session)
+    user2 = create_user("PEPA NUÑEZ", "CON", "A", session)
+    assert user == user2
+
+
+def test_no_carriage_return(session: scoped_session) -> None:
+    """Comprobar que no se producen duplicados."""
+    user = create_user("PEPA NUÑEZ", "CON", "A", session)
+    user2 = create_user("PEPA \nNUÑEZ", "CON", "A", session)
+    assert user == user2
