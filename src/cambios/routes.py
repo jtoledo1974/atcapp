@@ -16,6 +16,7 @@ from flask import (
     request,
     session,
     url_for,
+    jsonify,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -426,6 +427,46 @@ def admin_update_users() -> Response:
 
     return redirect(url_for("main.admin_user_list"))
 
+@main.route("/autocomplete_atc", methods=["GET"])
+@privacy_policy_accepted
+@es_admin
+def autocomplete_atc() -> Response:
+    """Return a list of ATC names for autocomplete."""
+    query = request.args.get("query")
+    if not query:
+        return jsonify([])
+
+    atcs = ATC.query.filter(ATC.apellidos_nombre.ilike(f"%{query}%")).all()
+    results = [{"id": atc.id, "name": atc.apellidos_nombre} for atc in atcs]
+    return jsonify(results)
+
+@main.route("/admin/add_user", methods=["GET", "POST"])
+@privacy_policy_accepted
+@es_admin
+def add_user() -> Response | str:
+    """Render the add user page and handle form submission."""
+    if request.method == "POST":
+        atc_id = request.form.get("atc_id")
+        email = request.form.get("email")
+
+        if not atc_id or not email:
+            flash("Nombre y email son obligatorios.", "danger")
+            return redirect(url_for("main.add_user"))
+
+        # Buscar el usuario por id
+        user = db.session.get(ATC, atc_id)
+
+        if user:
+            # Actualizar el email del usuario existente
+            user.email = email
+            db.session.commit()
+            flash("Email del usuario actualizado con éxito.", "success")
+        else:
+            flash("Usuario no encontrado.", "danger")
+
+        return redirect(url_for("main.add_user"))
+
+    return render_template("add_user.html")
 
 def register_routes(app: Flask) -> Blueprint:
     """Register the routes with the app."""
