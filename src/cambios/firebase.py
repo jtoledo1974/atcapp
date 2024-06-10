@@ -14,7 +14,7 @@ logger = getLogger(__name__)
 
 CRED_FILE = os.getenv(
     "FIREBASE_CRED_FILE",
-    "cambios-firebase.json",
+    "atcapp-web-firebase.json",
 )
 CRED_JSON = os.getenv("FIREBASE_CRED_JSON")
 
