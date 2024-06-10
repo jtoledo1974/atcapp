@@ -28,8 +28,8 @@ git clone https://github.com/jtoledo1974/cambios.git
 
 Este proyecto utiliza el SDK de administración de Firebase para la autenticación y otros servicios de Firebase. El SDK se puede inicializar utilizando un archivo de credenciales o una cadena JSON pasada a través de variables de entorno, lo que lo hace flexible para diferentes entornos. Sólo se necesita una de las dos opciones para inicializar el SDK.
 
-- `FIREBASE_CRED_FILE`: Ruta al archivo de credenciales de Firebase (el valor predeterminado es `cambios-firebase.json`).
-- `FIREBASE_CRED_JSON`: Cadena JSON de las credenciales de Firebase.
+- `FIREBASE_CRED_FILE`: Ruta al archivo de credenciales de Firebase (el valor predeterminado es `atcapp.json`).
+- `FIREBASE_CRED_JSON`: Cadena JSON codificada en BASE64 de las credenciales de Firebase.
 
 Estas variables de entorno se utilizan para configurar la aplicación.
 

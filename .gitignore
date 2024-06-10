@@ -3,6 +3,7 @@
 .key
 shifts.db
 *firebase*.json
+atcapp.json
 file_listings.md
 logs/
 test_db.pickle
