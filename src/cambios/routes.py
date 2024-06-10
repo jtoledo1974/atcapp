@@ -11,12 +11,12 @@ from typing import TYPE_CHECKING, Callable
 from flask import (
     Blueprint,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
     session,
     url_for,
-    jsonify,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -427,6 +427,7 @@ def admin_update_users() -> Response:
 
     return redirect(url_for("main.admin_user_list"))
 
+
 @main.route("/autocomplete_atc", methods=["GET"])
 @privacy_policy_accepted
 @es_admin
@@ -439,6 +440,7 @@ def autocomplete_atc() -> Response:
     atcs = ATC.query.filter(ATC.apellidos_nombre.ilike(f"%{query}%")).all()
     results = [{"id": atc.id, "name": atc.apellidos_nombre} for atc in atcs]
     return jsonify(results)
+
 
 @main.route("/admin/add_user", methods=["GET", "POST"])
 @privacy_policy_accepted
@@ -467,6 +469,7 @@ def add_user() -> Response | str:
         return redirect(url_for("main.add_user"))
 
     return render_template("add_user.html")
+
 
 def register_routes(app: Flask) -> Blueprint:
     """Register the routes with the app."""
