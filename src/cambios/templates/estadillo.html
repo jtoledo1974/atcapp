@@ -22,10 +22,10 @@
             </div>
         </div>
         {% for atc in grupo.atcs %}
-
         <div class="atc {% if atc.usuario_actual %}usuario-actual{% endif %}">
             <div class="nombre">{{ atc.nombre }}</div>
             <div class="periodos">
+                <div class="hora-actual" style="left: {{ grupo.marcador }}%;"></div>
                 {% for periodo in atc.periodos %}
                 <div {% if periodo.scroll_anchor %} id="active-period" {% endif %}
                     class="periodo periodo_{{ periodo.activo.lower()}}  {% if atc.usuario_actual %}periodo-usuario-actual{% endif %}"
@@ -55,5 +55,49 @@
             window.scrollTo({ top: yOffset, behavior: 'smooth' });
         }
     };
+</script>
+<script>
+    window.onload = function () {
+        const activePeriod = document.getElementById('active-period');
+        const scrollbox = document.getElementById('grupos');
+        if (activePeriod && scrollbox) {
+            // Scroll horizontal
+            scrollbox.scrollLeft = activePeriod.offsetLeft - scrollbox.offsetLeft;
+
+            // Scroll vertical
+            const yOffset = activePeriod.getBoundingClientRect().top + window.pageYOffset - (window.innerHeight / 2);
+            window.scrollTo({ top: yOffset, behavior: 'smooth' });
+        }
+    };
+
+    let intervalId;
+
+    // Función para recargar la página
+    function reloadPage() {
+        location.reload();
+    }
+
+    // Función para iniciar la recarga automática
+    function startAutoReload() {
+        intervalId = setInterval(reloadPage, 60000); // 60000 ms = 1 minuto
+    }
+
+    // Función para detener la recarga automática
+    function stopAutoReload() {
+        clearInterval(intervalId);
+    }
+
+    // Configurar recarga al volver al foco
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            stopAutoReload();
+        } else {
+            reloadPage(); // Recarga inmediatamente al recuperar el foco
+            startAutoReload();
+        }
+    });
+
+    // Iniciar recarga automática cuando la página se carga
+    startAutoReload();
 </script>
 {% endblock %}

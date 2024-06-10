@@ -16,6 +16,7 @@ from flask import (
     request,
     session,
     url_for,
+    jsonify,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -85,7 +86,7 @@ def es_admin(f: Callable) -> Callable:
 @main.route("/")
 @privacy_policy_accepted
 def index() -> Response | str:
-    """Render the index page."""
+    """Render the index page or redirect to the appropriate page."""
     if "id_atc" not in session:
         return redirect(url_for("main.login"))
 
@@ -105,6 +106,20 @@ def index() -> Response | str:
     now = datetime.now(tz=get_timezone())
     if estadillo and estadillo.hora_inicio <= now <= estadillo.hora_fin:
         return redirect(url_for("main.estadillo"))
+
+    return redirect(url_for("main.calendario"))
+
+
+@main.route("/calendario")
+@privacy_policy_accepted
+def calendario() -> Response | str:
+    """Render the calendar page."""
+    if "id_atc" not in session:
+        return redirect(url_for("main.login"))
+
+    user = db.session.get(ATC, session["id_atc"])
+    if not user:
+        return redirect(url_for("main.logout"))
 
     # TODO #3 It would be better to use the user's timezone here
     # Currently forcing continental Spain using pytz
@@ -126,7 +141,7 @@ def index() -> Response | str:
         ]
 
     return render_template(
-        "index.html",
+        "calendario.html",
         user=user,
         calendar=calendar,
         toggle_descriptions=session["toggleDescriptions"],
@@ -412,6 +427,46 @@ def admin_update_users() -> Response:
 
     return redirect(url_for("main.admin_user_list"))
 
+@main.route("/autocomplete_atc", methods=["GET"])
+@privacy_policy_accepted
+@es_admin
+def autocomplete_atc() -> Response:
+    """Return a list of ATC names for autocomplete."""
+    query = request.args.get("query")
+    if not query:
+        return jsonify([])
+
+    atcs = ATC.query.filter(ATC.apellidos_nombre.ilike(f"%{query}%")).all()
+    results = [{"id": atc.id, "name": atc.apellidos_nombre} for atc in atcs]
+    return jsonify(results)
+
+@main.route("/admin/add_user", methods=["GET", "POST"])
+@privacy_policy_accepted
+@es_admin
+def add_user() -> Response | str:
+    """Render the add user page and handle form submission."""
+    if request.method == "POST":
+        atc_id = request.form.get("atc_id")
+        email = request.form.get("email")
+
+        if not atc_id or not email:
+            flash("Nombre y email son obligatorios.", "danger")
+            return redirect(url_for("main.add_user"))
+
+        # Buscar el usuario por id
+        user = db.session.get(ATC, atc_id)
+
+        if user:
+            # Actualizar el email del usuario existente
+            user.email = email
+            db.session.commit()
+            flash("Email del usuario actualizado con éxito.", "success")
+        else:
+            flash("Usuario no encontrado.", "danger")
+
+        return redirect(url_for("main.add_user"))
+
+    return render_template("add_user.html")
 
 def register_routes(app: Flask) -> Blueprint:
     """Register the routes with the app."""

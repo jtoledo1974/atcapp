@@ -189,6 +189,8 @@
 
 /* Periods container */
 .periodos {
+    position: relative;
+    /* Asegura que los elementos hijos se posicionen respecto a este contenedor */
     flex: 1;
     display: flex;
     width: 100%;
@@ -249,6 +251,30 @@
 
     100% {
         box-shadow: 0 0 5px #ff8c00;
+    }
+}
+
+.hora-actual {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: red;
+    animation: pulse 2s infinite;
+    z-index: 1000;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 5px red;
+    }
+
+    50% {
+        box-shadow: 0 0 20px red;
+    }
+
+    100% {
+        box-shadow: 0 0 5px red;
     }
 }
 

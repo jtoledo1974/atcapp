@@ -58,7 +58,7 @@ class PeriodoData:
     activo: str = field(default="FUT")
     """Indica si el periodo está activo, está pasado o es futuro. PAS, ACT, FUT."""
     scroll_anchor: bool = False
-    "Indica si es este periodo el que se debe mostrar en la pantalla al cargar la página."
+    "Indica si este periodo se debe mostrar en la pantalla al cargar la página."
 
 
 @dataclass
@@ -82,6 +82,8 @@ class GrupoDatos:
     """Datos de los controladores en el grupo: nombre y periodos."""
     horas_inicio: list[PeriodoData] = field(default_factory=list)
     """Horas de inicio de todos los periodos para la cabecera."""
+    marcador: float = 0.0
+    """Posición del marcador de la hora actual en porcentaje."""
 
 
 def identifica_grupos(
@@ -303,7 +305,27 @@ def _es_activo(
     return "ACT"
 
 
-def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager, user: ATC | None = None) -> GrupoDatos:
+def calcula_marcador(grupo: Grupo) -> float:
+    """Calcula la posición del marcador de la hora actual en porcentaje."""
+    now = datetime.now(tz=get_timezone())
+    inicio_grupo = grupo.estadillo.hora_inicio
+    fin_grupo = grupo.estadillo.hora_fin
+
+    if now < inicio_grupo:
+        return 0.0
+    if now > fin_grupo:
+        return 100.0
+
+    total_duracion = (fin_grupo - inicio_grupo).total_seconds()
+    duracion_actual = (now - inicio_grupo).total_seconds()
+    return (duracion_actual / total_duracion) * 100
+
+
+def genera_datos_grupo(
+    grupo: Grupo,
+    color_manager: ColorManager,
+    user: ATC | None = None,
+) -> GrupoDatos:
     """Genera los datos de un grupo de controladores para presentar en una plantilla."""
     sectores = [sector.nombre for sector in grupo.sectores]
     sectores.sort()
@@ -334,8 +356,14 @@ def genera_datos_grupo(grupo: Grupo, color_manager: ColorManager, user: ATC | No
         atcs.append(atc_data)
 
     horas_inicio = _genera_horas_de_inicio(grupo.duracion, grupo.controladores)
+    marcador = calcula_marcador(grupo)
 
-    return GrupoDatos(sectores=sectores, atcs=atcs, horas_inicio=horas_inicio)
+    return GrupoDatos(
+        sectores=sectores,
+        atcs=atcs,
+        horas_inicio=horas_inicio,
+        marcador=marcador,
+    )
 
 
 def genera_datos_estadillo(
@@ -347,6 +375,4 @@ def genera_datos_estadillo(
     grupos = identifica_grupos(estadillo, session)
     marca_anchor(grupos, user)
     color_manager = ColorManager()  # Crear una instancia de ColorManager
-    datos_grupo = [genera_datos_grupo(grupo, color_manager, user) for grupo in grupos]
-    # datos_grupo.sort(key=lambda g: len(g.atcs), reverse=True)
-    return datos_grupo
+    return [genera_datos_grupo(grupo, color_manager, user) for grupo in grupos]
