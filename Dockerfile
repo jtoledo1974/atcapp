@@ -1,7 +1,10 @@
 FROM python:3.12-slim
 
 # Install dependencies
-RUN apt-get update && apt-get install -y git
+RUN apt-get update && apt-get install -y git locales && apt-get clean
+
+# Set the locale
+RUN sed -i -e 's/# es_ES.UTF-8 UTF-8/es_ES.UTF-8 UTF-8/' /etc/locale.gen && locale-gen
 
 # Clone the repository
 RUN git clone https://github.com/jtoledo1974/cambios.git /app
