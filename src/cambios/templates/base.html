@@ -43,6 +43,11 @@
                         <a class="nav-link" href="{{ url_for('main.estadillo') }}">Estadillo</a>
                     </li>
                     {% endif %}
+                    {% if request.endpoint != 'main.upload_estadillo' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.upload_estadillo') }}">Subir Estadillo</a>
+                    </li>
+                    {% endif %}
                     {% if current_user.es_admin %}
                     <li class="nav-item">
                         <a class="nav-link" href="/admin/atc/">Administrar Usuarios</a>
@@ -50,11 +55,6 @@
                     {% if request.endpoint != 'main.upload' %}
                     <li class="nav-item">
                         <a class="nav-link" href="/upload">Subir Turnero</a>
-                    </li>
-                    {% endif %}
-                    {% if request.endpoint != 'main.upload_estadillo' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.upload_estadillo') }}">Subir Estadillo</a>
                     </li>
                     {% endif %}
                     {% endif %}

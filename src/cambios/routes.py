@@ -308,7 +308,6 @@ def upload() -> Response | str:
 
 @main.route("/upload_estadillo", methods=["GET", "POST"])
 @privacy_policy_accepted
-@es_admin
 def upload_estadillo() -> Response | str:
     """Upload estadillo data to the server.
 
