@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import sys
@@ -14,9 +16,9 @@ logger = getLogger(__name__)
 
 CRED_FILE = os.getenv(
     "FIREBASE_CRED_FILE",
-    "cambios-firebase.json",
+    "atcapp.json",
 )
-CRED_JSON = os.getenv("FIREBASE_CRED_JSON")
+CRED_JSON_BASE64 = os.getenv("FIREBASE_CRED_JSON")
 
 firebase_initialized = False
 
@@ -24,26 +26,39 @@ firebase_initialized = False
 def init_firebase() -> None:
     """Initialize Firebase Admin SDK."""
     global firebase_initialized  # noqa: PLW0603
+    have_credentials = False
     if firebase_initialized:
         return
 
     try:
-        if CRED_JSON:
-            cred_dict = json.loads(CRED_JSON)
-            cred = credentials.Certificate(cred_dict)
+        if CRED_JSON_BASE64:
+            try:
+                cred_json = base64.b64decode(CRED_JSON_BASE64).decode("utf-8")
+                cred_dict = json.loads(cred_json)
+                cred = credentials.Certificate(cred_dict)
+                have_credentials = True
+            except (binascii.Error, json.JSONDecodeError):
+                logger.exception(
+                    "Failed to decode Firebase credentials from environment variable."
+                    " Please ensure FIREBASE_CRED_JSON is correctly set"
+                    " and encoded in Base64.",
+                )
         else:
             cred = credentials.Certificate(CRED_FILE)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        # Report error and shutdown
-        logger.critical(
-            "Firebase Admin SDK credentials not found or invalid: %s\n"
-            "Please set FIREBASE_CRED_FILE or FIREBASE_CRED_JSON "
-            "environment variables.\n"
-            "Firebase credentials can be downloaded from Firebase Console.\n\n"
-            "%s",
+            have_credentials = True
+    except FileNotFoundError:
+        logger.exception(
+            "Firebase Admin SDK credentials file not found: %s"
+            " Please set the FIREBASE_CRED_FILE environment variable correctly."
+            " Firebase credentials can be downloaded from Firebase Console. ",
             CRED_FILE,
-            str(e),
         )
+        sys.exit(1)
+    except BaseException:
+        logger.exception(
+            "An unexpected error occurred while initializing Firebase",
+        )
+    if not have_credentials:
         sys.exit(1)
     firebase_admin.initialize_app(cred)
     firebase_initialized = True
