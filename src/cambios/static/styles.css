@@ -205,17 +205,20 @@
     color: white;
     text-align: center;
     border: 1px solid #ddd;
+    background-color: #d3d3d3;
+    /* Color gris claro */
+    opacity: 0.7;
+    /* Reduce opacidad para dar efecto de pasado */
+    color: #666;
+    /* Texto gris oscuro */
 }
 
 /* Estilo para los periodos del usuario actual */
 .periodo-usuario-actual {
-    border: 2px solid black;
-    /* Borde negro grueso */
-    background-color: #e6ffe6;
-    color: black;
-    /* Asegurar que el texto sea visible */
-    font-weight: bold;
-    /* Texto en negrita */
+    animation: pulse 2s infinite;
+    /* Animación suave */
+    opacity: 1;
+    color: white;
 }
 
 /* Estilo para periodo pasado */
@@ -260,11 +263,11 @@
     bottom: 0;
     width: 2px;
     background-color: red;
-    animation: pulse 2s infinite;
+    animation: barpulse 2s infinite;
     z-index: 1000;
 }
 
-@keyframes pulse {
+@keyframes barpulse {
     0% {
         box-shadow: 0 0 5px red;
     }
