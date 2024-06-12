@@ -1,3 +1,9 @@
+# Reglas específicas de Docker
+Dockerfile
+.dockerignore
+.git
+
+
 # App data
 .admin_passwd
 .key
@@ -6,13 +12,13 @@ shifts.db
 atcapp.json
 file_listings.md
 logs/
-test_db.pickle
+tests/
+utils/
 
 # Container environment data
 db_uri
 id_rsa
 .env
-env.yml
 
 # virtualenv
 .venv*/
@@ -21,18 +27,19 @@ ENV/
 cambios.egg-info/
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+**/__pycache__/
+**.py[cod]
+**$py.class
 Crujisim.sublime-workspace
 crujisim.code-workspace
-*.glade~
+**.glade~
 test.py
 
 # Extra files 
-/*.pdf
+**.pdf
 
 # Coverage
 .coverage
 htmlcov/
 cov.xml
+

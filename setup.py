@@ -15,6 +15,7 @@ setup(
         "alembic",
         "firebase-admin",
         "pdfplumber",
+        "pymysql",
         "pytz",
         # other dependencies
     ],
