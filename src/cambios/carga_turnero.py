@@ -168,6 +168,7 @@ def extract_schedule_data(page: Page) -> list[ScheduleEntry]:
             if not equipo:
                 equipo_match = equipo_pattern.search(parts[0])
                 equipo = equipo_match.group(1) if equipo_match else None
+                equipo = equipo if equipo != "NA" else None
 
             # Identify role by finding the first occurrence of a known role
             role_index = next(
