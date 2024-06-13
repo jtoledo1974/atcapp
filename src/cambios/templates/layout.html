@@ -1,0 +1,67 @@
+<!-- layout.html -->
+{% extends 'base.html' %}
+
+{% block body %}
+{% if request.endpoint not in ['main.login'] and current_user.politica_aceptada %}
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <span class="navbar-brand mb-0 h1">{{ current_user.nombre }} {{ current_user.apellidos }}</span>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                {% if request.endpoint not in ['main.calendario', 'main.login', 'main.logout'] %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.calendario') }}">Calendario</a>
+                </li>
+                {% endif %}
+                {% if request.endpoint not in ['main.estadillo', 'main.login', 'main.logout'] %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.estadillo') }}">Estadillo</a>
+                </li>
+                {% endif %}
+                {% if request.endpoint != 'main.upload_estadillo' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.upload_estadillo') }}">Subir Estadillo</a>
+                </li>
+                {% endif %}
+                {% if current_user.es_admin %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/atc/">Administrar Usuarios</a>
+                </li>
+                {% if request.endpoint != 'main.upload' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/upload">Subir Turnero</a>
+                </li>
+                {% endif %}
+                {% endif %}
+            </ul>
+
+            {# Política de privacidad #}
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.privacy_policy') }}">Política de Privacidad</a>
+                </li>
+            </ul>
+
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                {% if current_user %}
+                <li class="nav-item">
+                    <a id="logoutLink" href="{{ url_for('main.logout') }}" class="btn btn-primary">Salir</a>
+                </li>
+                {% elif request.endpoint != 'main.login' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('main.login') }}" class="btn btn-primary">Entrar</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+{% endif %}
+
+{% block content %}{% endblock %}
+{% endblock %}
