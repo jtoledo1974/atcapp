@@ -180,6 +180,28 @@ def create_app() -> Flask:
     def make_session_permanent() -> None:
         session.permanent = True
 
+    # Manejador de error 404
+    @app.errorhandler(404)
+    def page_not_found(_e: Exception) -> str:
+        msg = "Página no encontrada (404)"
+        app.logger.exception(msg)
+        return render_template("error.html", message=msg)
+
+    # Manejador de error 500
+    @app.errorhandler(500)
+    def internal_server_error(_e: Exception) -> str:
+        msg = "Error de servidor (500)"
+        app.logger.exception(msg)
+        return render_template("error.html", message=msg)
+
+    # Otros errores
+    @app.errorhandler(Exception)
+    def handle_exception(_e: Exception) -> tuple[str, int]:
+        # Para manejar otros errores de forma general
+        msg = "Error desconocido"
+        app.logger.exception(msg)
+        return render_template("error.html", message=msg), 500
+
     return app
 
 
