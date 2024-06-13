@@ -471,7 +471,7 @@ def add_user() -> Response | str:
 
 
 @main.route("/error")
-def error() -> Response | str:
+def error() -> str:
     """Render an error page."""
     return render_template("error.html")
 
