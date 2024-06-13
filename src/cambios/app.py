@@ -6,13 +6,16 @@ import locale
 import logging
 import os
 import secrets
+import sys
 from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from flask import Flask, redirect, session, url_for
+from flask import Flask, flash, redirect, render_template, session, url_for
 from flask_admin import Admin  # type: ignore[import-untyped]
 from flask_admin.contrib.sqla import ModelView  # type: ignore[import-untyped]
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from . import configure_timezone
 from .database import db, init_db
@@ -117,6 +120,22 @@ class AdminModelView(ModelView):
         return redirect(url_for("main.login"))
 
 
+def check_db_connection() -> None | str:
+    """Check if a database connection can be established."""
+    try:
+        # Intenta realizar una consulta simple para verificar la conexión
+
+        db.session.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        # Maneja el error de conexión a la base de datos
+        app.logger.exception("Error al conectar a la base de datos.")
+        flash("Error: No se puede conectar a la base de datos.", "danger")
+        return render_template("error.html")
+    else:
+        # Continúa con la solicitud normal
+        return None
+
+
 def create_app() -> Flask:
     """Create the Flask app."""
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
@@ -132,7 +151,11 @@ def create_app() -> Flask:
 
     db.init_app(app)
     with app.app_context():
-        init_db()
+        try:
+            init_db()
+        except SQLAlchemyError:
+            app.logger.exception("Error al inicializar la base de datos.")
+            sys.exit(1)
 
     init_firebase()
     register_routes(app)
@@ -140,11 +163,18 @@ def create_app() -> Flask:
     admin = Admin(app, name="Admin Panel", template_mode="bootstrap4")
     admin.add_view(AdminModelView(ATC, db.session))
 
+    # Registrar la función de verificación de la base de datos
+    app.before_request(check_db_connection)
+
     # Context processor to make user info available in templates
     @app.context_processor
-    def inject_user() -> dict[str, str]:
-        user = ATC.query.filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
-        return {"current_user": user}
+    def inject_user() -> dict[str, str | None]:
+        try:
+            user = ATC.query.filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
+        except SQLAlchemyError:
+            return {"current_user": None}
+        else:
+            return {"current_user": user}
 
     @app.before_request
     def make_session_permanent() -> None:

@@ -1,0 +1,15 @@
+<!-- error.html -->
+{% extends 'base.html' %}
+
+{% block title %}Error - ATCCApp{% endblock %}
+
+{% block body %}
+<div class="text-center">
+    <h1 class="display-1">Oops!</h1>
+
+    <p class="lead">Algo fue mal. Intente de nuevo más tarde, por
+        favor.</p>
+    <hr class="my-4">
+    <a class="btn btn-primary btn-lg" href="{{ url_for('main.index') }}" role="button">Ir a la página principal</a>
+</div>
+{% endblock %}

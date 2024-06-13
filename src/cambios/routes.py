@@ -470,6 +470,12 @@ def add_user() -> Response | str:
     return render_template("add_user.html")
 
 
+@main.route("/error")
+def error() -> Response | str:
+    """Render an error page."""
+    return render_template("error.html")
+
+
 def register_routes(app: Flask) -> Blueprint:
     """Register the routes with the app."""
     app.register_blueprint(main)
