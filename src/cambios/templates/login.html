@@ -1,7 +1,6 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
 
-{% block title %}Login{% endblock %}
-
+{% block title %}Iniciar Sesión{% endblock %}
 {% block head %}
 <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.css" />
 <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
@@ -25,6 +24,12 @@
     font-size: 1.2em;
   }
 
+  .login-container img {
+    max-width: 200px;
+    /* Adjust this value as needed */
+    margin-bottom: 1em;
+  }
+
   #loader {
     margin-top: 1em;
   }
@@ -33,7 +38,8 @@
 
 {% block content %}
 <div class="login-container">
-  <h1>Aplicación de cambios de LECS</h1>
+  <h1>ATCApp</h1>
+  <img src="{{ url_for('static', filename='atcapp.webp') }}" alt="ATCApp Logo">
   <p class="welcome-text">Por favor, use la cuenta de Google que ha indicado previamente al administrador para iniciar
     sesión.</p>
   <div id="firebaseui-auth-container"></div>
