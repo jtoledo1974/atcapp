@@ -1,11 +1,10 @@
-"""Comandos CLI."""
-
 import json
 
 import click
+from flask import current_app
 from flask.cli import with_appcontext
 
-from .database import db, init_db
+from .database import db
 from .models import ATC
 
 # Definir constantes globales para los nombres de los atributos
@@ -19,9 +18,16 @@ ATTR_POLITICA_ACEPTADA = "politica_aceptada"
 
 @click.command("export-atcs")
 @click.argument("output_file", type=click.File("w"))
+@click.option("--db-uri", type=str, default=None, help="URI de la base de datos a usar")
 @with_appcontext
-def export_atcs(output_file: click.File) -> None:
+def export_atcs(output_file: click.File, db_uri: str | None) -> None:
     """Exportar ATCs a un archivo JSON."""
+    if db_uri:
+        # Cambia la configuración de la base de datos
+        current_app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
+        db.engine.dispose()  # Dispone la conexión existente
+        db.create_all()  # Crea todas las tablas en la nueva base de datos
+
     atcs = ATC.query.filter(~ATC.email.like("%example%")).all()
     atc_list = [
         {
@@ -34,7 +40,7 @@ def export_atcs(output_file: click.File) -> None:
         }
         for atc in atcs
     ]
-    json.dump(atc_list, output_file, ensure_ascii=False, indent=4)  # type: ignore[arg-type]
+    json.dump(atc_list, output_file, ensure_ascii=False, indent=4)
     click.echo(f"Exported {len(atc_list)} ATCs to {output_file.name}")
 
 
@@ -44,25 +50,31 @@ def export_atcs(output_file: click.File) -> None:
 @with_appcontext
 def import_atcs(input_file: click.File, db_uri: str) -> None:
     """Importar ATCs desde un archivo JSON a otra base de datos."""
-    data = json.load(input_file)  # type: ignore[arg-type]
+    data = json.load(input_file)
 
     # Configura la URI de la base de datos
+    current_app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
     db.engine.dispose()  # Dispone la conexión existente
-    db.get_engine(bind=db_uri)
+    db.create_all()  # Crea todas las tablas en la nueva base de datos
 
-    with db.get_app().app_context():
-        init_db()
-
-        for item in data:
-            atc = ATC.query.filter_by(
+    for item in data:
+        atc = ATC.query.filter_by(apellidos_nombre=item[ATTR_APELLIDOS_NOMBRE]).first()
+        if atc:
+            atc.nombre = item[ATTR_NOMBRE]
+            atc.apellidos = item[ATTR_APELLIDOS]
+            atc.email = item[ATTR_EMAIL]
+            atc.es_admin = item[ATTR_ES_ADMIN]
+            atc.politica_aceptada = item[ATTR_POLITICA_ACEPTADA]
+        else:
+            atc = ATC(
                 apellidos_nombre=item[ATTR_APELLIDOS_NOMBRE],
-            ).first()
-            if atc:
-                atc.nombre = item[ATTR_NOMBRE]
-                atc.apellidos = item[ATTR_APELLIDOS]
-                atc.es_admin = item[ATTR_ES_ADMIN]
-                atc.politica_aceptada = item[ATTR_POLITICA_ACEPTADA]
-                db.session.add(atc)
+                nombre=item[ATTR_NOMBRE],
+                apellidos=item[ATTR_APELLIDOS],
+                email=item[ATTR_EMAIL],
+                es_admin=item[ATTR_ES_ADMIN],
+                politica_aceptada=item[ATTR_POLITICA_ACEPTADA],
+            )
+        db.session.add(atc)
 
-        db.session.commit()
-        click.echo(f"Imported {len(data)} ATCs to the database at {db_uri}")
+    db.session.commit()
+    click.echo(f"Imported {len(data)} ATCs to the database at {db_uri}")
