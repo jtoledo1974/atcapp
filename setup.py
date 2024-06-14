@@ -11,7 +11,6 @@ setup(
     install_requires=[
         "flask",
         "flask-admin",
-        "flask-sqlalchemy",
         "alembic",
         "firebase-admin",
         "pdfplumber",

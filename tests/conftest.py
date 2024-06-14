@@ -28,9 +28,9 @@ from .pickled_db import (
 if TYPE_CHECKING:
     from typing import Any, Generator
 
+    from cambios.database import DB
     from flask import Flask
     from flask.testing import FlaskClient
-    from flask_sqlalchemy import SQLAlchemy
     from pdfplumber import PDF
     from pytest_mock import MockerFixture
     from sqlalchemy.orm import Session
@@ -59,7 +59,7 @@ def app() -> Flask:
 
 
 @pytest.fixture(scope="session")
-def db(app: Flask) -> Generator[SQLAlchemy, None, None]:
+def db(app: Flask) -> Generator[DB, None, None]:
     """Provide a database session for tests."""
     engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
     app.config["SQLALCHEMY_DATABASE_URI"] = engine_str
@@ -72,13 +72,14 @@ def db(app: Flask) -> Generator[SQLAlchemy, None, None]:
 
 
 @pytest.fixture()
-def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
+def session(db: DB) -> Generator[scoped_session, None, None]:
     """Create a new database session for a test."""
     connection = db.engine.connect()
     transaction = connection.begin()
 
     session_factory = sessionmaker(bind=connection)
     session = scoped_session(session_factory)
+    saved_session = db.session
     db.session = session  # type: ignore[assignment]
 
     yield session
@@ -86,6 +87,7 @@ def session(db: SQLAlchemy) -> Generator[scoped_session, None, None]:
     session.remove()
     transaction.rollback()
     connection.close()
+    db.session = saved_session
 
 
 @pytest.fixture(scope="session")

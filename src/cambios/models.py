@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime  # noqa: TCH003  # Necesario para el mapping
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -22,6 +23,11 @@ from sqlalchemy.schema import MetaData
 
 from . import get_timezone
 
+if TYPE_CHECKING:
+    from typing import ClassVar
+
+    from sqlalchemy.orm import Query
+
 # Naming conventions for Alembic migrations
 naming_convention = {
     "ix": "ix_%(column_0_label)s",
@@ -39,6 +45,7 @@ class Base(DeclarativeBase):
     """Base class for declarative models."""
 
     metadata = metadata
+    query: ClassVar[Query]
 
 
 sectores_estadillo = Table(
