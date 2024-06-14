@@ -53,7 +53,7 @@ def test_logout(client: FlaskClient, regular_user: ATC) -> None:
     client.post("/login", data={"idToken": "test_token"})
     response = client.get("/logout", follow_redirects=True)
     assert response.status_code == 200
-    assert b"Login" in response.data
+    assert "Has cerrado sesión" in response.data.decode()
     with client.session_transaction() as sess:
         assert "id_atc" not in sess
 
