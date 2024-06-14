@@ -10,8 +10,8 @@ import pytest
 from cambios.models import ATC, Turno
 
 if TYPE_CHECKING:
+    from cambios.database import DB
     from flask.testing import FlaskClient
-    from sqlalchemy import SQLAlchemy
 
 # Assuming your fixtures are in conftest.py as shown before
 
@@ -36,7 +36,7 @@ def extract_users_and_shifts_inserted(response: bytes) -> tuple[int, int]:
 def test_upload_admin_post(
     client: FlaskClient,
     admin_user: ATC,
-    db: SQLAlchemy,
+    db: DB,
     turnero_path: Path,
 ) -> None:
     """Test that the upload route processes a valid PDF file."""
@@ -57,7 +57,8 @@ def test_upload_admin_post(
     assert shifts == 445
 
     # Skip the first user (Admin) and get the second user
-    user = ATC.query.offset(1).first()
+    user = db.session.query(ATC).offset(1).first()
+    assert user
     assert user.nombre == "Manuel"
     assert user.apellidos == "Gil Romero"
     assert user.email == "gil.romero.manuel@example.com"

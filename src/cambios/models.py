@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime  # noqa: TCH003  # Necesario para el mapping
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -17,28 +18,46 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm.decl_api import DeclarativeBase
+from sqlalchemy.schema import MetaData
 
 from . import get_timezone
-from .database import db
 
-# This is a hack due to flask_sqlalchemy seeming incompatible with mypy
-# It is explained in https://github.com/pallets-eco/flask-sqlalchemy/issues/1327
-# I've tried all approaches and this seems to me the simplest hack
-# to get mypy happy.
-# We don't get autocomplete for model methods like query, but at least
-# we do get type checking of columns.
+if TYPE_CHECKING:
+    from typing import ClassVar
+
+    from sqlalchemy.orm import Query
+
+# Naming conventions for Alembic migrations
+naming_convention = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+metadata = MetaData(naming_convention=naming_convention)
+
+
+# Define a base using the declarative base
+class Base(DeclarativeBase):
+    """Base class for declarative models."""
+
+    metadata = metadata
+    query: ClassVar[Query]
 
 
 sectores_estadillo = Table(
     "sectores_estadillo",
-    db.Model.metadata,
+    Base.metadata,
     Column("id", Integer, primary_key=True),
     Column("id_sector", Integer, ForeignKey("sectores.id"), nullable=False),
     Column("id_estadillo", Integer, ForeignKey("estadillos.id"), nullable=False),
 )
 
 
-class ATC(db.Model):  # type: ignore[name-defined]
+class ATC(Base):
     """Modelo de la tabla controladores."""
 
     __tablename__ = "atcs"
@@ -83,7 +102,7 @@ class ATC(db.Model):  # type: ignore[name-defined]
         return f"<ATC {self.apellidos_nombre}>"
 
 
-class Turno(db.Model):  # type: ignore[name-defined]
+class Turno(Base):
     """Turnos son los publicados en el turnero mensual y actualizados con cambios.
 
     Se distinguen de los servicios porque esos son los que se utilizan para
@@ -101,7 +120,7 @@ class Turno(db.Model):  # type: ignore[name-defined]
     atc: Mapped[ATC] = relationship("ATC", backref="turnos")
 
 
-class TipoTurno(db.Model):  # type: ignore[name-defined]
+class TipoTurno(Base):
     """Modelo de la tabla "tipos_de_turno."""
 
     __tablename__ = "tipos_de_turno"
@@ -110,7 +129,7 @@ class TipoTurno(db.Model):  # type: ignore[name-defined]
     descripcion: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
-class Estadillo(db.Model):  # type: ignore[name-defined]
+class Estadillo(Base):
     """Modelo de la tabla estadillos.
 
     Datos generales del estadillo diario:
@@ -160,7 +179,7 @@ class Estadillo(db.Model):  # type: ignore[name-defined]
         return hora_max.astimezone(get_timezone())
 
 
-class Sector(db.Model):  # type: ignore[name-defined]
+class Sector(Base):
     """Modelo de la tabla sectores."""
 
     __tablename__ = "sectores"
@@ -179,7 +198,7 @@ class Sector(db.Model):  # type: ignore[name-defined]
         return f"<Sector {self.nombre}>"
 
 
-class Periodo(db.Model):  # type: ignore[name-defined]
+class Periodo(Base):
     """Modelo de la tabla periodos.
 
     Periodos es cada uno de los tramos en que un controlador
@@ -242,7 +261,7 @@ class Periodo(db.Model):  # type: ignore[name-defined]
         return f"<Per. {self.hora_inicio.strftime('%H:%M')} {self.duracion}'>"
 
 
-class Servicio(db.Model):  # type: ignore[name-defined]
+class Servicio(Base):
     """Modelo intermedio para gestionar la relación entre ATC y Estadillo.
 
     Un concepto similar es el de Turno, pero usaremos servicios para

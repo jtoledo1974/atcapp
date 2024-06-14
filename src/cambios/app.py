@@ -18,7 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from . import configure_timezone
-from .database import db, init_db
+from .database import db
 from .firebase import init_firebase
 from .models import ATC
 from .routes import register_routes
@@ -152,7 +152,7 @@ def create_app() -> Flask:
     db.init_app(app)
     with app.app_context():
         try:
-            init_db()
+            db.init_db()
         except SQLAlchemyError:
             app.logger.exception("Error al inicializar la base de datos.")
             sys.exit(1)
