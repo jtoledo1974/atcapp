@@ -32,19 +32,23 @@ class DB:
     """
 
     app: Flask
-    engine: Engine
+    engine: Engine | None = None
     session_factory: sessionmaker
     session: scoped_session
 
     def init_app(self, app: Flask) -> None:
         """Initialize the database connection."""
+        self.app = app
+
+        if self.engine:
+            logger.debug("Inicialización de la base de datos ya realizada. Ignorada.")
+            return
+
         self.engine = create_engine(
             app.config["SQLALCHEMY_DATABASE_URI"],
             echo=False,
             future=True,
         )
-        self.app = app
-
         self.session_factory = sessionmaker(bind=self.engine)
         self.session = scoped_session(self.session_factory)
         app.teardown_appcontext(self.shutdown_session)
