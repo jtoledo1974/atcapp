@@ -170,7 +170,7 @@ def create_app() -> Flask:
     @app.context_processor
     def inject_user() -> dict[str, str | None]:
         try:
-            user = ATC.query.filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
+            user = db.session.query(ATC).filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
         except SQLAlchemyError:
             return {"current_user": None}
         else:

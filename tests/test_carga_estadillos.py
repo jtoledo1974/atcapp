@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import TYPE_CHECKING
 
 import pytest
@@ -246,3 +247,28 @@ def test_subir_dos_veces_lo_deja_igual(
     assert n_periodos == n_periodos2
     assert n_sectores == n_sectores2
     assert n_atcs == n_atcs2
+
+
+def test_eliminacion_en_cascada(session: scoped_session) -> None:
+    """Comprobar que se eliminan los servicios en cascada."""
+    # Crear un nuevo estadillo con servicios
+    estadillo = Estadillo(
+        fecha=date.today(),  # noqa: DTZ011
+        dependencia="TWR",
+        turno="M",
+    )
+    servicio = Servicio(id_atc=1, id_estadillo=1, categoria="CAT1", rol="ROL1")
+    estadillo.servicios.append(servicio)
+
+    session.add(estadillo)
+    session.commit()
+
+    # Verificar que el servicio fue agregado
+    assert session.query(Servicio).count() == 1
+
+    # Eliminar el estadillo
+    session.delete(estadillo)
+    session.commit()
+
+    # Verificar que el servicio fue eliminado en cascada
+    assert session.query(Servicio).count() == 0

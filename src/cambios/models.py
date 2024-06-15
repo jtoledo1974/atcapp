@@ -273,6 +273,8 @@ class Servicio(Base):
     __tablename__ = "servicios"
     __table_args__ = (UniqueConstraint("id_atc", "id_estadillo"),)
 
+    __mapper_args__ = {"confirm_deleted_rows": False}  # noqa: RUF012 Creo que es FP
+
     id: Mapped[int] = mapped_column(primary_key=True)
     id_atc: Mapped[int] = mapped_column(Integer, ForeignKey("atcs.id"), nullable=False)
     id_estadillo: Mapped[int] = mapped_column(

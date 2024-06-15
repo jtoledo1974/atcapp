@@ -183,10 +183,10 @@ def login() -> Response | str:
         )
         return redirect(url_for("main.logout", error="Autenticación fallida"))
 
-    user = ATC.query.filter_by(email=email).first()
+    user = db.session.query(ATC).filter_by(email=email).first()
     if not user:
         # If the user database is empty we assume the first user is an admin.
-        if not ATC.query.all():
+        if not db.session.query(ATC).all():
             logger.info(
                 "No hay usuarios en la base de datos."
                 " Se asume que el primer usuario es un administrador.",
@@ -377,7 +377,7 @@ def admin_user_list() -> Response | str:
         request.args.get("filter_recognized", default="false").lower() == "true"
     )
 
-    users_query = ATC.query.order_by(ATC.apellidos_nombre)
+    users_query = db.session.query(ATC).order_by(ATC.apellidos_nombre)
 
     if filter_by_recognized:
         recognized_emails = get_recognized_emails()
@@ -412,7 +412,7 @@ def admin_update_users() -> Response:
                 flash(f"valores inválidos en: {line}", "danger")
                 logger.warning("Vaores inválidos en: %s", line)
                 continue
-            user = ATC.query.get(user_id)
+            user = db.session.query(ATC).get(user_id)
             if user:
                 user.nombre = nombre.strip()
                 user.apellidos = apellidos.strip()
@@ -436,7 +436,7 @@ def autocomplete_atc() -> Response:
     if not query:
         return jsonify([])
 
-    atcs = ATC.query.filter(ATC.apellidos_nombre.ilike(f"%{query}%")).all()
+    atcs = db.session.query(ATC).filter(ATC.apellidos_nombre.ilike(f"%{query}%")).all()
     results = [{"id": atc.id, "name": atc.apellidos_nombre} for atc in atcs]
     return jsonify(results)
 
