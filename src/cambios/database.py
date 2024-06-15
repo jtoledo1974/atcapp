@@ -53,8 +53,6 @@ class DB:
         self.session = scoped_session(self.session_factory)
         app.teardown_appcontext(self.shutdown_session)
 
-        Base.query = self.dynamic_query_property()
-
     def shutdown_session(self, _exception: BaseException | None = None) -> None:  # type: ignore[no-untyped-def]
         """Remove the session after the request is finished."""
         self.session.remove()
@@ -80,25 +78,6 @@ class DB:
     def metadata(self) -> MetaData:
         """Return the metadata."""
         return Base.metadata
-
-    def dynamic_query_property(self):  # noqa: ANN201
-        """Return a dynamic query property for Base.
-
-        Esto genera un poco de magia para que se pueda
-        usar la sintaxis de flask_sqlalchemy en los modelos.
-        QueryProperty es un descriptor que devuelve el
-        objeto query que referencie la sesión actual.
-        No nos vale la sesión en el momento de la creación
-        de DB porque los tests juegan con las sesiones
-        para asegurarse de que se hace un rollback al final.
-        """
-        db = self
-
-        class QueryProperty:
-            def __get__(self, _instance, owner):  # noqa: ANN204, ANN001
-                return db.session.query(owner)
-
-        return QueryProperty()
 
 
 db = DB()

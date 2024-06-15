@@ -68,7 +68,7 @@ def test_upload_admin_post(
 
     # Checking that we don't touch existing shifts
     # and that roles and equipos are updated
-    shift_to_delete = Turno.query.first()
+    shift_to_delete = db.session.query(Turno).first()
     db.session.delete(shift_to_delete)
     user.equipo = "X"
     user.categoria = "CON"
