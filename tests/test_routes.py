@@ -174,9 +174,10 @@ def test_upload_estadillo_post(
     assert "Archivo cargado con éxito".encode() in response.data
 
 
+@pytest.mark.usefixtures("_verify_id_token_mock")
 def test_plantilla_estadillo(preloaded_client: FlaskClient, atc: ATC) -> None:
     """Verificar que la plantilla de estadillo se renderiza correctamente."""
     preloaded_client.post("/login", data={"idToken": "test_token"})
     response = preloaded_client.get("/estadillo")
     assert response.status_code == 200
-    assert b"Plantilla de Estadillo" in response.data
+    assert 'class="periodos"' in response.data.decode()

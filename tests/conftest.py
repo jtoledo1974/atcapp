@@ -52,23 +52,30 @@ def _set_env() -> None:
 
 @pytest.fixture(scope="session")
 def app() -> Flask:
-    """Create and configure a new app instance for each test."""
+    """Create and configure a new app instance."""
     app = create_app()
     app.config.update({"TESTING": True})
     return app
 
 
 @pytest.fixture(scope="session")
-def db(app: Flask) -> Generator[DB, None, None]:
-    """Provide a database session for tests."""
-    engine_str = os.getenv("FLASK_SQLALCHEMY_DATABASE_URI", "sqlite:///:memory:")
-    app.config["SQLALCHEMY_DATABASE_URI"] = engine_str
-
+def preloaded_app(app: Flask, preloaded_session: Session) -> Flask:
+    """Create and configure a new app instance with preloaded data."""
     with app.app_context():
-        _db.create_all()
-        yield _db
+        saved_session = _db.session
+        _db.session = scoped_session(lambda: preloaded_session)
+        yield app
         _db.session.remove()
         _db.drop_all()
+        _db.session.remove()
+        _db.session = saved_session
+
+
+@pytest.fixture(scope="session")
+def db(preloaded_app: Flask) -> Generator[DB, None, None]:
+    """Provide a database session for tests."""
+    with preloaded_app.app_context():
+        yield _db
 
 
 @pytest.fixture()
@@ -86,7 +93,7 @@ def session(db: DB) -> Generator[scoped_session, None, None]:
 
     session.remove()
     transaction.rollback()
-    connection.close()
+    # connection.close()
     db.session = saved_session
 
 
@@ -163,9 +170,9 @@ def turnero_path(pdf_turnero: pdfplumber.pdf.PDF) -> Generator[Path, Any, Any]:
 
 
 @pytest.fixture()
-def client(app: Flask, session: scoped_session) -> FlaskClient:
-    """Create a test client for the app."""
-    return app.test_client()
+def client(preloaded_app: Flask, session: scoped_session) -> FlaskClient:
+    """Create a test client for the app with preloaded data."""
+    return preloaded_app.test_client()
 
 
 @pytest.fixture()
@@ -248,11 +255,26 @@ def preloaded_session() -> Generator[Session, None, None]:
 
 
 @pytest.fixture()
-def atc(preloaded_session: Session) -> ATC:
-    """Return an atc from a preloaded database."""
-    # Get the first user from the Users table
+def preloaded_client(
+    preloaded_app: Flask,
+    preloaded_session: scoped_session,
+) -> FlaskClient:
+    """Create a test client for the app with preloaded data."""
+    return preloaded_app.test_client()
+
+
+@pytest.fixture()
+def atc(preloaded_session: Session, mocker: MockerFixture) -> ATC:
+    """Return an ATC from a preloaded database and mock verify_id_token."""
     user = preloaded_session.query(ATC).first()
     if not user:
-        _msg = "No users in the database."
-        raise ValueError(_msg)
+        raise ValueError("No users in the database.")
+
+    mocker.patch(
+        "cambios.firebase.auth.verify_id_token",
+        return_value={"uid": "admin_uid", "email": user.email},
+    )
+    user.politica_aceptada = True
+    preloaded_session.commit()
+
     return user
