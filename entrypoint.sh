@@ -13,5 +13,8 @@ else
     echo "SSH_HOST is not defined or is empty, skipping SSH tunnel setup."
 fi
 
-# Ejecutar la aplicación Flask
-exec gunicorn --bind 0.0.0.0:8080 cambios.wsgi:app
+# Iniciar Nginx
+service nginx start
+
+# Ejecutar la aplicación Flask con Gunicorn
+exec gunicorn --bind 127.0.0.1:8000 cambios.wsgi:app

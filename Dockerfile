@@ -1,7 +1,12 @@
 FROM python:3.12-slim
 
 # Install dependencies
-RUN apt-get update && apt-get install -y git locales openssh-client && apt-get clean
+RUN apt-get update && apt-get install -y \
+    git \
+    locales \
+    openssh-client \
+    nginx \
+    && apt-get clean
 
 # Set the locale
 RUN sed -i -e 's/# es_ES.UTF-8 UTF-8/es_ES.UTF-8 UTF-8/' /etc/locale.gen && locale-gen
@@ -21,16 +26,15 @@ COPY . .
 # Install the application in editable mode
 RUN pip install -e .
 
-# Set environment variables for SSH
-ENV SSH_HOST=""
-ENV SSH_PORT=22
-ENV SSH_USER=root
-ENV SSH_PRIVATE_KEY=""
-ENV SSH_KEY_PATH=/root/.ssh/id_rsa
+# Copy Nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Run the application
+# Expose the port for Nginx
+EXPOSE 8080
+
+# Run the entrypoint script
 CMD ["/entrypoint.sh"]
