@@ -14,4 +14,4 @@ else
 fi
 
 # Ejecutar la aplicación Flask
-exec python -m cambios.app
+exec gunicorn --bind 0.0.0.0:8080 cambios.wsgi:app
