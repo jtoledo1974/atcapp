@@ -72,7 +72,7 @@ class ATC(Base):
     """Nombre completo del controlador según lo presenta enaire."""
     nombre: Mapped[str] = mapped_column(String(40), nullable=False)
     apellidos: Mapped[str] = mapped_column(String(40), nullable=False)
-    categoria: Mapped[str] = mapped_column(String(50), nullable=False)
+    categoria: Mapped[str] = mapped_column(String(50), nullable=True)
     equipo: Mapped[str | None] = mapped_column(String(1), nullable=True)
     numero_de_licencia: Mapped[str] = mapped_column(String(50), nullable=True)
     es_admin: Mapped[bool] = mapped_column(Boolean, default=False)
