@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y \
     locales \
     openssh-client \
     nginx \
+    curl \
+    procps \
     && apt-get clean
 
 # Set the locale
