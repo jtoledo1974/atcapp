@@ -13,9 +13,13 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger("Tunnel Monitor")
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
-SIGNAL_FILE = Path("/tmp/tunnel_ready")  # noqa: S108
+if os.name == "posix":
+    SIGNAL_FILE = Path("/tmp/tunnel_ready")  # noqa: S108
+else:
+    # Use the guaranteed existing windows temp directory
+    SIGNAL_FILE = Path(os.getenv("TEMP", "C:\\Windows\\Temp")) / "tunnel_ready"
 
 
 @dataclass
@@ -47,6 +51,7 @@ def get_tunnel_params() -> TunnelParams:
 def check_db_connection(uri: str) -> bool:
     """Check if a database connection can be established using SQLAlchemy."""
     try:
+        logger.debug("Checking database connection to %s", uri)
         engine = create_engine(uri)
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
