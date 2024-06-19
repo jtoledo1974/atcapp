@@ -13,7 +13,13 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger("Tunnel Monitor")
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+
+if os.name == "posix":
+    SIGNAL_FILE = Path("/tmp/tunnel_ready")  # noqa: S108
+else:
+    # Use the guaranteed existing windows temp directory
+    SIGNAL_FILE = Path(os.getenv("TEMP", "C:\\Windows\\Temp")) / "tunnel_ready"
 
 
 @dataclass
@@ -45,6 +51,7 @@ def get_tunnel_params() -> TunnelParams:
 def check_db_connection(uri: str) -> bool:
     """Check if a database connection can be established using SQLAlchemy."""
     try:
+        logger.debug("Checking database connection to %s", uri)
         engine = create_engine(uri)
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
@@ -65,7 +72,7 @@ def create_key_file(tunnel_params: TunnelParams) -> None:
     key_path.chmod(0o600)
 
 
-def restart_ssh_tunnel(tunnel_params: TunnelParams) -> None:
+def restart_ssh_tunnel(tunnel_params: TunnelParams) -> subprocess.Popen | None:
     """Restart the SSH tunnel to the database."""
     tp = tunnel_params
     ssh_command = [
@@ -76,7 +83,7 @@ def restart_ssh_tunnel(tunnel_params: TunnelParams) -> None:
         "UserKnownHostsFile=/dev/null",
         "-N",
         "-L",
-        f"{tp.db_port}:{tp.db_host}:{tp.db_port}",
+        f"127.0.0.1:{tp.db_port}:{tp.db_host}:{tp.db_port}",
         "-p",
         str(tp.ssh_port),
         f"{tp.ssh_user}@{tp.ssh_host}",
@@ -85,14 +92,13 @@ def restart_ssh_tunnel(tunnel_params: TunnelParams) -> None:
     ]
     logger.info("Restarting tunnel with: %s", " ".join(ssh_command))
     try:
-        p = subprocess.Popen(ssh_command)  # noqa: S603
+        process = subprocess.Popen(ssh_command)  # noqa: S603
     except Exception:
         logger.exception("Failed to start SSH tunnel")
-    # log output of the command
-    stdout, stderr = p.communicate()
-    logger.info("SSH tunnel stdout: %s", stdout)
-    logger.info("SSH tunnel stderr: %s", stderr)
-    time.sleep(2)
+        return None
+
+    time.sleep(5)
+    return process
 
 
 # Singleton class to calculate reattempt time
@@ -113,6 +119,21 @@ class ReattemptTime:
         self.reattempt_time = 1
 
 
+def create_signal_file() -> None:
+    """Create a signal file to indicate the tunnel is ready."""
+    if SIGNAL_FILE.exists():
+        return
+    with SIGNAL_FILE.open("w") as f:
+        f.write("Tunnel is ready\n")
+    logger.info("Tunnel is ready. Signal file %s created", SIGNAL_FILE)
+
+
+def remove_signal_file() -> None:
+    """Remove the signal file to indicate the tunnel is not ready."""
+    if SIGNAL_FILE.exists():
+        SIGNAL_FILE.unlink()
+
+
 def monitor_connection() -> None:
     """Monitor db connection and restart the SSH tunnel if necessary."""
     tunnel_params = get_tunnel_params()
@@ -122,14 +143,20 @@ def monitor_connection() -> None:
     )
     create_key_file(tunnel_params)
     timer = ReattemptTime()
-    restart_ssh_tunnel(tunnel_params)
+    tunnel_process = restart_ssh_tunnel(tunnel_params)
+
     while True:
         if not check_db_connection(db_uri):
+            if tunnel_process:
+                tunnel_process.terminate()
+                tunnel_process.wait()
+            remove_signal_file()
             cool_down = timer()
             logger.info("Retrying in %d seconds", cool_down)
             time.sleep(cool_down)
-            restart_ssh_tunnel(tunnel_params)
+            tunnel_process = restart_ssh_tunnel(tunnel_params)
         else:
+            create_signal_file()
             timer.reset()
             time.sleep(60)
 
