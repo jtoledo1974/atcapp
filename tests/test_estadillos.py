@@ -71,6 +71,7 @@ def test_comprueba_duraciones_grupo(
     preloaded_session: Session,
     color_manager: ColorManager,
 ) -> None:
+    """Verifica que las duraciones de los periodos sean correctas."""
     grupos = identifica_grupos(estadillo, preloaded_session)
     tz = pytz.timezone("Europe/Madrid")
     datos_grupos = [genera_datos_grupo(grupo, color_manager, tz) for grupo in grupos]

@@ -288,8 +288,6 @@ def _genera_horas_de_inicio(
                 porcentaje=duracion / dur_total * 100,
             ),
         )
-        if horas_inicio[-1].hora_inicio == "05:30":
-            logger.info("Hora de inicio 05:30")
 
     return horas_inicio
 

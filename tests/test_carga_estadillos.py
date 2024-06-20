@@ -334,7 +334,7 @@ def test_horas_guardadas_en_utc(
         # a la zona horaria local
         assert (
             hora_inicio_local.time() == periodo.hora_inicio_utc.astimezone(tz).time()
-        ), f"hora_inicio {hora_inicio_local} no coincide con la hora local esperada {hora_inicio_local}"
+        ), f"hora_inicio {hora_inicio_local} difere de la esperada {hora_inicio_local}"
         assert (
             hora_fin_local.time() == periodo.hora_fin_utc.astimezone(tz).time()
-        ), f"hora_fin {hora_fin_local} no coincide con la hora local esperada {hora_fin_local}"
+        ), f"hora_fin {hora_fin_local} difere de la esperada {hora_fin_local}"

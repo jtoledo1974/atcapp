@@ -263,9 +263,8 @@ def string_to_utc_datetime(
     """
     naive_dt = datetime.strptime(time, "%H:%M")  # noqa: DTZ007
     naive_dt_date = datetime.combine(fecha, naive_dt.time())
-    local_dt = tz.localize(naive_dt_date)
-    utc_datetime = local_dt.astimezone(timezone.utc)
-    return utc_datetime
+    local_dt = tz.localize(naive_dt_date)  # type: ignore[attr-defined]
+    return local_dt.astimezone(timezone.utc)
 
 
 def calcula_horas_inicio_y_fin(
