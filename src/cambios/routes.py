@@ -194,6 +194,7 @@ def login() -> Response | str:
             user = ATC(
                 apellidos_nombre="Admin User",
                 email=email,
+                dependencia="LECS",
                 nombre="Admin",
                 apellidos="User",
                 categoria="Admin",

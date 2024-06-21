@@ -61,6 +61,7 @@ def test_upload_admin_post(
     assert user
     assert user.nombre == "Manuel"
     assert user.apellidos == "Gil Romero"
+    assert user.dependencia == "LECS"
     assert user.email == "gil.romero.manuel@example.com"
     assert user.categoria == "TS"
     assert user.equipo == "A"

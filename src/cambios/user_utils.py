@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum, auto
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -27,46 +28,61 @@ class UpdateResult(Enum):
     UPDATED = auto()
 
 
+@dataclass
+class AtcTexto:
+    """Datos en texto de un controlador.
+
+    Para ser utilizada con funciones del módulo user_utils.
+    """
+
+    apellidos_nombre: str
+    dependencia: str
+    """LECS, LECM, etc."""
+    categoria: str
+    """CON, PTD, IS, TIN, etc."""
+    equipo: str | None = None
+    "A a H, o None."
+    email: str | None = None
+
+
 def create_user(
-    name: str,
-    role: str,
-    equipo: str | None,
+    atc_texto: AtcTexto,
     db_session: scoped_session,
-    email: str | None = None,
 ) -> ATC:
     """Create a new user in the database.
 
     Args:
     ----
-        name: The full name as a single string or a tuple of (nombre, apellidos).
-              If a full name is provided it should be in the format "apellidos nombre".
-        role: The role of the user. (CON, PDT, etc.)
-        equipo: The equipo of the user (A, B, C, ...).
+        atc_texto (AtcTexto): The user's data in text form.
         db_session (scoped_session): The database session.
-        email: The email of the user. If not provided, a fake email will be generated.
 
     Returns:
     -------
         User: The created user.
 
     """
-    name = no_extraneous_spaces(name)
-    name = fix_encoding(name)
-    role = no_extraneous_spaces(role)
-    equipo = no_extraneous_spaces(equipo) if equipo else None
+    apellidos_nombre = no_extraneous_spaces(atc_texto.apellidos_nombre)
+    apellidos_nombre = fix_encoding(apellidos_nombre)
+    dependencia = no_extraneous_spaces(atc_texto.dependencia)
+    role = no_extraneous_spaces(atc_texto.categoria)
+    equipo = no_extraneous_spaces(atc_texto.equipo) if atc_texto.equipo else None
 
-    nombre, apellidos = parse_name(name)
+    nombre, apellidos = parse_name(apellidos_nombre)
     nombre, apellidos = capitaliza_nombre(nombre, apellidos)
 
+    email = atc_texto.email
     if not email:
         # Substitute spaces for dots and remove accents
         email_name = (
-            f"{name.replace(' ', '.').encode('ascii', 'ignore').decode('utf-8')}"
-        ).lower()
+            apellidos_nombre.replace(" ", ".")
+            .encode("ascii", "ignore")
+            .decode("utf-8")
+            .lower()
+        )
         email = f"{email_name}@example.com"
 
     # Check first whether the user already exists
-    existing_user = find_user(name, db_session)
+    existing_user = find_user(apellidos_nombre, db_session)
     if existing_user:
         logger.warning(
             "Controlador existente: %s. No creamos uno nuevo con el mismo nombre.",
@@ -75,9 +91,10 @@ def create_user(
         return existing_user
 
     new_user = ATC(
-        apellidos_nombre=name,
+        apellidos_nombre=apellidos_nombre,
         nombre=nombre,
         apellidos=apellidos,
+        dependencia=dependencia.upper(),
         email=email,
         categoria=role,
         equipo=equipo.upper() if equipo else None,
@@ -101,7 +118,7 @@ def update_user(user: ATC, role: str, equipo: str | None) -> UpdateResult:
 
 
 def find_user(
-    name: str,
+    apellidos_nombre: str,
     db_session: scoped_session,
 ) -> ATC | None:
     """Find a user in the database by name.
@@ -109,7 +126,9 @@ def find_user(
     The name is expected to be in the format "apellidos nombre".
     """
     # Find the user in the database by name
-    query = db_session.query(ATC).filter(ATC.apellidos_nombre == fix_encoding(name))
+    query = db_session.query(ATC).filter(
+        ATC.apellidos_nombre == fix_encoding(apellidos_nombre),
+    )
     if query.count() > 0:
         return query.first()
     return None

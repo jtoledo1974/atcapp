@@ -52,7 +52,7 @@ def test_extraer_datos_generales(pdf_estadillo: PDF) -> None:
     assert "GALLEGO PAGAN ANTONIO GINES" in data.tcas
 
     assert "ASENSIO GONZALEZ JUAN CARLOS" in data.controladores
-    assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].puesto == "CON"
+    assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].categoria == "CON"
     assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].sectores == {"TPR1"}
     assert data.controladores["TRUJILLO GUERRA RAFAEL"].sectores == {"SUR", "SEV"}
 
@@ -144,7 +144,7 @@ def verify_user_data(data: EstadilloTexto, session: scoped_session) -> None:
     for nombre_controlador, controlador_data in data.controladores.items():
         user = find_user(nombre_controlador, session)
         assert user
-        assert user.categoria == controlador_data.puesto
+        assert user.categoria == controlador_data.categoria
 
 
 def verify_sector_data(data: EstadilloTexto, session: scoped_session) -> None:

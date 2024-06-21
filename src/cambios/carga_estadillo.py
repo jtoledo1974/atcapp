@@ -23,7 +23,7 @@ from sqlalchemy.orm import scoped_session
 
 from . import get_timezone
 from .models import Estadillo, Periodo, Sector, Servicio
-from .user_utils import create_user, find_user, update_user
+from .user_utils import AtcTexto, create_user, find_user, update_user
 
 logger = getLogger(__name__)
 
@@ -56,7 +56,7 @@ class Controller:
     """Datos de un controlador extraídos de la primera página del estadillo."""
 
     nombre: str
-    puesto: str
+    categoria: str
     """Puesto del controlador, como aparece en el estadillo (CON, PTD, IS, etc.)."""
     sectores: set[str] = field(default_factory=set)
     """Conjunto de sectores en los que trabaja el controlador en un turno."""
@@ -126,7 +126,7 @@ def extraer_datos_estadillo(page: pdfplumber.page.Page) -> EstadilloTexto:
                 continue
             controller = Controller(
                 nombre=controller_name,
-                puesto=controller_role,  # type: ignore[arg-type]
+                categoria=controller_role,  # type: ignore[arg-type]
             )
             data.controladores[controller_name] = controller
             sectors = [row[5], row[6], row[7]]
@@ -198,10 +198,9 @@ def extraer_periodos(page: pdfplumber.page.Page) -> dict[str, list[PeriodosTexto
 
 
 def guardar_atc_en_estadillo(
-    name: str,
-    role: str,
+    atc_texto: AtcTexto,
     estadillo: Estadillo,
-    categoria: str,
+    rol_servicio: str,
     db_session: scoped_session,
 ) -> ATC:
     """Incluye a un atc en un estadillo.
@@ -211,14 +210,19 @@ def guardar_atc_en_estadillo(
 
     Si el atc no existe en la base de datos, se crea.
     """
-    if not name:
+    apellidos_nombre = atc_texto.apellidos_nombre
+
+    if not apellidos_nombre:
         _msg = "El nombre del controlador no puede estar vacío"
         raise ValueError(_msg)
 
-    user = find_user(name, db_session)
+    user = find_user(apellidos_nombre, db_session)
     if not user:
-        logger.debug("Controlador %s no encontrado en la base de datos", name)
-        user = create_user(name, role, None, db_session)
+        logger.debug(
+            "Controlador %s no encontrado en la base de datos",
+            apellidos_nombre,
+        )
+        user = create_user(atc_texto, db_session)
 
     servicio = (
         db_session.query(Servicio)
@@ -229,8 +233,8 @@ def guardar_atc_en_estadillo(
         servicio = Servicio(
             id_atc=user.id,
             id_estadillo=estadillo.id,
-            categoria=categoria,
-            rol=role,
+            categoria=atc_texto.categoria,
+            rol=rol_servicio,
         )
         db_session.add(servicio)
     return user
@@ -355,15 +359,19 @@ def procesar_controladores_y_sectores(
     Añade a la base de datos a los controladores y sectores que no existan.
     """
     for nombre_controlador, controller in controladores.items():
+        atc_texto = AtcTexto(
+            apellidos_nombre=nombre_controlador,
+            dependencia=estadillo.dependencia,
+            categoria=controller.categoria,
+        )
         try:
             user = guardar_atc_en_estadillo(
-                nombre_controlador,
-                "Controlador",
+                atc_texto,
                 estadillo,
-                controller.puesto,
+                "Controlador",
                 db_session,
             )
-            update_user(user, controller.puesto, None)
+            update_user(user, controller.categoria, None)
         except ValueError:
             logger.exception("Error al guardar controlador %s", nombre_controlador)
             continue
@@ -429,18 +437,22 @@ def guardar_datos_estadillo(
         "tcas": ("TCA", "TCA"),
     }
 
-    for rol, (titulo, identificador) in roles.items():
-        for nombre in (nombre for nombre in getattr(data, rol) if nombre):
+    for nombre_atributo, (rol_servicio, categoria) in roles.items():
+        for nombre in (nombre for nombre in getattr(data, nombre_atributo) if nombre):
+            atc_texto = AtcTexto(
+                apellidos_nombre=nombre,
+                dependencia=data.dependencia,
+                categoria=categoria,
+            )
             try:
                 guardar_atc_en_estadillo(
-                    nombre,
-                    titulo,
+                    atc_texto,
                     estadillo,
-                    identificador,
+                    rol_servicio,
                     db_session,
                 )
             except ValueError:
-                logger.exception("Error al guardar %s %s", titulo, nombre)
+                logger.exception("Error al guardar %s %s", rol_servicio, nombre)
                 continue
 
     # Procesar controladores y sus sectores

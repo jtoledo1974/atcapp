@@ -23,7 +23,7 @@ from pdfminer.pdfparser import PDFSyntaxError
 from . import get_timezone
 from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
 from .models import ATC, Turno
-from .user_utils import UpdateResult, create_user, find_user, update_user
+from .user_utils import AtcTexto, UpdateResult, create_user, find_user, update_user
 
 logger = getLogger(__name__)
 
@@ -31,6 +31,15 @@ if TYPE_CHECKING:  # pragma: no cover
     from pdfplumber.page import Page
     from sqlalchemy.orm.scoping import scoped_session
     from werkzeug.datastructures import FileStorage
+
+
+@dataclass
+class DatosTurnero:
+    """Datos globales de un archivo pdf de turnero mensual."""
+
+    mes: str
+    año: str
+    dependencia: str
 
 
 @dataclass
@@ -136,16 +145,6 @@ def is_valid_shift_code(shift_code: str) -> bool:
     return False
 
 
-def extract_month_year(text: str) -> tuple[str, str]:
-    """Extract the month and year from the text."""
-    month_year_pattern = re.compile(r"Mes:\s*(\w+)\s*Año:\s*(\d{4})")
-    match = month_year_pattern.search(text)
-    if match:
-        return match.group(1), match.group(2)
-    _msg = "Couldn't extract month and year from the text"
-    raise ValueError(_msg)
-
-
 MAX_DAYS_IN_MONTH = 31
 
 
@@ -210,10 +209,32 @@ def is_valid_user_entry(entry: ScheduleEntry) -> bool:
     return True
 
 
-def extract_month_year_from_first_page(page: Page) -> tuple[str, str]:
-    """Extract month and year from the first page."""
+def extraer_mes_año(text: str) -> tuple[str, str]:
+    """Extract the month and year from the text."""
+    month_year_pattern = re.compile(r"Mes:\s*(\w+)\s*Año:\s*(\d{4})")
+    match = month_year_pattern.search(text)
+    if match:
+        return match.group(1), match.group(2)
+    _msg = "Couldn't extract month and year from the text"
+    raise ValueError(_msg)
+
+
+def extraer_dependencia(text: str) -> str:
+    """Extraer la dependencia del texto."""
+    dependencia_pattern = re.compile(r"(\w+) - CONTROLADORES")
+    match = dependencia_pattern.search(text)
+    if match:
+        return match.group(1)
+    _msg = "Couldn't extract dependency from the text"
+    raise ValueError(_msg)
+
+
+def extraer_datos_turnero_de_primera_pagina(page: Page) -> DatosTurnero:
+    """Extrae los datos del turnero de la primera página."""
     text = page.extract_text()
-    return extract_month_year(text)
+    mes, año = extraer_mes_año(text)
+    dependencia = extraer_dependencia(text)
+    return DatosTurnero(mes=mes, año=año, dependencia=dependencia)
 
 
 def insert_shift_data(
@@ -268,8 +289,7 @@ def insert_shift_data(
 
 def parse_and_insert_data(
     all_data: list[ScheduleEntry],
-    month: str,
-    year: str,
+    datos_turnero: DatosTurnero,
     db_session: scoped_session,
 ) -> ResultadoProcesadoTurnero:
     """Parse extracted data and insert it into the database.
@@ -301,19 +321,20 @@ def parse_and_insert_data(
                 else:
                     res.existing_users.add(user)
             else:
-                user = create_user(
-                    entry.name,
-                    entry.role,
-                    entry.equipo,
-                    db_session,
+                atc_texto = AtcTexto(
+                    apellidos_nombre=entry.name,
+                    dependencia=datos_turnero.dependencia,
+                    categoria=entry.role,
+                    equipo=entry.equipo,
                 )
+                user = create_user(atc_texto, db_session)
                 db_session.flush()
                 res.created_users.add(user)
 
             res_turnos = insert_shift_data(
                 entry.shifts,
-                month,
-                year,
+                datos_turnero.mes,
+                datos_turnero.año,
                 user,
                 db_session,
             )
@@ -355,7 +376,7 @@ def procesa_turnero(
     try:
         with pdfplumber.open(BytesIO(file.read())) as pdf:
             all_data = []
-            month, year = extract_month_year_from_first_page(pdf.pages[0])
+            datos_turnero = extraer_datos_turnero_de_primera_pagina(pdf.pages[0])
 
             for page in pdf.pages:
                 page_data = extract_schedule_data(page)
@@ -363,8 +384,7 @@ def procesa_turnero(
 
             res = parse_and_insert_data(
                 all_data,
-                month,
-                year,
+                datos_turnero,
                 db_session,
             )
 

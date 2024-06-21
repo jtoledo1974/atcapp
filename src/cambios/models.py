@@ -75,8 +75,12 @@ class ATC(Base):
     """Nombre completo del controlador según lo presenta enaire."""
     nombre: Mapped[str] = mapped_column(String(40), nullable=False)
     apellidos: Mapped[str] = mapped_column(String(40), nullable=False)
+    dependencia: Mapped[str] = mapped_column(String(4), nullable=False)
+    """Unidad a la que pertenece el controlador. LECS, LECM, etc."""
     categoria: Mapped[str] = mapped_column(String(50), nullable=True)
+    """Categoría del controlador. PTD, CON, TIN, etc."""
     equipo: Mapped[str | None] = mapped_column(String(1), nullable=True)
+    """Equipo al que pertenece el controlador. Típicamente del A al H."""
     numero_de_licencia: Mapped[str] = mapped_column(String(50), nullable=True)
     es_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     politica_aceptada: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -313,7 +317,9 @@ class Servicio(Base):
         nullable=False,
     )
     categoria: Mapped[str] = mapped_column(String(50), nullable=False)
+    """Puesto que ejerce un controlador en un servicio: CON, PTD, IS, TIN, etc."""
     rol: Mapped[str] = mapped_column(String(50), nullable=False)
+    """Rol de ATC para un servicio: Controlador, Jefe de Sala, Supervicsor, TCA."""
 
     atc: Mapped[ATC] = relationship(
         "ATC",

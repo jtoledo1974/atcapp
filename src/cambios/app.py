@@ -27,7 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 LOGFILE = "logs/cambios.log"
 SQLLOGFILE = "logs/cambios-sql.log"
-LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
+LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(module)s:%(lineno)d]"
 
 
 class Config:
