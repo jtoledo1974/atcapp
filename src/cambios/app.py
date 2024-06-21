@@ -17,6 +17,7 @@ from flask_admin.contrib.sqla import ModelView  # type: ignore[import-untyped]
 from sqlalchemy.exc import SQLAlchemyError
 
 from . import commands
+from .app_sessions import ID_ATC, SqlAlchemySessionInterface
 from .database import db
 from .firebase import init_firebase
 from .models import ATC
@@ -43,7 +44,7 @@ class Config:
     HOST = "localhost"
     PORT = 80
     PERMANENT_SESSION_LIFETIME = timedelta(days=90)
-    SESSION_TYPE = "filesystem"
+    SESSION_COOKIE_SAMESITE = "Lax"
 
 
 def configure_logging(
@@ -143,6 +144,8 @@ def create_app() -> Flask:
             app.logger.exception("Error al inicializar la base de datos.")
             sys.exit(1)
 
+    app.session_interface = SqlAlchemySessionInterface()
+
     init_firebase()
     register_routes(app)
 
@@ -153,7 +156,7 @@ def create_app() -> Flask:
     @app.context_processor
     def inject_user() -> dict[str, ATC | None]:
         try:
-            user = db.session.query(ATC).filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
+            user = db.session.query(ATC).filter_by(id=session.get(ID_ATC)).first()  # type: ignore[attr-defined]
         except SQLAlchemyError:
             return {"current_user": None}
         else:

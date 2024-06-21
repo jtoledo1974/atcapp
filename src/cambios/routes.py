@@ -156,7 +156,7 @@ def toggle_descriptions() -> Response:
 
 @main.route("/login", methods=["GET", "POST"])
 def login() -> Response | str:
-    """Render the login page."""
+    """Renderiza la página de inicio de sesión."""
     if request.method == "GET":
         if request.args.get("verify_email"):
             flash(
@@ -177,14 +177,15 @@ def login() -> Response | str:
         session["firebase_uid"] = firebase_data["uid"]
     except ValueError:
         logger.exception(
-            "Error verifying ID token %s",
+            "Error verificando el ID token %s",
             request.form["idToken"],
         )
         return redirect(url_for("main.logout", error="Autenticación fallida"))
 
     user = db.session.query(ATC).filter_by(email=email).first()
     if not user:
-        # If the user database is empty we assume the first user is an admin.
+        # Si la base de datos de usuarios está vacía
+        # asumimos que el primer usuario es un administrador.
         if not db.session.query(ATC).all():
             logger.info(
                 "No hay usuarios en la base de datos."
@@ -204,9 +205,10 @@ def login() -> Response | str:
             db.session.commit()
             session["es_admin"] = True
             flash("Usuario administrador creado.", "success")
+            rotate_session_id()  # Rota el ID de sesión después de crear el admin
             return redirect(url_for("admin.index"))
 
-        logger.error("User not recognized. email=%s", email)
+        logger.error("Usuario no reconocido. email=%s", email)
         return redirect(
             url_for(
                 "main.logout",
@@ -216,13 +218,16 @@ def login() -> Response | str:
 
     session["id_atc"] = user.id
     logger.info(
-        "User %s logged in. email=%s",
+        "Usuario %s ha iniciado sesión. email=%s",
         user.nombre + " " + user.apellidos,
         email,
     )
     flash("Bienvenido, " + user.nombre + " " + user.apellidos, "success")
 
-    # Check for admin user.
+    # Rotar el ID de sesión después de iniciar sesión exitosamente
+    rotate_session_id()
+
+    # Comprobar si el usuario es administrador.
     if user.es_admin:
         session["es_admin"] = True
 
@@ -231,6 +236,16 @@ def login() -> Response | str:
         return redirect(url_for("main.privacy_policy"))
 
     return redirect(url_for("main.index"))
+
+
+def rotate_session_id() -> None:
+    """Rota el ID de sesión para la sesión actual.
+
+    Es una medida de seguridad para evitar ataques de fijación de sesión.
+    """
+    old_session = dict(session)
+    session.clear()
+    session.update(old_session)
 
 
 @main.route("/logout")
