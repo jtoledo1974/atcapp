@@ -152,7 +152,7 @@ def create_app() -> Flask:
 
     # Context processor to make user info available in templates
     @app.context_processor
-    def inject_user() -> dict[str, str | None]:
+    def inject_user() -> dict[str, ATC | None]:
         try:
             user = db.session.query(ATC).filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
         except SQLAlchemyError:

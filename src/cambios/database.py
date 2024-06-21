@@ -59,11 +59,18 @@ class DB:
 
     def create_all(self) -> None:
         """Create all tables."""
+        if not self.engine:
+            msg = "DB engine is not initialized."
+            raise RuntimeError(msg)
+
         logger.debug("Creando las tablas de la base de datos.")
         Base.metadata.create_all(bind=self.engine)
 
     def drop_all(self) -> None:
         """Drop all tables."""
+        if not self.engine:
+            msg = "DB engine is not initialized."
+            raise RuntimeError(msg)
         logger.debug("Eliminando las tablas de la base de datos.")
         Base.metadata.drop_all(bind=self.engine)
 
