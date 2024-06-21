@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import pytest
-from cambios import configure_timezone, get_timezone
+from cambios import get_timezone
 from cambios.app import create_app
 
 if TYPE_CHECKING:
@@ -79,23 +79,17 @@ def test_admin_sees_users_link(client: FlaskClient, admin_user: ATC) -> None:
     assert b"User" in response.data
 
 
-def test_default_timezone() -> None:
-    """Verifica que la zona horaria por defecto es 'Europe/Madrid'."""
-    tz = get_timezone()
-    assert tz.zone == "Europe/Madrid"
-
-
-def test_env_timezone() -> None:
-    """Verifica que la zona horaria se puede configurar mediante una env var."""
-    # Set the environment variable to change the timezone
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setenv("TZ", "America/New_York")
-        configure_timezone()
-
-        tz = get_timezone()
-        assert tz.zone == "America/New_York"
-
-    # Unset the environment variable
-    configure_timezone()
-    tz = get_timezone()
-    assert tz.zone == "Europe/Madrid"
+@pytest.mark.parametrize(
+    ("icao", "expected_timezone"),
+    [
+        ("LECM", "Europe/Madrid"),
+        ("GCCC", "Atlantic/Canary"),
+        ("LECS", "Europe/Madrid"),
+        ("LECB", "Europe/Madrid"),
+        ("PericoPalotes", "Europe/Madrid"),
+    ],
+)
+def test_default_timezone(icao: str, expected_timezone: str) -> None:
+    """Verifica que la zona horaria por defecto es correcta."""
+    tz = get_timezone(icao)
+    assert tz.zone == expected_timezone

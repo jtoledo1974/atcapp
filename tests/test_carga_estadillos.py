@@ -115,7 +115,7 @@ def test_datos_generales_estadillo_a_db(
 ) -> None:
     """Test the extraction and storage of general estadillo data."""
     data = extraer_datos_estadillo(pdf_estadillo.pages[0])
-    guardar_datos_estadillo(data, session, get_timezone())
+    guardar_datos_estadillo(data, session, get_timezone(data.dependencia))
 
     verify_estadillo_general_data(data, session)
     verify_user_data(data, session)
@@ -316,14 +316,14 @@ def test_horas_guardadas_en_utc(
     """Comprobar que las horas de los periodos se guardan en UTC."""
     # Procesar el estadillo y guardar en la base de datos
     with estadillo_path.open("rb") as file:
-        procesa_estadillo(file, session)
+        estadillo = procesa_estadillo(file, session)
 
     # Obtener los periodos de la base de datos
     periodos = session.query(Periodo).all()
 
     assert periodos, "No se encontraron periodos en la base de datos."
 
-    tz = get_timezone()
+    tz = get_timezone(estadillo.dependencia)
 
     for periodo in periodos:
         # Asumir que los datetime almacenados están en UTC

@@ -176,14 +176,14 @@ class Estadillo(Base):
     @property
     def hora_inicio(self) -> datetime:
         """Hora de inicio del estadillo."""
-        hora_min = min(periodo.hora_inicio for periodo in self.periodos)
-        return hora_min.astimezone(get_timezone())
+        hora_min = min(periodo.hora_inicio_utc for periodo in self.periodos)
+        return hora_min.astimezone(get_timezone(self.dependencia))
 
     @property
     def hora_fin(self) -> datetime:
         """Hora de fin del estadillo."""
-        hora_max = max(periodo.hora_fin for periodo in self.periodos)
-        return hora_max.astimezone(get_timezone())
+        hora_max = max(periodo.hora_fin_utc for periodo in self.periodos)
+        return hora_max.astimezone(get_timezone(self.dependencia))
 
 
 class Sector(Base):

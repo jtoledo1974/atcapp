@@ -16,7 +16,7 @@ from flask_admin import Admin  # type: ignore[import-untyped]
 from flask_admin.contrib.sqla import ModelView  # type: ignore[import-untyped]
 from sqlalchemy.exc import SQLAlchemyError
 
-from . import commands, configure_timezone
+from . import commands
 from .database import db
 from .firebase import init_firebase
 from .models import ATC
@@ -128,7 +128,6 @@ def create_app() -> Flask:
     app.config.from_prefixed_env()
 
     configure_logging()
-    configure_timezone()
 
     app.logger.info("DB_URI: %s", app.config["SQLALCHEMY_DATABASE_URI"])
 

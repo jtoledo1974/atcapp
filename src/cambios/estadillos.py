@@ -142,7 +142,7 @@ def identifica_grupos(
     return res
 
 
-def marca_anchor(grupos: list[Grupo], user: ATC | None) -> None:
+def marca_anchor(grupos: list[Grupo], user: ATC | None, tz: pytz.BaseTzInfo) -> None:
     """Marca el periodo activo en el grupo de controladores.
 
     El periodo activo es el que está en curso en el momento de la consulta.
@@ -151,7 +151,7 @@ def marca_anchor(grupos: list[Grupo], user: ATC | None) -> None:
     se marca como el group anchor.
     Si no, se marca el periodo que pertenezca a un grupo con más controladores.
     """
-    now = datetime.now(tz=get_timezone())
+    now = datetime.now(tz)
     periodos_activos = [
         periodo
         for grupo in grupos
@@ -297,9 +297,9 @@ def _es_activo(
     hora_fin: datetime,
     grupo_hora_inicio: datetime,
     grupo_hora_fin: datetime,
+    now: datetime,
 ) -> str:
     """Determina si un periodo está activo, pasado o futuro."""
-    now = datetime.now(tz=get_timezone())
     if now < grupo_hora_inicio or now > grupo_hora_fin:
         return "FUT"
     if hora_fin < now:
@@ -309,9 +309,8 @@ def _es_activo(
     return "ACT"
 
 
-def calcula_marcador(grupo: Grupo) -> float:
+def calcula_marcador(grupo: Grupo, now: datetime) -> float:
     """Calcula la posición del marcador de la hora actual en porcentaje."""
-    now = datetime.now(tz=get_timezone())
     inicio_grupo = grupo.estadillo.hora_inicio
     fin_grupo = grupo.estadillo.hora_fin
 
@@ -335,6 +334,7 @@ def genera_datos_grupo(
     sectores = [sector.nombre for sector in grupo.sectores]
     sectores.sort()
     atcs = []
+    now = datetime.now(tz)
     for controlador, periodos in grupo.controladores.items():
         atc_data = EstadilloPersonalData(
             nombre=f"{controlador.nombre_apellidos}",
@@ -354,6 +354,7 @@ def genera_datos_grupo(
                         p.hora_fin_utc,
                         grupo.estadillo.hora_inicio,
                         grupo.estadillo.hora_fin,
+                        now,
                     ),
                     scroll_anchor=p == grupo.anchor,
                 )
@@ -364,7 +365,7 @@ def genera_datos_grupo(
         atcs.append(atc_data)
 
     horas_inicio = _genera_horas_de_inicio(grupo.duracion, grupo.controladores, tz)
-    marcador = calcula_marcador(grupo)
+    marcador = calcula_marcador(grupo, now)
 
     return GrupoDatos(
         sectores=sectores,
@@ -381,7 +382,7 @@ def genera_datos_estadillo(
 ) -> list[GrupoDatos]:
     """Genera los datos de un estadillo para presentar en una plantilla."""
     grupos = identifica_grupos(estadillo, session)
-    marca_anchor(grupos, user)
+    tz = get_timezone(estadillo.dependencia)
+    marca_anchor(grupos, user, tz)
     color_manager = ColorManager()  # Crear una instancia de ColorManager
-    tz = get_timezone()
     return [genera_datos_grupo(grupo, color_manager, tz, user) for grupo in grupos]

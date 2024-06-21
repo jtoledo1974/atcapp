@@ -71,11 +71,17 @@ class EstadilloTexto:
     """Datos en texto extraídos de la primera página del estadillo."""
 
     dependencia: str = ""
+    """LECM, LECS, LECB, GCCC, etc."""
     fecha: str = ""
+    """Fecha en formato DD.MM.AAAA."""
     turno: str = ""
+    """M o T."""
     jefes_de_sala: list[str] = field(default_factory=list)
+    """Lista de apellidos y nombres de los jefes de sala."""
     supervisores: list[str] = field(default_factory=list)
+    """Lista de apellidos y nombres de los supervisores."""
     tcas: list[str] = field(default_factory=list)
+    """Lista de apellidos y nombres de los TCAs."""
     controladores: dict[str, Controller] = field(default_factory=dict)
     """Diccionario de controladores extraídos de la primera página del turno diario.
     
@@ -523,7 +529,7 @@ def procesa_estadillo(
     periodos_por_atc = extraer_periodos(page2)
     incorporar_periodos(estadillo_texto, periodos_por_atc)
 
-    tz = get_timezone()
+    tz = get_timezone(estadillo_texto.dependencia)
     estadillo_db = guardar_datos_estadillo(estadillo_texto, db_session, tz)
 
     logger.info("Archivo de estadillo diario procesado")

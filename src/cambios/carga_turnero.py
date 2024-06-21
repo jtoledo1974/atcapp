@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
 
-from . import get_timezone
+from cambios import get_timezone
+
 from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
 from .models import ATC, Turno
 from .user_utils import AtcTexto, UpdateResult, create_user, find_user, update_user
@@ -28,6 +29,7 @@ from .user_utils import AtcTexto, UpdateResult, create_user, find_user, update_u
 logger = getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover
+    import pytz
     from pdfplumber.page import Page
     from sqlalchemy.orm.scoping import scoped_session
     from werkzeug.datastructures import FileStorage
@@ -243,13 +245,13 @@ def insert_shift_data(
     year: str,
     user: ATC,
     db_session: scoped_session,
+    tz: pytz.BaseTzInfo,
 ) -> ResultadoProcesadoTurnos:
     """Insert shift data into the database.
 
     The shifts list contains the shift codes for each day of the month.
     Returns the number of shifts inserted.
     """
-    tz = get_timezone()
     logger.info("Inserting shifts for %s %s", user.nombre, user.apellidos)
     res = ResultadoProcesadoTurnos()
     for day, shift_code in enumerate(shifts, start=1):
@@ -291,6 +293,7 @@ def parse_and_insert_data(
     all_data: list[ScheduleEntry],
     datos_turnero: DatosTurnero,
     db_session: scoped_session,
+    tz: pytz.BaseTzInfo,
 ) -> ResultadoProcesadoTurnero:
     """Parse extracted data and insert it into the database.
 
@@ -337,6 +340,7 @@ def parse_and_insert_data(
                 datos_turnero.año,
                 user,
                 db_session,
+                tz,
             )
             res.created_shifts.update(res_turnos.created_shifts)
             res.existing_shifts.update(res_turnos.existing_shifts)
@@ -386,6 +390,7 @@ def procesa_turnero(
                 all_data,
                 datos_turnero,
                 db_session,
+                get_timezone(datos_turnero.dependencia),
             )
 
     except PDFSyntaxError as e:
