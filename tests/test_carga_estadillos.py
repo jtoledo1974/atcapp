@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING
 
 import pytest
+import pytz
+from cambios import get_timezone
 from cambios.carga_estadillo import (
     EstadilloTexto,
     extraer_datos_estadillo,
     extraer_periodos,
     guardar_datos_estadillo,
     procesa_estadillo,
+    string_to_utc_datetime,
 )
 from cambios.models import (
     ATC,
@@ -49,7 +52,7 @@ def test_extraer_datos_generales(pdf_estadillo: PDF) -> None:
     assert "GALLEGO PAGAN ANTONIO GINES" in data.tcas
 
     assert "ASENSIO GONZALEZ JUAN CARLOS" in data.controladores
-    assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].puesto == "CON"
+    assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].categoria == "CON"
     assert data.controladores["ASENSIO GONZALEZ JUAN CARLOS"].sectores == {"TPR1"}
     assert data.controladores["TRUJILLO GUERRA RAFAEL"].sectores == {"SUR", "SEV"}
 
@@ -110,33 +113,42 @@ def test_datos_generales_estadillo_a_db(
     pdf_estadillo: PDF,
     session: scoped_session,
 ) -> None:
-    """Comprobar que los datos del estadillo se guardan en la base de datos."""
+    """Test the extraction and storage of general estadillo data."""
     data = extraer_datos_estadillo(pdf_estadillo.pages[0])
-    guardar_datos_estadillo(data, session)
+    guardar_datos_estadillo(data, session, get_timezone(data.dependencia))
 
-    # Check the control room shift
+    verify_estadillo_general_data(data, session)
+    verify_user_data(data, session)
+    verify_sector_data(data, session)
+    verify_controller_sector_assignments(data, session)
+    verify_estadillo_references(data, session)
+
+
+def verify_estadillo_general_data(
+    data: EstadilloTexto,
+    session: scoped_session,
+) -> None:
+    """Verify the general data of the estadillo."""
     shift = session.query(Estadillo).first()
     assert shift
     assert shift.dependencia == data.dependencia
     assert shift.fecha.strftime("%d.%m.%Y") == data.fecha
 
-    for nombre_controlador in data.jefes_de_sala:
-        assert find_user(nombre_controlador, session) is not None
 
-    for nombre_controlador in data.supervisores:
-        assert find_user(nombre_controlador, session) is not None
+def verify_user_data(data: EstadilloTexto, session: scoped_session) -> None:
+    """Verify the user data extracted from the estadillo."""
+    for role in ["jefes_de_sala", "supervisores", "tcas"]:
+        for nombre_controlador in getattr(data, role):
+            assert find_user(nombre_controlador, session) is not None
 
-    for nombre_controlador in data.tcas:
-        assert find_user(nombre_controlador, session) is not None
-
-    # Any controllers names mentioned on the first page should now exist
-    # in the Users table
-    for nombre_controlador in data.controladores:
+    for nombre_controlador, controlador_data in data.controladores.items():
         user = find_user(nombre_controlador, session)
         assert user
-        assert user.categoria == data.controladores[nombre_controlador].puesto
+        assert user.categoria == controlador_data.categoria
 
-    # Verificar sectores
+
+def verify_sector_data(data: EstadilloTexto, session: scoped_session) -> None:
+    """Verify the sector data extracted from the estadillo."""
     for sector in data.sectores:
         assert (
             session.query(Estadillo)
@@ -144,8 +156,12 @@ def test_datos_generales_estadillo_a_db(
             .first()
         )
 
-    # Verificar que cada controlador mencionado tiene en el estadillo
-    # los sectores que le tocan
+
+def verify_controller_sector_assignments(
+    data: EstadilloTexto,
+    session: scoped_session,
+) -> None:
+    """Verify the controller-sector assignments extracted from the estadillo."""
     for nombre_controlador, controlador in data.controladores.items():
         user = find_user(nombre_controlador, session)
         assert user
@@ -156,14 +172,13 @@ def test_datos_generales_estadillo_a_db(
                 .first()
             )
 
-    # Verificar que podemos encontrar este estadillo referenciado
-    # en la tabla atcs_estadillos
+
+def verify_estadillo_references(data: EstadilloTexto, session: scoped_session) -> None:
+    """Verify the references to the estadillo in the database."""
     db_estadillo = session.query(Estadillo).first()
     assert db_estadillo
     assert db_estadillo.atcs
 
-    # Contar los servicios asociados a este estadillo cuyo
-    # rol es de Controlador
     controladores = [
         servicio for servicio in db_estadillo.servicios if servicio.rol == "Controlador"
     ]
@@ -174,11 +189,30 @@ def test_datos_generales_estadillo_a_db(
             continue
         assert servicio.atc.apellidos_nombre in data.controladores
 
-    # Verificar que horas de inicio y final de los periodos no son naif
     for servicio in controladores:
         for periodo in servicio.atc.periodos:
             assert periodo.hora_inicio.tzinfo
             assert periodo.hora_fin.tzinfo
+
+
+def test_string_to_utc_datetime() -> None:
+    """Comprobar que la función string_to_utc_datetime convierte correctamente."""
+    # Test the conversion of a string to a datetime object
+    date_str = "27.05.2024"
+    time_str = "07:30"
+    tz = pytz.timezone("Europe/Madrid")
+    date = datetime.strptime(date_str, "%d.%m.%Y").date()  # noqa: DTZ007
+    dt = string_to_utc_datetime(time_str, date, tz)
+    assert dt.strftime("%d.%m.%Y") == date_str
+    assert dt.strftime("%H:%M") == "05:30"
+
+    # Test the conversion of a string to a datetime object
+    date_str = "01.01.2024"
+    time_str = "15:00"
+    date = datetime.strptime(date_str, "%d.%m.%Y").date()  # noqa: DTZ007
+    dt = string_to_utc_datetime(time_str, date, tz)
+    assert dt.strftime("%d.%m.%Y") == date_str
+    assert dt.strftime("%H:%M") == "14:00"
 
 
 def test_periodos_a_db(
@@ -211,8 +245,8 @@ def test_periodos_a_db(
     hora_inicio = atcs[0].periodos[0].hora_inicio
     hora_fin = atcs[-1].periodos[-1].hora_fin
 
-    assert hora_inicio.strftime("%H:%M") == "07:30"
-    assert hora_fin.strftime("%H:%M") == "15:00"
+    assert hora_inicio.strftime("%H:%M") == "05:30"
+    assert hora_fin.strftime("%H:%M") == "13:00"
 
     # Check that everybody has the same start and end time
     for atc in atcs:
@@ -272,3 +306,46 @@ def test_eliminacion_en_cascada(session: scoped_session) -> None:
 
     # Verificar que el servicio fue eliminado en cascada
     assert session.query(Servicio).count() == 0
+
+
+def test_horas_guardadas_en_utc(
+    pdf_estadillo: PDF,
+    session: scoped_session,
+    estadillo_path: Path,
+) -> None:
+    """Comprobar que las horas de los periodos se guardan en UTC."""
+    # Procesar el estadillo y guardar en la base de datos
+    with estadillo_path.open("rb") as file:
+        estadillo = procesa_estadillo(file, session)
+
+    # Obtener los periodos de la base de datos
+    periodos = session.query(Periodo).all()
+
+    assert periodos, "No se encontraron periodos en la base de datos."
+
+    tz = get_timezone(estadillo.dependencia)
+
+    for periodo in periodos:
+        # Asumir que los datetime almacenados están en UTC
+        hora_inicio_utc = datetime.combine(
+            periodo.hora_inicio.date(),
+            periodo.hora_inicio.time(),
+        ).replace(tzinfo=timezone.utc)
+        hora_fin_utc = datetime.combine(
+            periodo.hora_fin.date(),
+            periodo.hora_fin.time(),
+        ).replace(tzinfo=timezone.utc)
+
+        # Convertir las horas almacenadas en UTC a la zona horaria local para verificar
+        hora_inicio_local = hora_inicio_utc.astimezone(tz)
+        hora_fin_local = hora_fin_utc.astimezone(tz)
+
+        # La base de datos tiene las fechas guardadas como UTC,
+        # pero son datos naive. Para compararlas hay que convertirlas
+        # a la zona horaria local
+        assert (
+            hora_inicio_local.time() == periodo.hora_inicio_utc.astimezone(tz).time()
+        ), f"hora_inicio {hora_inicio_local} difere de la esperada {hora_inicio_local}"
+        assert (
+            hora_fin_local.time() == periodo.hora_fin_utc.astimezone(tz).time()
+        ), f"hora_fin {hora_fin_local} difere de la esperada {hora_fin_local}"

@@ -16,6 +16,7 @@ from . import get_timezone
 from .models import ATC, Estadillo, Periodo
 
 if TYPE_CHECKING:
+    import pytz
     from sqlalchemy.orm import Session, scoped_session
 
     from .models import Sector
@@ -141,7 +142,7 @@ def identifica_grupos(
     return res
 
 
-def marca_anchor(grupos: list[Grupo], user: ATC | None) -> None:
+def marca_anchor(grupos: list[Grupo], user: ATC | None, tz: pytz.BaseTzInfo) -> None:
     """Marca el periodo activo en el grupo de controladores.
 
     El periodo activo es el que está en curso en el momento de la consulta.
@@ -150,13 +151,13 @@ def marca_anchor(grupos: list[Grupo], user: ATC | None) -> None:
     se marca como el group anchor.
     Si no, se marca el periodo que pertenezca a un grupo con más controladores.
     """
-    now = datetime.now(tz=get_timezone())
+    now = datetime.now(tz)
     periodos_activos = [
         periodo
         for grupo in grupos
         for controlador, periodos in grupo.controladores.items()
         for periodo in periodos
-        if periodo.hora_inicio_tz <= now <= periodo.hora_fin_tz
+        if periodo.hora_inicio_utc <= now <= periodo.hora_fin_utc
     ]
 
     if user:
@@ -248,6 +249,7 @@ def _genera_color(per: Periodo, color_manager: ColorManager) -> str:
 def _genera_horas_de_inicio(
     dur_total: int,
     controladores: dict[ATC, list[Periodo]],
+    tz: pytz.BaseTzInfo,
 ) -> list[PeriodoData]:
     """Busca todas las horas de inicio de todos los periodos.
 
@@ -265,18 +267,20 @@ def _genera_horas_de_inicio(
 
     while periodos_deque:
         current_period = periodos_deque.popleft()
-        hora_inicio = current_period.hora_inicio
-        while periodos_deque and periodos_deque[0].hora_inicio == hora_inicio:
+        hora_inicio_utc = current_period.hora_inicio_utc
+        while periodos_deque and periodos_deque[0].hora_inicio_utc == hora_inicio_utc:
             current_period = periodos_deque.popleft()
 
         if periodos_deque:
-            duracion = (periodos_deque[0].hora_inicio - hora_inicio).seconds // 60
+            duracion = (
+                periodos_deque[0].hora_inicio_utc - hora_inicio_utc
+            ).seconds // 60
         else:
-            duracion = (current_period.hora_fin - hora_inicio).seconds // 60
+            duracion = (current_period.hora_fin_utc - hora_inicio_utc).seconds // 60
 
         horas_inicio.append(
             PeriodoData(
-                hora_inicio=datetime.strftime(hora_inicio, "%H:%M"),
+                hora_inicio=datetime.strftime(hora_inicio_utc.astimezone(tz), "%H:%M"),
                 hora_fin="",
                 actividad="",
                 color="",
@@ -293,9 +297,9 @@ def _es_activo(
     hora_fin: datetime,
     grupo_hora_inicio: datetime,
     grupo_hora_fin: datetime,
+    now: datetime,
 ) -> str:
     """Determina si un periodo está activo, pasado o futuro."""
-    now = datetime.now(tz=get_timezone())
     if now < grupo_hora_inicio or now > grupo_hora_fin:
         return "FUT"
     if hora_fin < now:
@@ -305,9 +309,8 @@ def _es_activo(
     return "ACT"
 
 
-def calcula_marcador(grupo: Grupo) -> float:
+def calcula_marcador(grupo: Grupo, now: datetime) -> float:
     """Calcula la posición del marcador de la hora actual en porcentaje."""
-    now = datetime.now(tz=get_timezone())
     inicio_grupo = grupo.estadillo.hora_inicio
     fin_grupo = grupo.estadillo.hora_fin
 
@@ -324,28 +327,34 @@ def calcula_marcador(grupo: Grupo) -> float:
 def genera_datos_grupo(
     grupo: Grupo,
     color_manager: ColorManager,
+    tz: pytz.BaseTzInfo,
     user: ATC | None = None,
 ) -> GrupoDatos:
     """Genera los datos de un grupo de controladores para presentar en una plantilla."""
     sectores = [sector.nombre for sector in grupo.sectores]
     sectores.sort()
     atcs = []
+    now = datetime.now(tz)
     for controlador, periodos in grupo.controladores.items():
         atc_data = EstadilloPersonalData(
             nombre=f"{controlador.nombre_apellidos}",
             periodos=[
                 PeriodoData(
-                    hora_inicio=datetime.strftime(p.hora_inicio, "%H:%M"),
-                    hora_fin=datetime.strftime(p.hora_fin, "%H:%M"),
+                    hora_inicio=datetime.strftime(
+                        p.hora_inicio_utc.astimezone(tz),
+                        "%H:%M",
+                    ),
+                    hora_fin=datetime.strftime(p.hora_fin_utc.astimezone(tz), "%H:%M"),
                     actividad=_genera_actividad(p),
                     color=_genera_color(p, color_manager),
                     duracion=(duracion := (p.hora_fin - p.hora_inicio).seconds // 60),
                     porcentaje=duracion / grupo.duracion * 100,
                     activo=_es_activo(
-                        p.hora_inicio_tz,
-                        p.hora_fin_tz,
+                        p.hora_inicio_utc,
+                        p.hora_fin_utc,
                         grupo.estadillo.hora_inicio,
                         grupo.estadillo.hora_fin,
+                        now,
                     ),
                     scroll_anchor=p == grupo.anchor,
                 )
@@ -355,8 +364,8 @@ def genera_datos_grupo(
         )
         atcs.append(atc_data)
 
-    horas_inicio = _genera_horas_de_inicio(grupo.duracion, grupo.controladores)
-    marcador = calcula_marcador(grupo)
+    horas_inicio = _genera_horas_de_inicio(grupo.duracion, grupo.controladores, tz)
+    marcador = calcula_marcador(grupo, now)
 
     return GrupoDatos(
         sectores=sectores,
@@ -373,6 +382,7 @@ def genera_datos_estadillo(
 ) -> list[GrupoDatos]:
     """Genera los datos de un estadillo para presentar en una plantilla."""
     grupos = identifica_grupos(estadillo, session)
-    marca_anchor(grupos, user)
+    tz = get_timezone(estadillo.dependencia)
+    marca_anchor(grupos, user, tz)
     color_manager = ColorManager()  # Crear una instancia de ColorManager
-    return [genera_datos_grupo(grupo, color_manager, user) for grupo in grupos]
+    return [genera_datos_grupo(grupo, color_manager, tz, user) for grupo in grupos]

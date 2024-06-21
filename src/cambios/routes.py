@@ -103,7 +103,7 @@ def index() -> Response | str:
         .first()
     )
 
-    now = datetime.now(tz=get_timezone())
+    now = datetime.now(tz=get_timezone(user.dependencia))
     if estadillo and estadillo.hora_inicio <= now <= estadillo.hora_fin:
         return redirect(url_for("main.estadillo"))
 
@@ -123,12 +123,11 @@ def calendario() -> Response | str:
 
     # TODO #3 It would be better to use the user's timezone here
     # Currently forcing continental Spain using pytz
-    tz = get_timezone()
-    today = datetime.now(tz=tz)
+    now = datetime.now(tz=get_timezone(user.dependencia))
 
     # Get month and year from query parameters or use current month and year
-    month = request.args.get("month", type=int, default=today.month)
-    year = request.args.get("year", type=int, default=today.year)
+    month = request.args.get("month", type=int, default=now.month)
+    year = request.args.get("year", type=int, default=now.year)
 
     logger.debug("Generando calendario para %s %s", month, year)
     calendar = GenCalMensual.generate(year, month, user, db.session)  # type: ignore[arg-type]
@@ -194,6 +193,7 @@ def login() -> Response | str:
             user = ATC(
                 apellidos_nombre="Admin User",
                 email=email,
+                dependencia="LECS",
                 nombre="Admin",
                 apellidos="User",
                 categoria="Admin",

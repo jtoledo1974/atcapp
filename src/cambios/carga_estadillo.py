@@ -11,7 +11,7 @@ los datos en la base de datos.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -23,7 +23,7 @@ from sqlalchemy.orm import scoped_session
 
 from . import get_timezone
 from .models import Estadillo, Periodo, Sector, Servicio
-from .user_utils import create_user, find_user, update_user
+from .user_utils import AtcTexto, create_user, find_user, update_user
 
 logger = getLogger(__name__)
 
@@ -31,6 +31,7 @@ logger = getLogger(__name__)
 if TYPE_CHECKING:  # pragma: no cover
     from io import BufferedReader
 
+    import pytz
     from sqlalchemy.orm import scoped_session
     from werkzeug.datastructures import FileStorage
 
@@ -55,7 +56,7 @@ class Controller:
     """Datos de un controlador extraídos de la primera página del estadillo."""
 
     nombre: str
-    puesto: str
+    categoria: str
     """Puesto del controlador, como aparece en el estadillo (CON, PTD, IS, etc.)."""
     sectores: set[str] = field(default_factory=set)
     """Conjunto de sectores en los que trabaja el controlador en un turno."""
@@ -70,11 +71,17 @@ class EstadilloTexto:
     """Datos en texto extraídos de la primera página del estadillo."""
 
     dependencia: str = ""
+    """LECM, LECS, LECB, GCCC, etc."""
     fecha: str = ""
+    """Fecha en formato DD.MM.AAAA."""
     turno: str = ""
+    """M o T."""
     jefes_de_sala: list[str] = field(default_factory=list)
+    """Lista de apellidos y nombres de los jefes de sala."""
     supervisores: list[str] = field(default_factory=list)
+    """Lista de apellidos y nombres de los supervisores."""
     tcas: list[str] = field(default_factory=list)
+    """Lista de apellidos y nombres de los TCAs."""
     controladores: dict[str, Controller] = field(default_factory=dict)
     """Diccionario de controladores extraídos de la primera página del turno diario.
     
@@ -125,7 +132,7 @@ def extraer_datos_estadillo(page: pdfplumber.page.Page) -> EstadilloTexto:
                 continue
             controller = Controller(
                 nombre=controller_name,
-                puesto=controller_role,  # type: ignore[arg-type]
+                categoria=controller_role,  # type: ignore[arg-type]
             )
             data.controladores[controller_name] = controller
             sectors = [row[5], row[6], row[7]]
@@ -197,10 +204,9 @@ def extraer_periodos(page: pdfplumber.page.Page) -> dict[str, list[PeriodosTexto
 
 
 def guardar_atc_en_estadillo(
-    name: str,
-    role: str,
+    atc_texto: AtcTexto,
     estadillo: Estadillo,
-    categoria: str,
+    rol_servicio: str,
     db_session: scoped_session,
 ) -> ATC:
     """Incluye a un atc en un estadillo.
@@ -210,14 +216,19 @@ def guardar_atc_en_estadillo(
 
     Si el atc no existe en la base de datos, se crea.
     """
-    if not name:
+    apellidos_nombre = atc_texto.apellidos_nombre
+
+    if not apellidos_nombre:
         _msg = "El nombre del controlador no puede estar vacío"
         raise ValueError(_msg)
 
-    user = find_user(name, db_session)
+    user = find_user(apellidos_nombre, db_session)
     if not user:
-        logger.debug("Controlador %s no encontrado en la base de datos", name)
-        user = create_user(name, role, None, db_session)
+        logger.debug(
+            "Controlador %s no encontrado en la base de datos",
+            apellidos_nombre,
+        )
+        user = create_user(atc_texto, db_session)
 
     servicio = (
         db_session.query(Servicio)
@@ -228,8 +239,8 @@ def guardar_atc_en_estadillo(
         servicio = Servicio(
             id_atc=user.id,
             id_estadillo=estadillo.id,
-            categoria=categoria,
-            rol=role,
+            categoria=atc_texto.categoria,
+            rol=rol_servicio,
         )
         db_session.add(servicio)
     return user
@@ -251,38 +262,42 @@ def extrae_actividad_y_sector(funcion: str) -> tuple[str, str]:
     return res[0], res[1]
 
 
-def str_to_dt(time: str) -> datetime:
-    """Convierte una cadena HH:MM en un objeto datetime.
+def string_to_utc_datetime(
+    time: str,
+    fecha: date,
+    tz: pytz.BaseTzInfo,
+) -> datetime:
+    """Convierte una cadena HH:MM en un datetime UTC.
 
-    Usa la zona horaria preconfigurada.
+    Para ellos se requiere la fecha y la zona horaria.
     """
-    tz = get_timezone()
-    return datetime.strptime(time, "%H:%M").replace(tzinfo=tz)
+    naive_dt = datetime.strptime(time, "%H:%M")  # noqa: DTZ007
+    naive_dt_date = datetime.combine(fecha, naive_dt.time())
+    local_dt = tz.localize(naive_dt_date)
+    return local_dt.astimezone(timezone.utc)
 
 
 def calcula_horas_inicio_y_fin(
     periodos: list[PeriodosTexto],
     fecha: date,
+    fin_mañana: datetime,
+    fin_tarde: datetime,
+    tz: pytz.BaseTzInfo,
 ) -> list[tuple[datetime, datetime]]:
     """Recoge la lista de horas de inicio en texto y calcula las horas de fin.
 
-    Devuelve una lista de tuplas con las horas de inicio y fin.
+    Devuelve una lista de tuplas con las horas de inicio y fin en UTC.
     """
-    # Si hay un periodo posterior, la hora de fin es la hora de inicio del siguiente
-    # periodo.
-    # De no haberlo la heurística es que si el periodo comienza antes de las 15:00
-    # entonces acaba a las 15:00, y si es posterior entonces acaba a las 22:30
     horas = []
     for i, periodo in enumerate(periodos):
-        hora_inicio = str_to_dt(periodo.hora_inicio)
+        hora_inicio = string_to_utc_datetime(periodo.hora_inicio, fecha, tz)
         if i + 1 < len(periodos):
-            hora_fin = str_to_dt(periodos[i + 1].hora_inicio)
-        elif hora_inicio.time() < (fin_mañana := str_to_dt("15:00")).time():
+            hora_fin = string_to_utc_datetime(periodos[i + 1].hora_inicio, fecha, tz)
+        elif hora_inicio < fin_mañana:
             hora_fin = fin_mañana
         else:
-            hora_fin = str_to_dt("22:30")
-        hora_inicio = datetime.combine(fecha, hora_inicio.time())
-        hora_fin = datetime.combine(fecha, hora_fin.time())
+            hora_fin = fin_tarde
+
         horas.append((hora_inicio, hora_fin))
     return horas
 
@@ -292,9 +307,19 @@ def guardar_periodos(
     periodos: list[PeriodosTexto],
     estadillo: Estadillo,
     db_session: scoped_session,
+    tz: pytz.BaseTzInfo,
 ) -> None:
     """Guardar los periodos de los controladores en la base de datos."""
-    horas = calcula_horas_inicio_y_fin(periodos, estadillo.fecha)
+    fin_mañana = string_to_utc_datetime("15:00", estadillo.fecha, tz)
+    fin_tarde = string_to_utc_datetime("22:30", estadillo.fecha, tz)
+
+    horas = calcula_horas_inicio_y_fin(
+        periodos,
+        estadillo.fecha,
+        fin_mañana,
+        fin_tarde,
+        tz=tz,
+    )
 
     for i, periodo_texto in enumerate(periodos):
         sector = None
@@ -311,8 +336,9 @@ def guardar_periodos(
                 )
                 continue
 
-        hora_inicio = horas[i][0]
-        hora_fin = horas[i][1]
+        # Convertir a naive datetime en UTC
+        hora_inicio = horas[i][0].replace(tzinfo=None)
+        hora_fin = horas[i][1].replace(tzinfo=None)
 
         periodo = Periodo(
             id_controlador=user.id,
@@ -332,21 +358,26 @@ def procesar_controladores_y_sectores(
     controladores: dict[str, Controller],
     estadillo: Estadillo,
     db_session: scoped_session,
+    tz: pytz.BaseTzInfo,
 ) -> None:
     """Procesar los controladores y sus sectores.
 
     Añade a la base de datos a los controladores y sectores que no existan.
     """
     for nombre_controlador, controller in controladores.items():
+        atc_texto = AtcTexto(
+            apellidos_nombre=nombre_controlador,
+            dependencia=estadillo.dependencia,
+            categoria=controller.categoria,
+        )
         try:
             user = guardar_atc_en_estadillo(
-                nombre_controlador,
-                "Controlador",
+                atc_texto,
                 estadillo,
-                controller.puesto,
+                "Controlador",
                 db_session,
             )
-            update_user(user, controller.puesto, None)
+            update_user(user, controller.categoria, None)
         except ValueError:
             logger.exception("Error al guardar controlador %s", nombre_controlador)
             continue
@@ -359,17 +390,17 @@ def procesar_controladores_y_sectores(
             if sector not in estadillo.sectores:
                 estadillo.sectores.append(sector)
 
-        guardar_periodos(user, controller.periodos, estadillo, db_session)
+        guardar_periodos(user, controller.periodos, estadillo, db_session, tz)
 
 
 def guardar_datos_estadillo(
     data: EstadilloTexto,
     db_session: scoped_session,
+    tz: pytz.BaseTzInfo,
 ) -> Estadillo:
     """Guardar los datos generales del estadillo en la base de datos."""
     logger.info("Guardando datos del estadillo en la base de datos")
     # Convertir la fecha "27.05.2024" a un objeto date de Python
-    tz = get_timezone()
     fecha = datetime.strptime(data.fecha, "%d.%m.%Y").astimezone(tz).date()
 
     # Iniciar transacción
@@ -412,22 +443,26 @@ def guardar_datos_estadillo(
         "tcas": ("TCA", "TCA"),
     }
 
-    for rol, (titulo, identificador) in roles.items():
-        for nombre in (nombre for nombre in getattr(data, rol) if nombre):
+    for nombre_atributo, (rol_servicio, categoria) in roles.items():
+        for nombre in (nombre for nombre in getattr(data, nombre_atributo) if nombre):
+            atc_texto = AtcTexto(
+                apellidos_nombre=nombre,
+                dependencia=data.dependencia,
+                categoria=categoria,
+            )
             try:
                 guardar_atc_en_estadillo(
-                    nombre,
-                    titulo,
+                    atc_texto,
                     estadillo,
-                    identificador,
+                    rol_servicio,
                     db_session,
                 )
             except ValueError:
-                logger.exception("Error al guardar %s %s", titulo, nombre)
+                logger.exception("Error al guardar %s %s", rol_servicio, nombre)
                 continue
 
     # Procesar controladores y sus sectores
-    procesar_controladores_y_sectores(data.controladores, estadillo, db_session)
+    procesar_controladores_y_sectores(data.controladores, estadillo, db_session, tz)
 
     logger.info("Datos del estadillo guardados en la base de datos")
     db_session.commit()
@@ -494,7 +529,8 @@ def procesa_estadillo(
     periodos_por_atc = extraer_periodos(page2)
     incorporar_periodos(estadillo_texto, periodos_por_atc)
 
-    estadillo_db = guardar_datos_estadillo(estadillo_texto, db_session)
+    tz = get_timezone(estadillo_texto.dependencia)
+    estadillo_db = guardar_datos_estadillo(estadillo_texto, db_session, tz)
 
     logger.info("Archivo de estadillo diario procesado")
     db_session.commit()

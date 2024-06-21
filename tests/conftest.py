@@ -59,11 +59,14 @@ def app() -> Flask:
 
 
 @pytest.fixture(scope="session")
-def preloaded_app(app: Flask, preloaded_session: Session) -> Flask:
+def preloaded_app(
+    app: Flask,
+    preloaded_session: Session,
+) -> Generator[Flask, None, None]:
     """Create and configure a new app instance with preloaded data."""
     with app.app_context():
         saved_session = _db.session
-        _db.session = scoped_session(lambda: preloaded_session)
+        _db.session = scoped_session(lambda: preloaded_session)  # type: ignore[arg-type]
         yield app
         _db.session.remove()
         _db.drop_all()
@@ -81,6 +84,8 @@ def db(preloaded_app: Flask) -> Generator[DB, None, None]:
 @pytest.fixture()
 def session(db: DB) -> Generator[scoped_session, None, None]:
     """Create a new database session for a test."""
+    if not db.engine:
+        pytest.fail("No database engine.")
     connection = db.engine.connect()
     transaction = connection.begin()
 
@@ -93,7 +98,6 @@ def session(db: DB) -> Generator[scoped_session, None, None]:
 
     session.remove()
     transaction.rollback()
-    # connection.close()
     db.session = saved_session
 
 
@@ -203,13 +207,13 @@ def _verify_admin_id_token_mock(mocker: MockerFixture) -> None:
 def regular_user(session: scoped_session) -> ATC:
     """Create a regular user for testing."""
     user = ATC(
-        apellidos_nombre="User Regular",
         email="user@example.com",
+        apellidos_nombre="User Regular",
         nombre="Regular",
         apellidos="User",
-        categoria="User",
+        dependencia="LECS",
+        categoria="CON",
         equipo=None,
-        numero_de_licencia="654321",
         es_admin=False,
         politica_aceptada=True,
     )
@@ -268,7 +272,8 @@ def atc(preloaded_session: Session, mocker: MockerFixture) -> ATC:
     """Return an ATC from a preloaded database and mock verify_id_token."""
     user = preloaded_session.query(ATC).first()
     if not user:
-        raise ValueError("No users in the database.")
+        msg = "No users in the database."
+        raise ValueError(msg)
 
     mocker.patch(
         "cambios.firebase.auth.verify_id_token",

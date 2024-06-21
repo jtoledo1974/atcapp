@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+import pytz
 from cambios.estadillos import ColorManager, genera_datos_grupo, identifica_grupos
 
 if TYPE_CHECKING:
@@ -43,7 +44,8 @@ def test_genera_datos_grupo(
 ) -> None:
     """Verifica que se generen correctamente los datos de un grupo."""
     grupos = identifica_grupos(estadillo, preloaded_session)
-    dg = genera_datos_grupo(grupos[2], color_manager)
+    tz = pytz.timezone("Europe/Madrid")
+    dg = genera_datos_grupo(grupos[2], color_manager, tz)
     assert dg
     assert set(dg.sectores) == {"ASV", "CEN", "MAR"}
     assert dg.atcs[0].nombre == "Francisco Victoria Alberdi"
@@ -62,6 +64,27 @@ def test_genera_datos_grupo(
     duracion_horas = sum(periodo.duracion for periodo in dg.horas_inicio)
     assert duracion_atc == duracion_horas
     assert duracion_atc == 450
+
+
+def test_comprueba_duraciones_grupo(
+    estadillo: Estadillo,
+    preloaded_session: Session,
+    color_manager: ColorManager,
+) -> None:
+    """Verifica que las duraciones de los periodos sean correctas."""
+    grupos = identifica_grupos(estadillo, preloaded_session)
+    tz = pytz.timezone("Europe/Madrid")
+    datos_grupos = [genera_datos_grupo(grupo, color_manager, tz) for grupo in grupos]
+
+    # Comprobar las duraciones:
+    duraciones = {
+        periodo.duracion
+        for dg in datos_grupos
+        for atc in dg.atcs
+        for periodo in atc.periodos
+    }
+
+    assert duraciones == {37, 38, 50, 75, 450}
 
 
 def test_mismas_duraciones(estadillo: Estadillo, preloaded_session: Session) -> None:

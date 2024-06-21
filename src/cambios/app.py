@@ -16,7 +16,7 @@ from flask_admin import Admin  # type: ignore[import-untyped]
 from flask_admin.contrib.sqla import ModelView  # type: ignore[import-untyped]
 from sqlalchemy.exc import SQLAlchemyError
 
-from . import commands, configure_timezone
+from . import commands
 from .database import db
 from .firebase import init_firebase
 from .models import ATC
@@ -27,7 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 LOGFILE = "logs/cambios.log"
 SQLLOGFILE = "logs/cambios-sql.log"
-LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
+LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(module)s:%(lineno)d]"
 
 
 class Config:
@@ -128,7 +128,6 @@ def create_app() -> Flask:
     app.config.from_prefixed_env()
 
     configure_logging()
-    configure_timezone()
 
     app.logger.info("DB_URI: %s", app.config["SQLALCHEMY_DATABASE_URI"])
 
@@ -152,7 +151,7 @@ def create_app() -> Flask:
 
     # Context processor to make user info available in templates
     @app.context_processor
-    def inject_user() -> dict[str, str | None]:
+    def inject_user() -> dict[str, ATC | None]:
         try:
             user = db.session.query(ATC).filter_by(id=session.get("id_atc")).first()  # type: ignore[attr-defined]
         except SQLAlchemyError:
