@@ -249,7 +249,7 @@ def _genera_color(per: Periodo, color_manager: ColorManager) -> str:
 def _genera_horas_de_inicio(
     dur_total: int,
     controladores: dict[ATC, list[Periodo]],
-    tz: pytz.timezone,
+    tz: pytz.BaseTzInfo,
 ) -> list[PeriodoData]:
     """Busca todas las horas de inicio de todos los periodos.
 
@@ -328,7 +328,7 @@ def calcula_marcador(grupo: Grupo) -> float:
 def genera_datos_grupo(
     grupo: Grupo,
     color_manager: ColorManager,
-    tz: pytz.timezone,
+    tz: pytz.BaseTzInfo,
     user: ATC | None = None,
 ) -> GrupoDatos:
     """Genera los datos de un grupo de controladores para presentar en una plantilla."""

@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 from pytz import timezone as tzinfo
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pytz import DstTzInfo, StaticTzInfo, _UTCclass  # type: ignore[attr-defined]
+    from pytz import _UTCclass
+    from pytz.tzinfo import DstTzInfo, StaticTzInfo
 
 _DEFAULT_TIMEZONE = "Europe/Madrid"
 _TZ = tzinfo(_DEFAULT_TIMEZONE)

@@ -254,8 +254,8 @@ def extrae_actividad_y_sector(funcion: str) -> tuple[str, str]:
 
 def string_to_utc_datetime(
     time: str,
-    fecha: datetime.date,
-    tz: pytz.timezone,
+    fecha: date,
+    tz: pytz.BaseTzInfo,
 ) -> datetime:
     """Convierte una cadena HH:MM en un datetime UTC.
 
@@ -263,7 +263,7 @@ def string_to_utc_datetime(
     """
     naive_dt = datetime.strptime(time, "%H:%M")  # noqa: DTZ007
     naive_dt_date = datetime.combine(fecha, naive_dt.time())
-    local_dt = tz.localize(naive_dt_date)  # type: ignore[attr-defined]
+    local_dt = tz.localize(naive_dt_date)
     return local_dt.astimezone(timezone.utc)
 
 
@@ -272,7 +272,7 @@ def calcula_horas_inicio_y_fin(
     fecha: date,
     fin_mañana: datetime,
     fin_tarde: datetime,
-    tz: pytz.timezone,
+    tz: pytz.BaseTzInfo,
 ) -> list[tuple[datetime, datetime]]:
     """Recoge la lista de horas de inicio en texto y calcula las horas de fin.
 
@@ -297,7 +297,7 @@ def guardar_periodos(
     periodos: list[PeriodosTexto],
     estadillo: Estadillo,
     db_session: scoped_session,
-    tz: pytz.timezone,
+    tz: pytz.BaseTzInfo,
 ) -> None:
     """Guardar los periodos de los controladores en la base de datos."""
     fin_mañana = string_to_utc_datetime("15:00", estadillo.fecha, tz)
@@ -348,7 +348,7 @@ def procesar_controladores_y_sectores(
     controladores: dict[str, Controller],
     estadillo: Estadillo,
     db_session: scoped_session,
-    tz: pytz.timezone,
+    tz: pytz.BaseTzInfo,
 ) -> None:
     """Procesar los controladores y sus sectores.
 
@@ -382,7 +382,7 @@ def procesar_controladores_y_sectores(
 def guardar_datos_estadillo(
     data: EstadilloTexto,
     db_session: scoped_session,
-    tz: pytz.timezone,
+    tz: pytz.BaseTzInfo,
 ) -> Estadillo:
     """Guardar los datos generales del estadillo en la base de datos."""
     logger.info("Guardando datos del estadillo en la base de datos")
