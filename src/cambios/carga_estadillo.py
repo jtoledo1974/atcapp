@@ -11,7 +11,7 @@ los datos en la base de datos.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -31,6 +31,7 @@ logger = getLogger(__name__)
 if TYPE_CHECKING:  # pragma: no cover
     from io import BufferedReader
 
+    import pytz
     from sqlalchemy.orm import scoped_session
     from werkzeug.datastructures import FileStorage
 
@@ -251,38 +252,43 @@ def extrae_actividad_y_sector(funcion: str) -> tuple[str, str]:
     return res[0], res[1]
 
 
-def str_to_dt(time: str) -> datetime:
-    """Convierte una cadena HH:MM en un objeto datetime.
+def string_to_utc_datetime(
+    time: str,
+    fecha: datetime.date,
+    tz: pytz.timezone,
+) -> datetime:
+    """Convierte una cadena HH:MM en un datetime UTC.
 
-    Usa la zona horaria preconfigurada.
+    Para ellos se requiere la fecha y la zona horaria.
     """
-    tz = get_timezone()
-    return datetime.strptime(time, "%H:%M").replace(tzinfo=tz)
+    naive_dt = datetime.strptime(time, "%H:%M")  # noqa: DTZ007
+    naive_dt_date = datetime.combine(fecha, naive_dt.time())
+    local_dt = tz.localize(naive_dt_date)
+    utc_datetime = local_dt.astimezone(timezone.utc)
+    return utc_datetime
 
 
 def calcula_horas_inicio_y_fin(
     periodos: list[PeriodosTexto],
     fecha: date,
+    fin_mañana: datetime,
+    fin_tarde: datetime,
+    tz: pytz.timezone,
 ) -> list[tuple[datetime, datetime]]:
     """Recoge la lista de horas de inicio en texto y calcula las horas de fin.
 
-    Devuelve una lista de tuplas con las horas de inicio y fin.
+    Devuelve una lista de tuplas con las horas de inicio y fin en UTC.
     """
-    # Si hay un periodo posterior, la hora de fin es la hora de inicio del siguiente
-    # periodo.
-    # De no haberlo la heurística es que si el periodo comienza antes de las 15:00
-    # entonces acaba a las 15:00, y si es posterior entonces acaba a las 22:30
     horas = []
     for i, periodo in enumerate(periodos):
-        hora_inicio = str_to_dt(periodo.hora_inicio)
+        hora_inicio = string_to_utc_datetime(periodo.hora_inicio, fecha, tz)
         if i + 1 < len(periodos):
-            hora_fin = str_to_dt(periodos[i + 1].hora_inicio)
-        elif hora_inicio.time() < (fin_mañana := str_to_dt("15:00")).time():
+            hora_fin = string_to_utc_datetime(periodos[i + 1].hora_inicio, fecha, tz)
+        elif hora_inicio < fin_mañana:
             hora_fin = fin_mañana
         else:
-            hora_fin = str_to_dt("22:30")
-        hora_inicio = datetime.combine(fecha, hora_inicio.time())
-        hora_fin = datetime.combine(fecha, hora_fin.time())
+            hora_fin = fin_tarde
+
         horas.append((hora_inicio, hora_fin))
     return horas
 
@@ -292,9 +298,19 @@ def guardar_periodos(
     periodos: list[PeriodosTexto],
     estadillo: Estadillo,
     db_session: scoped_session,
+    tz: pytz.timezone,
 ) -> None:
     """Guardar los periodos de los controladores en la base de datos."""
-    horas = calcula_horas_inicio_y_fin(periodos, estadillo.fecha)
+    fin_mañana = string_to_utc_datetime("15:00", estadillo.fecha, tz)
+    fin_tarde = string_to_utc_datetime("22:30", estadillo.fecha, tz)
+
+    horas = calcula_horas_inicio_y_fin(
+        periodos,
+        estadillo.fecha,
+        fin_mañana,
+        fin_tarde,
+        tz=tz,
+    )
 
     for i, periodo_texto in enumerate(periodos):
         sector = None
@@ -311,8 +327,9 @@ def guardar_periodos(
                 )
                 continue
 
-        hora_inicio = horas[i][0]
-        hora_fin = horas[i][1]
+        # Convertir a naive datetime en UTC
+        hora_inicio = horas[i][0].replace(tzinfo=None)
+        hora_fin = horas[i][1].replace(tzinfo=None)
 
         periodo = Periodo(
             id_controlador=user.id,
@@ -332,6 +349,7 @@ def procesar_controladores_y_sectores(
     controladores: dict[str, Controller],
     estadillo: Estadillo,
     db_session: scoped_session,
+    tz: pytz.timezone,
 ) -> None:
     """Procesar los controladores y sus sectores.
 
@@ -359,17 +377,17 @@ def procesar_controladores_y_sectores(
             if sector not in estadillo.sectores:
                 estadillo.sectores.append(sector)
 
-        guardar_periodos(user, controller.periodos, estadillo, db_session)
+        guardar_periodos(user, controller.periodos, estadillo, db_session, tz)
 
 
 def guardar_datos_estadillo(
     data: EstadilloTexto,
     db_session: scoped_session,
+    tz: pytz.timezone,
 ) -> Estadillo:
     """Guardar los datos generales del estadillo en la base de datos."""
     logger.info("Guardando datos del estadillo en la base de datos")
     # Convertir la fecha "27.05.2024" a un objeto date de Python
-    tz = get_timezone()
     fecha = datetime.strptime(data.fecha, "%d.%m.%Y").astimezone(tz).date()
 
     # Iniciar transacción
@@ -427,7 +445,7 @@ def guardar_datos_estadillo(
                 continue
 
     # Procesar controladores y sus sectores
-    procesar_controladores_y_sectores(data.controladores, estadillo, db_session)
+    procesar_controladores_y_sectores(data.controladores, estadillo, db_session, tz)
 
     logger.info("Datos del estadillo guardados en la base de datos")
     db_session.commit()
@@ -494,7 +512,8 @@ def procesa_estadillo(
     periodos_por_atc = extraer_periodos(page2)
     incorporar_periodos(estadillo_texto, periodos_por_atc)
 
-    estadillo_db = guardar_datos_estadillo(estadillo_texto, db_session)
+    tz = get_timezone()
+    estadillo_db = guardar_datos_estadillo(estadillo_texto, db_session, tz)
 
     logger.info("Archivo de estadillo diario procesado")
     db_session.commit()

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime  # noqa: TCH003  # Necesario para el mapping
+from datetime import (  # Necesario para el mapping
+    date,
+    datetime,
+)
 from typing import TYPE_CHECKING
 
+import pytz
 from sqlalchemy import (
     Boolean,
     Column,
@@ -38,6 +42,8 @@ naming_convention = {
 }
 
 metadata = MetaData(naming_convention=naming_convention)
+
+UTC = pytz.utc
 
 
 # Define a base using the declarative base
@@ -230,7 +236,20 @@ class Periodo(Base):
         DateTime(timezone=True),
         nullable=False,
     )
+    """Hora de inicio del periodo en la zona horaria del controlador.
+    
+    Ni SQLite ni Mariadb tratan zonas horarias. Así que no nos fiamos
+    y utilizamos la propiedad hora_inicio_utc para asegurarnos de que
+    estamos trabajando con horas en UTC.
+    """
     hora_fin: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    """Hora de fin del periodo en la zona horaria del controlador.
+    
+    Ni SQLite ni Mariadb tratan zonas horarias. Así que no nos fiamos
+    y utilizamos la propiedad hora_fin_utc para asegurarnos de que
+    estamos trabajando con horas en UTC.
+    """
+
     actividad: Mapped[str] = mapped_column(String(20), nullable=False)
     """E, P o D: ejecutivo, planificador o descanso."""
 
@@ -242,14 +261,28 @@ class Periodo(Base):
     sector: Mapped[Sector] = relationship("Sector", backref="periodos")
 
     @property
-    def hora_inicio_tz(self) -> datetime:
-        """Hora de inicio del periodo en la zona horaria del controlador."""
-        return self.hora_inicio.astimezone(get_timezone())
+    def hora_inicio_utc(self) -> datetime:
+        """Hora de inicio del periodo en UTC.
+
+        La hora de inicio guardada debería ser bien UTC o bien
+        naif en UTC. Nos aseguramos que en ambos casos
+        devolvemos una hora en UTC.
+        """
+        if self.hora_inicio.tzinfo is None:
+            return UTC.localize(self.hora_inicio)
+        return self.hora_inicio.astimezone(UTC)
 
     @property
-    def hora_fin_tz(self) -> datetime:
-        """Hora de fin del periodo en la zona horaria del controlador."""
-        return self.hora_fin.astimezone(get_timezone())
+    def hora_fin_utc(self) -> datetime:
+        """Hora de fin del periodo en UTC.
+
+        La hora de fin guardada debería ser bien UTC o bien
+        naif en UTC. Nos aseguramos que en ambos casos
+        devolvemos una hora en UTC.
+        """
+        if self.hora_fin.tzinfo is None:
+            return UTC.localize(self.hora_fin)
+        return self.hora_fin.astimezone(UTC)
 
     @property
     def duracion(self) -> int:

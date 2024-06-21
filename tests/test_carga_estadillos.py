@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING
 
 import pytest
+import pytz
+from cambios import get_timezone
 from cambios.carga_estadillo import (
     EstadilloTexto,
     extraer_datos_estadillo,
     extraer_periodos,
     guardar_datos_estadillo,
     procesa_estadillo,
+    string_to_utc_datetime,
 )
 from cambios.models import (
     ATC,
@@ -112,7 +115,7 @@ def test_datos_generales_estadillo_a_db(
 ) -> None:
     """Comprobar que los datos del estadillo se guardan en la base de datos."""
     data = extraer_datos_estadillo(pdf_estadillo.pages[0])
-    guardar_datos_estadillo(data, session)
+    guardar_datos_estadillo(data, session, get_timezone())
 
     # Check the control room shift
     shift = session.query(Estadillo).first()
@@ -181,6 +184,26 @@ def test_datos_generales_estadillo_a_db(
             assert periodo.hora_fin.tzinfo
 
 
+def test_string_to_utc_datetime() -> None:
+    """Comprobar que la función string_to_utc_datetime convierte correctamente."""
+    # Test the conversion of a string to a datetime object
+    date_str = "27.05.2024"
+    time_str = "07:30"
+    tz = pytz.timezone("Europe/Madrid")
+    date = datetime.strptime(date_str, "%d.%m.%Y").date()  # noqa: DTZ007
+    dt = string_to_utc_datetime(time_str, date, tz)
+    assert dt.strftime("%d.%m.%Y") == date_str
+    assert dt.strftime("%H:%M") == "05:30"
+
+    # Test the conversion of a string to a datetime object
+    date_str = "01.01.2024"
+    time_str = "15:00"
+    date = datetime.strptime(date_str, "%d.%m.%Y").date()  # noqa: DTZ007
+    dt = string_to_utc_datetime(time_str, date, tz)
+    assert dt.strftime("%d.%m.%Y") == date_str
+    assert dt.strftime("%H:%M") == "14:00"
+
+
 def test_periodos_a_db(
     pdf_estadillo: PDF,
     session: scoped_session,
@@ -211,8 +234,8 @@ def test_periodos_a_db(
     hora_inicio = atcs[0].periodos[0].hora_inicio
     hora_fin = atcs[-1].periodos[-1].hora_fin
 
-    assert hora_inicio.strftime("%H:%M") == "07:30"
-    assert hora_fin.strftime("%H:%M") == "15:00"
+    assert hora_inicio.strftime("%H:%M") == "05:30"
+    assert hora_fin.strftime("%H:%M") == "13:00"
 
     # Check that everybody has the same start and end time
     for atc in atcs:
@@ -272,3 +295,46 @@ def test_eliminacion_en_cascada(session: scoped_session) -> None:
 
     # Verificar que el servicio fue eliminado en cascada
     assert session.query(Servicio).count() == 0
+
+
+def test_horas_guardadas_en_utc(
+    pdf_estadillo: PDF,
+    session: scoped_session,
+    estadillo_path: Path,
+) -> None:
+    """Comprobar que las horas de los periodos se guardan en UTC."""
+    # Procesar el estadillo y guardar en la base de datos
+    with estadillo_path.open("rb") as file:
+        procesa_estadillo(file, session)
+
+    # Obtener los periodos de la base de datos
+    periodos = session.query(Periodo).all()
+
+    assert periodos, "No se encontraron periodos en la base de datos."
+
+    tz = get_timezone()
+
+    for periodo in periodos:
+        # Asumir que los datetime almacenados están en UTC
+        hora_inicio_utc = datetime.combine(
+            periodo.hora_inicio.date(),
+            periodo.hora_inicio.time(),
+        ).replace(tzinfo=timezone.utc)
+        hora_fin_utc = datetime.combine(
+            periodo.hora_fin.date(),
+            periodo.hora_fin.time(),
+        ).replace(tzinfo=timezone.utc)
+
+        # Convertir las horas almacenadas en UTC a la zona horaria local para verificar
+        hora_inicio_local = hora_inicio_utc.astimezone(tz)
+        hora_fin_local = hora_fin_utc.astimezone(tz)
+
+        # La base de datos tiene las fechas guardadas como UTC,
+        # pero son datos naive. Para compararlas hay que convertirlas
+        # a la zona horaria local
+        assert (
+            hora_inicio_local.time() == periodo.hora_inicio_utc.astimezone(tz).time()
+        ), f"hora_inicio {hora_inicio_local} no coincide con la hora local esperada {hora_inicio_local}"
+        assert (
+            hora_fin_local.time() == periodo.hora_fin_utc.astimezone(tz).time()
+        ), f"hora_fin {hora_fin_local} no coincide con la hora local esperada {hora_fin_local}"
