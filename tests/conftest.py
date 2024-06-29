@@ -10,9 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pdfplumber
 import pytest
-from cambios.app import create_app
-from cambios.database import db as _db
-from cambios.models import ATC, Estadillo
+from atcapp.app import create_app
+from atcapp.database import db as _db
+from atcapp.models import ATC, Estadillo
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from .pickled_db import (
@@ -28,7 +28,7 @@ from .pickled_db import (
 if TYPE_CHECKING:
     from typing import Any, Generator
 
-    from cambios.database import DB
+    from atcapp.database import DB
     from flask import Flask
     from flask.testing import FlaskClient
     from pdfplumber import PDF
@@ -182,14 +182,14 @@ def client(preloaded_app: Flask, session: scoped_session) -> FlaskClient:
 @pytest.fixture()
 def _init_firebase_mock(mocker: MockerFixture) -> None:
     """Mock the init_firebase function."""
-    mocker.patch("src.cambios.firebase.init_firebase", return_value=None)
+    mocker.patch("src.atcapp.firebase.init_firebase", return_value=None)
 
 
 @pytest.fixture()
 def _verify_id_token_mock(mocker: MockerFixture) -> None:
     """Mock the verify_id_token function from firebase."""
     mocker.patch(
-        "src.cambios.firebase.auth.verify_id_token",
+        "src.atcapp.firebase.auth.verify_id_token",
         return_value={"uid": "user_uid", "email": "user@example.com"},
     )
 
@@ -198,7 +198,7 @@ def _verify_id_token_mock(mocker: MockerFixture) -> None:
 def _verify_admin_id_token_mock(mocker: MockerFixture) -> None:
     """Mock the verify_id_token function from firebase."""
     mocker.patch(
-        "src.cambios.firebase.auth.verify_id_token",
+        "src.atcapp.firebase.auth.verify_id_token",
         return_value={"uid": "admin_uid", "email": "admin@example.com"},
     )
 
@@ -276,7 +276,7 @@ def atc(preloaded_session: Session, mocker: MockerFixture) -> ATC:
         raise ValueError(msg)
 
     mocker.patch(
-        "cambios.firebase.auth.verify_id_token",
+        "atcapp.firebase.auth.verify_id_token",
         return_value={"uid": "admin_uid", "email": user.email},
     )
     user.politica_aceptada = True

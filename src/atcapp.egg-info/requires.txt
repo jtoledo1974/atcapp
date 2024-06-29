@@ -1,0 +1,16 @@
+flask
+flask-admin
+alembic
+firebase-admin
+pdfplumber
+pymysql
+pytz
+
+[dev]
+pytest
+pytest-mock
+pytest-cov
+mypy
+ruff
+pathspec
+types-pytz

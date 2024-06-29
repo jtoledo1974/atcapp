@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import TYPE_CHECKING
 
-from cambios.cambios import (
+from atcapp.cambios import (
     Dia,
     GenCalMensual,
     TipoTurno,
@@ -15,7 +15,7 @@ from cambios.cambios import (
 )
 
 if TYPE_CHECKING:
-    from cambios.models import ATC
+    from atcapp.models import ATC
     from sqlalchemy.orm import Session
 
 

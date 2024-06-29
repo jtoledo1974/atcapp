@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from cambios.name_utils import capitaliza_nombre, parse_name, to_no_accents
+from atcapp.name_utils import capitaliza_nombre, parse_name, to_no_accents
 
 
 @pytest.mark.parametrize(

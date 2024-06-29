@@ -6,11 +6,11 @@ import logging
 from typing import TYPE_CHECKING
 
 import pytest
-from cambios import get_timezone
-from cambios.app import create_app
+from atcapp import get_timezone
+from atcapp.app import create_app
 
 if TYPE_CHECKING:
-    from cambios.models import ATC
+    from atcapp.models import ATC
     from flask.testing import FlaskClient
 
 

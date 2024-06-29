@@ -9,7 +9,7 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from cambios.models import ATC
+    from atcapp.models import ATC
     from flask.testing import FlaskClient
     from pytest_mock import MockerFixture
 
@@ -37,7 +37,7 @@ def test_login_success(client: FlaskClient, regular_user: ATC) -> None:
 
 def test_login_failure(client: FlaskClient, mocker: MockerFixture) -> None:
     """Test that the login route fails with an invalid token."""
-    mocker.patch("src.cambios.firebase.auth.verify_id_token", side_effect=ValueError)
+    mocker.patch("src.atcapp.firebase.auth.verify_id_token", side_effect=ValueError)
     response = client.post(
         "/login",
         data={"idToken": "invalid_token"},

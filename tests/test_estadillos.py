@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytz
-from cambios.estadillos import ColorManager, genera_datos_grupo, identifica_grupos
+from atcapp.estadillos import ColorManager, genera_datos_grupo, identifica_grupos
 
 if TYPE_CHECKING:
-    from cambios.models import Estadillo
+    from atcapp.models import Estadillo
     from sqlalchemy.orm import Session
 
 
