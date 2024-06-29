@@ -21,7 +21,7 @@ fi
 
 # Ejecutar la aplicación Flask con Gunicorn
 echo "Starting Gunicorn..."
-gunicorn --bind 127.0.0.1:8000 --error-logfile - --workers=3 --capture-output  cambios.wsgi:app &
+gunicorn --bind 127.0.0.1:8000 --error-logfile - --workers=3 --capture-output  atcapp.wsgi:app &
 GUNICORN_PID=$!
 
 # Función para verificar si Gunicorn está listo

@@ -1,4 +1,4 @@
-"""Test cases for the cambios module."""
+"""Test cases for the core module."""
 
 from __future__ import annotations
 
