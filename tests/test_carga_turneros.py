@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from cambios.models import ATC, Turno
+from atcapp.models import ATC, Turno
 
 if TYPE_CHECKING:
-    from cambios.database import DB
+    from atcapp.database import DB
     from flask.testing import FlaskClient
 
 # Assuming your fixtures are in conftest.py as shown before

@@ -1,4 +1,4 @@
-"""Routes for the Cambios app."""
+"""Routes for the ATCApp app."""
 
 from __future__ import annotations
 
@@ -21,9 +21,9 @@ from flask import (
 from sqlalchemy.exc import IntegrityError
 
 from . import get_timezone
-from .cambios import GenCalMensual
 from .carga_estadillo import procesa_estadillo
 from .carga_turnero import ResultadoProcesadoTurnero, procesa_turnero
+from .core import GenCalMensual
 from .database import db
 from .estadillos import genera_datos_estadillo
 from .firebase import get_recognized_emails, invalidate_token, verify_id_token

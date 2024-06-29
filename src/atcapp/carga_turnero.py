@@ -20,9 +20,8 @@ from typing import TYPE_CHECKING
 import pdfplumber
 from pdfminer.pdfparser import PDFSyntaxError
 
-from cambios import get_timezone
-
-from .cambios import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
+from . import get_timezone
+from .core import CODIGOS_DE_TURNO, PUESTOS_CARRERA, TURNOS_BASICOS
 from .models import ATC, Turno
 from .user_utils import AtcTexto, UpdateResult, create_user, find_user, update_user
 

@@ -26,8 +26,8 @@ from .routes import register_routes
 if TYPE_CHECKING:  # pragma: no cover
     from werkzeug import Response
 
-LOGFILE = "logs/cambios.log"
-SQLLOGFILE = "logs/cambios-sql.log"
+LOGFILE = "logs/atcapp.log"
+SQLLOGFILE = "logs/atcapp-sql.log"
 LOGFORMAT = "%(asctime)s %(levelname)s: %(message)s [in %(module)s:%(lineno)d]"
 
 
@@ -95,13 +95,13 @@ def configure_logging(
     console_handler.setFormatter(formatter)
     console_handler.setLevel(log_level)
 
-    logger = logging.getLogger("cambios")
+    logger = logging.getLogger("atcapp")
 
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
     logger.addHandler(sql_file_handler)
     logger.setLevel(log_level)
-    logger.info("Cambios startup")
+    logger.info("ATCApp startup")
 
     sqllogger = logging.getLogger("sqlalchemy.engine")
     sqllogger.setLevel(logging.INFO)
@@ -124,7 +124,7 @@ def create_app() -> Flask:
     """Create the Flask app."""
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
 
-    app = Flask("cambios.app")
+    app = Flask("atcapp.app")
     app.config.from_object(Config)
     app.config.from_prefixed_env()
 

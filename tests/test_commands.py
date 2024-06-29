@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Generator
 from unittest import mock
 
 import pytest
-from cambios.commands import (
+from atcapp.commands import (
     ATTR_APELLIDOS,
     ATTR_APELLIDOS_NOMBRE,
     ATTR_EMAIL,
@@ -21,7 +21,7 @@ from cambios.commands import (
     import_atcs,
     set_verbose_level,
 )
-from cambios.models import ATC
+from atcapp.models import ATC
 from click.testing import CliRunner
 from sqlalchemy.orm import Session
 
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture()
 def session_mock() -> Generator[Session, Any, Any]:
-    """src/cambios/test_commands.py: Fixture for a SQLAlchemy session mock."""
+    """src/atcapp/test_commands.py: Fixture for a SQLAlchemy session mock."""
     with mock.patch("sqlalchemy.create_engine"), mock.patch(
         "sqlalchemy.orm.sessionmaker",
     ) as sessionmaker_mock:
@@ -76,7 +76,7 @@ def test_get_session() -> None:
 def test_set_verbose_level() -> None:
     """Test setting the logger verbosity level."""
     logger_mock = mock.Mock()
-    with mock.patch("cambios.commands.logger", logger_mock):
+    with mock.patch("atcapp.commands.logger", logger_mock):
         set_verbose_level(0)
         logger_mock.setLevel.assert_called_once_with(logging.INFO)
 
@@ -105,7 +105,7 @@ def test_export_atcs(
     ]
 
     runner = CliRunner()
-    with mock.patch("cambios.commands.get_session", return_value=session_mock):
+    with mock.patch("atcapp.commands.get_session", return_value=session_mock):
         runner.invoke(export_atcs, ["-v", str(output_file), "sqlite:///test.db"])
     assert output_file.exists()
 
@@ -141,7 +141,7 @@ def test_import_atcs(
     session_mock.query.return_value.filter_by.side_effect = mock_filter_by
 
     runner = CliRunner()
-    with mock.patch("cambios.commands.get_session", return_value=session_mock):
+    with mock.patch("atcapp.commands.get_session", return_value=session_mock):
         runner.invoke(import_atcs, [str(input_file), "sqlite:///test.db"])
 
     assert session_mock.query.return_value.filter_by.call_count == len(atcs)

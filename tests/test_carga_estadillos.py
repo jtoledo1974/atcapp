@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytz
-from cambios import get_timezone
-from cambios.carga_estadillo import (
+from atcapp import get_timezone
+from atcapp.carga_estadillo import (
     EstadilloTexto,
     extraer_datos_estadillo,
     extraer_periodos,
@@ -16,14 +16,14 @@ from cambios.carga_estadillo import (
     procesa_estadillo,
     string_to_utc_datetime,
 )
-from cambios.models import (
+from atcapp.models import (
     ATC,
     Estadillo,
     Periodo,
     Sector,
     Servicio,
 )
-from cambios.user_utils import find_user
+from atcapp.user_utils import find_user
 
 if TYPE_CHECKING:
     from pathlib import Path

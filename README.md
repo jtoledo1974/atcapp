@@ -20,7 +20,7 @@ Este proyecto está diseñado para facilitar la gestión de turnos para los Cont
 
 ### Clonar el Repositorio
 ```sh
-git clone https://github.com/jtoledo1974/cambios.git
+git clone https://github.com/jtoledo1974/atcapp.git
 ```
 
 ### Crear un entorno virtual
@@ -36,14 +36,14 @@ pip install -e ".[dev]"
 
 Suponiendo que el entorno está cargado (mirar más abajo), se puede arrancar la aplicación con el siguiente comando:
 ```sh
-python -m cambios.app
+python -m atcapp.app
 ```
 
 
 ### Instalar imágenes precompiladas
 El docker es de particular interés para ejecutar la aplicación en un entorno de producción. Se puede utilizar la imagen precompilada de Docker Hub para ejecutar la aplicación en un contenedor Docker.
 ```sh
-docker run -d -p 80:80 toledo74/cambios
+docker run -d -p 80:80 toledo74/atcapp
 ```
 
 ### Variables de entorno
@@ -92,9 +92,9 @@ base de datos accesible a través de un túnel SSH. Para ello, se pueden utiliza
 ### Actualizar la imagen de docker en docker hub
     
 ```sh
-docker build -t toledo74/cambios:latest .
+docker build -t toledo74/atcapp:latest .
 docker login
-docker push toledo74/cambios:latest
+docker push toledo74/atcapp:latest
 ```
 
 ### Arranque en pruebas con un contenedor en local
@@ -122,7 +122,7 @@ DB_PORT=3306
 Arrancar el contenedor con el siguiente comando:
 
 ```sh
-docker run --rm -e SSH_PRIVATE_KEY="$SSH_PRIVATE_KEY" -e FIREBASE_CRED_JSON="$CRED" --env-file .env -p 1512:1512 toledo74/cambios
+docker run --rm -e SSH_PRIVATE_KEY="$SSH_PRIVATE_KEY" -e FIREBASE_CRED_JSON="$CRED" --env-file .env -p 1512:1512 toledo74/atcapp
 ```
 
 ### Ejemplo de despliegue en google cloud
@@ -141,7 +141,7 @@ Y arrancar
 
 ```sh
 gcloud run deploy my_gcr_service \
-    --image docker.io/toledo74/cambios:latest \
+    --image docker.io/toledo74/atcapp:latest \
     --platform managed \
     --region europe-west1 \
     --allow-unauthenticated \

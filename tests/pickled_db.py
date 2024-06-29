@@ -11,11 +11,11 @@ import pickle
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from cambios.carga_estadillo import procesa_estadillo
-from cambios.carga_turnero import procesa_turnero
-from cambios.database import db
-from cambios.models import ATC, Estadillo, Periodo, Sector, Servicio, TipoTurno, Turno
-from cambios.models import __file__ as models_file
+from atcapp.carga_estadillo import procesa_estadillo
+from atcapp.carga_turnero import procesa_turnero
+from atcapp.database import db
+from atcapp.models import ATC, Estadillo, Periodo, Sector, Servicio, TipoTurno, Turno
+from atcapp.models import __file__ as models_file
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 

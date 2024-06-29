@@ -18,7 +18,7 @@ env.yml
 .venv*/
 venv*/
 ENV/
-cambios.egg-info/
+atcapp.egg-info/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
