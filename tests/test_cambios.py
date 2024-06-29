@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import TYPE_CHECKING
 
-from atcapp.cambios import (
+from atcapp.core import (
     Dia,
     GenCalMensual,
     TipoTurno,
