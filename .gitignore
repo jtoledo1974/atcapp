@@ -7,6 +7,7 @@ atcapp.json
 file_listings.md
 logs/
 test_db.pickle
+*.env
 
 # Container environment data
 db_uri

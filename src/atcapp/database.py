@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from logging import getLogger
 from typing import TYPE_CHECKING
 
@@ -85,6 +86,15 @@ class DB:
     def metadata(self) -> MetaData:
         """Return the metadata."""
         return Base.metadata
+
+
+def clean_db_uri(uri: str) -> str:
+    """Remove the password from the URI.
+
+    Dado un URI tal que mysql+pymysql://atcapp:mypassword@192.168.1.42:3306/atcapp
+    devuelve mysql+pymysql://atcapp:XXXXXXXX@192.168.1.42:3306/atcapp
+    """
+    return re.sub(r"(?<=:)[^:@]+(?=@)", "XXXXXXXX", uri)
 
 
 db = DB()

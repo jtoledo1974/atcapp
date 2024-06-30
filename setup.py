@@ -26,6 +26,7 @@ setup(
             "mypy",
             "ruff",
             "pathspec",
+            "python-dotenv",
             "types-pytz",
         ],
     },  # other setup options

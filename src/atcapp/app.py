@@ -18,7 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from . import commands
 from .app_sessions import ID_ATC, SqlAlchemySessionInterface
-from .database import db
+from .database import clean_db_uri, db
 from .firebase import init_firebase
 from .models import ATC
 from .routes import register_routes
@@ -130,7 +130,8 @@ def create_app() -> Flask:
 
     configure_logging()
 
-    app.logger.info("DB_URI: %s", app.config["SQLALCHEMY_DATABASE_URI"])
+    nopassword_db_uri = clean_db_uri(app.config["SQLALCHEMY_DATABASE_URI"])
+    app.logger.info("DB_URI: %s", nopassword_db_uri)
 
     with app.app_context():
         app.cli.add_command(commands.export_atcs)
