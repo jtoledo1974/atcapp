@@ -198,7 +198,6 @@ def login() -> Response | str:
                 nombre="Admin",
                 apellidos="User",
                 categoria="Admin",
-                numero_de_licencia=0,
                 es_admin=True,
             )
             db.session.add(user)

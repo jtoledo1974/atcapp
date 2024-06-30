@@ -98,7 +98,6 @@ def create_user(
         email=email,
         categoria=role,
         equipo=equipo.upper() if equipo else None,
-        numero_de_licencia="",
     )
     logger.debug("Creando nuevo controlador: %s", new_user)
     db_session.add(new_user)

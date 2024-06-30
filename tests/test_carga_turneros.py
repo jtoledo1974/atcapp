@@ -65,7 +65,6 @@ def test_upload_admin_post(
     assert user.email == "gil.romero.manuel@example.com"
     assert user.categoria == "TS"
     assert user.equipo == "A"
-    assert user.numero_de_licencia == ""
 
     # Checking that we don't touch existing shifts
     # and that roles and equipos are updated

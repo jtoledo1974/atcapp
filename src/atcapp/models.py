@@ -81,7 +81,6 @@ class ATC(Base):
     """Categoría del controlador. PTD, CON, TIN, etc."""
     equipo: Mapped[str | None] = mapped_column(String(1), nullable=True)
     """Equipo al que pertenece el controlador. Típicamente del A al H."""
-    numero_de_licencia: Mapped[str] = mapped_column(String(50), nullable=True)
     es_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     politica_aceptada: Mapped[bool] = mapped_column(Boolean, default=False)
 
