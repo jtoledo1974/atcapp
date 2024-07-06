@@ -63,11 +63,6 @@ class PeriodoData:
 
 
 @dataclass
-class PeriodoCompañeroData(PeriodoData):
-    """En un periodo con compañeros, se añade la lista de compañeros."""
-
-
-@dataclass
 class EstadilloPersonalData:
     """Datos de estadillo individual.
 
@@ -93,26 +88,77 @@ class GrupoDatos:
 
 
 @dataclass
-class CompañeroData:
+class InfoCompañero:
     nombre: str
     actividad: str
 
 
 @dataclass
-class PeriodoPersonal(PeriodoData):
-    compañeros: list[CompañeroData] = field(default_factory=list)
+class PeriodoContextualizado(PeriodoData):
+    compañeros: list[InfoCompañero] = field(default_factory=list)
+    relevo_anterior: InfoCompañero | None = None
+    relevo_siguiente: InfoCompañero | None = None
 
 
 @dataclass
-class MiEstadillo:
-    estadillo_personal: EstadilloPersonalData
-    periodos_con_compañeros: list[PeriodoPersonal]
+class VistaControladorCompleta:
+    estadillo_base: EstadilloPersonalData
+    periodos_contextualizados: list[PeriodoContextualizado]
 
 
 @dataclass
 class DatosEstadilloCompleto:
     grupos: list[GrupoDatos]
-    mi_estadillo: MiEstadillo | None = None
+    vista_controlador: VistaControladorCompleta | None = None
+
+
+@dataclass
+class ColorManager:
+    """Clase para gestionar los colores de los sectores."""
+
+    sector_colors: dict[str, tuple[str, str]] = field(default_factory=dict)
+    used_colors: set[str] = field(default_factory=set)
+
+    def __post_init__(self) -> None:
+        """Inicializa la tabla de colores disponibles."""
+        self.available_colors = [
+            "#FF5733",
+            "#33FF57",
+            "#3357FF",
+            "#FF33A1",
+            "#A133FF",
+            "#33FFF2",
+            "#FFC133",
+            "#FF3333",
+            "#33FF99",
+            "#FF33FF",
+            "#FF5733",
+            "#33FF57",
+            "#3357FF",
+            "#FF33A1",
+            "#A133FF",
+            "#33FFF2",
+            "#FFC133",
+            "#FF3333",
+            "#33FF99",
+            "#FF33FF",
+        ]
+
+    def get_color(self, sector: str, *, is_executive: bool) -> str:
+        """Devuelve un color para el sector, diferenciando entre ejecutivo y plani."""
+        if sector not in self.sector_colors:
+            color = self.available_colors.pop(0)
+            self.sector_colors[sector] = (color, self._darken_color(color))
+        executive_color, planner_color = self.sector_colors[sector]
+        return executive_color if is_executive else planner_color
+
+    def _darken_color(self, color: str) -> str:
+        """Genera una versión más oscura del color."""
+        red, green, blue = (float(int(color[i : i + 2], 16)) for i in (1, 3, 5))
+        hue, lum, sat = colorsys.rgb_to_hls(red / 255.0, green / 255.0, blue / 255.0)
+        lum = max(0, lum - 0.3)  # Reduce lightness by 30%
+        red, green, blue = colorsys.hls_to_rgb(hue, lum, sat)
+        return f"#{int(red * 255):02x}{int(green * 255):02x}{int(blue * 255):02x}"
 
 
 def identifica_grupos(
@@ -217,56 +263,6 @@ def _genera_actividad(per: Periodo) -> str:
     return f"{per.actividad}-{per.sector.nombre}"
 
 
-@dataclass
-class ColorManager:
-    """Clase para gestionar los colores de los sectores."""
-
-    sector_colors: dict[str, tuple[str, str]] = field(default_factory=dict)
-    used_colors: set[str] = field(default_factory=set)
-
-    def __post_init__(self) -> None:
-        """Inicializa la tabla de colores disponibles."""
-        self.available_colors = [
-            "#FF5733",
-            "#33FF57",
-            "#3357FF",
-            "#FF33A1",
-            "#A133FF",
-            "#33FFF2",
-            "#FFC133",
-            "#FF3333",
-            "#33FF99",
-            "#FF33FF",
-            "#FF5733",
-            "#33FF57",
-            "#3357FF",
-            "#FF33A1",
-            "#A133FF",
-            "#33FFF2",
-            "#FFC133",
-            "#FF3333",
-            "#33FF99",
-            "#FF33FF",
-        ]
-
-    def get_color(self, sector: str, *, is_executive: bool) -> str:
-        """Devuelve un color para el sector, diferenciando entre ejecutivo y plani."""
-        if sector not in self.sector_colors:
-            color = self.available_colors.pop(0)
-            self.sector_colors[sector] = (color, self._darken_color(color))
-        executive_color, planner_color = self.sector_colors[sector]
-        return executive_color if is_executive else planner_color
-
-    def _darken_color(self, color: str) -> str:
-        """Genera una versión más oscura del color."""
-        red, green, blue = (float(int(color[i : i + 2], 16)) for i in (1, 3, 5))
-        hue, lum, sat = colorsys.rgb_to_hls(red / 255.0, green / 255.0, blue / 255.0)
-        lum = max(0, lum - 0.3)  # Reduce lightness by 30%
-        red, green, blue = colorsys.hls_to_rgb(hue, lum, sat)
-        return f"#{int(red * 255):02x}{int(green * 255):02x}{int(blue * 255):02x}"
-
-
-# Actualización de funciones para usar ColorManager
 def _genera_color(per: Periodo, color_manager: ColorManager) -> str:
     """Genera el color de un periodo para presentar en una plantilla."""
     if per.actividad == "D":
@@ -407,7 +403,7 @@ def generar_estadillo_personal(
     estadillo: Estadillo,
     grupos_datos: list[GrupoDatos],
     user: ATC,
-) -> MiEstadillo:
+) -> VistaControladorCompleta:
     mi_estadillo_personal = None
     periodos_con_compañeros = []
 
@@ -425,7 +421,7 @@ def generar_estadillo_personal(
         )
 
     for periodo in mi_estadillo_personal.periodos:
-        periodo_personal = PeriodoPersonal(**periodo.__dict__)
+        periodo_contextualizado = PeriodoContextualizado(**periodo.__dict__)
 
         # Encontrar compañeros en el mismo sector y periodo
         for grupo in grupos_datos:
@@ -438,18 +434,18 @@ def generar_estadillo_personal(
                             and otro_periodo.actividad.split("-")[-1]
                             == periodo.actividad.split("-")[-1]
                         ):
-                            periodo_personal.compañeros.append(
-                                CompañeroData(
+                            periodo_contextualizado.compañeros.append(
+                                InfoCompañero(
                                     nombre=atc_data.nombre,
                                     actividad=otro_periodo.actividad.split("-")[0],
                                 ),
                             )
 
-        periodos_con_compañeros.append(periodo_personal)
+        periodos_con_compañeros.append(periodo_contextualizado)
 
-    return MiEstadillo(
-        estadillo_personal=mi_estadillo_personal,
-        periodos_con_compañeros=periodos_con_compañeros,
+    return VistaControladorCompleta(
+        estadillo_base=mi_estadillo_personal,
+        periodos_contextualizados=periodos_con_compañeros,
     )
 
 
@@ -471,4 +467,4 @@ def genera_datos_estadillo(
     if user:
         mi_estadillo = generar_estadillo_personal(estadillo, grupos_datos, user)
 
-    return DatosEstadilloCompleto(grupos=grupos_datos, mi_estadillo=mi_estadillo)
+    return DatosEstadilloCompleto(grupos=grupos_datos, vista_controlador=mi_estadillo)

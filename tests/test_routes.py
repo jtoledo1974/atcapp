@@ -5,13 +5,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from atcapp.models import ATC
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from atcapp.models import ATC
     from flask.testing import FlaskClient
     from pytest_mock import MockerFixture
+    from sqlalchemy.orm import Session
 
 
 def test_index_redirect(client: FlaskClient) -> None:
@@ -177,6 +178,34 @@ def test_upload_estadillo_post(
 @pytest.mark.usefixtures("_verify_id_token_mock")
 def test_plantilla_estadillo(preloaded_client: FlaskClient, atc: ATC) -> None:
     """Verificar que la plantilla de estadillo se renderiza correctamente."""
+    preloaded_client.post("/login", data={"idToken": "test_token"})
+    response = preloaded_client.get("/estadillo")
+    assert response.status_code == 200
+    assert 'class="periodos"' in response.data.decode()
+
+
+@pytest.mark.usefixtures("_verify_id_token_mock")
+def test_plantilla_vista_controaldor(
+    preloaded_client: FlaskClient,
+    preloaded_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Verificar que la plantilla de estadillo se renderiza correctamente.
+
+    Necesitamos que el usuario que pide el estadillo
+    sea uno de los que trabajan en ese estadillo.
+    """
+    user = preloaded_session.query(ATC).filter_by(apellidos="DOFORNO CASTILLO").first()
+    if not user:
+        pytest.fail("No se encontró el usuario en la base de datos.")
+
+    mocker.patch(
+        "atcapp.firebase.auth.verify_id_token",
+        return_value={"uid": "admin_uid", "email": user.email},
+    )
+    user.politica_aceptada = True
+    preloaded_session.commit()
+
     preloaded_client.post("/login", data={"idToken": "test_token"})
     response = preloaded_client.get("/estadillo")
     assert response.status_code == 200
