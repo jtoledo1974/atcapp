@@ -63,6 +63,11 @@ class PeriodoData:
 
 
 @dataclass
+class PeriodoCompañeroData(PeriodoData):
+    """En un periodo con compañeros, se añade la lista de compañeros."""
+
+
+@dataclass
 class EstadilloPersonalData:
     """Datos de estadillo individual.
 
@@ -85,6 +90,29 @@ class GrupoDatos:
     """Horas de inicio de todos los periodos para la cabecera."""
     marcador: float = 0.0
     """Posición del marcador de la hora actual en porcentaje."""
+
+
+@dataclass
+class CompañeroData:
+    nombre: str
+    actividad: str
+
+
+@dataclass
+class PeriodoPersonal(PeriodoData):
+    compañeros: list[CompañeroData] = field(default_factory=list)
+
+
+@dataclass
+class MiEstadillo:
+    estadillo_personal: EstadilloPersonalData
+    periodos_con_compañeros: list[PeriodoPersonal]
+
+
+@dataclass
+class DatosEstadilloCompleto:
+    grupos: list[GrupoDatos]
+    mi_estadillo: MiEstadillo | None = None
 
 
 def identifica_grupos(
@@ -375,14 +403,72 @@ def genera_datos_grupo(
     )
 
 
+def generar_estadillo_personal(
+    estadillo: Estadillo,
+    grupos_datos: list[GrupoDatos],
+    user: ATC,
+) -> MiEstadillo:
+    mi_estadillo_personal = None
+    periodos_con_compañeros = []
+
+    for grupo in grupos_datos:
+        for atc_data in grupo.atcs:
+            if atc_data.usuario_actual:
+                mi_estadillo_personal = atc_data
+                break
+        if mi_estadillo_personal:
+            break
+
+    if not mi_estadillo_personal:
+        raise ValueError(
+            f"No se encontró información para el usuario {user.nombre_apellidos}",
+        )
+
+    for periodo in mi_estadillo_personal.periodos:
+        periodo_personal = PeriodoPersonal(**periodo.__dict__)
+
+        # Encontrar compañeros en el mismo sector y periodo
+        for grupo in grupos_datos:
+            for atc_data in grupo.atcs:
+                if atc_data != mi_estadillo_personal:
+                    for otro_periodo in atc_data.periodos:
+                        if (
+                            otro_periodo.hora_inicio == periodo.hora_inicio
+                            and otro_periodo.hora_fin == periodo.hora_fin
+                            and otro_periodo.actividad.split("-")[-1]
+                            == periodo.actividad.split("-")[-1]
+                        ):
+                            periodo_personal.compañeros.append(
+                                CompañeroData(
+                                    nombre=atc_data.nombre,
+                                    actividad=otro_periodo.actividad.split("-")[0],
+                                ),
+                            )
+
+        periodos_con_compañeros.append(periodo_personal)
+
+    return MiEstadillo(
+        estadillo_personal=mi_estadillo_personal,
+        periodos_con_compañeros=periodos_con_compañeros,
+    )
+
+
 def genera_datos_estadillo(
     estadillo: Estadillo,
     session: Session | scoped_session,
     user: ATC | None = None,
-) -> list[GrupoDatos]:
+) -> DatosEstadilloCompleto:
     """Genera los datos de un estadillo para presentar en una plantilla."""
     grupos = identifica_grupos(estadillo, session)
     tz = get_timezone(estadillo.dependencia)
     marca_anchor(grupos, user, tz)
     color_manager = ColorManager()  # Crear una instancia de ColorManager
-    return [genera_datos_grupo(grupo, color_manager, tz, user) for grupo in grupos]
+    grupos_datos = [
+        genera_datos_grupo(grupo, color_manager, tz, user) for grupo in grupos
+    ]
+
+    mi_estadillo = None
+    if user:
+        mi_estadillo = generar_estadillo_personal(estadillo, grupos_datos, user)
+
+    return DatosEstadilloCompleto(grupos=grupos_datos, mi_estadillo=mi_estadillo)
