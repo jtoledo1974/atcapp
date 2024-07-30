@@ -19,7 +19,9 @@ env.yml
 .venv*/
 venv*/
 ENV/
-atcapp.egg-info/
+src/*.egg-info/
+env*.bat
+env*.ps1
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
